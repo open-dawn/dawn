@@ -1,0 +1,18 @@
+name: pineapplewm
+options:
+  bundleIdPrefix: pineappleinc
+targets:
+  PineappleWM:
+    type: application
+    platform: macOS
+    deploymentTarget: "26.0"
+    sources:
+      - PineappleWM
+    info:
+      path: PineappleWM/Info.plist
+      properties:
+        CFBundleDisplayName: PineappleWM
+    settings:
+      MARKETING_VERSION: "0.0.0"
+      SWIFT_VERSION: "6"
+
