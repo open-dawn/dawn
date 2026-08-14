@@ -1,0 +1,33 @@
+name: Lint, format, build and test
+on:
+  push:
+    branches: [ "main", "stable" ]
+  pull_request:
+    branches: [ "main", "stable" ]
+
+jobs:
+  lint_build_test_project:
+    name: Lint, build and test project
+    runs-on: macos-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Install XCBeautify, XCodeGen
+        run: brew install xcbeautify xcodegen swiftlint
+
+      - name: Swift Lint
+        run: swiftlint lint --strict
+
+      - name: Generate XCodeProj
+        run: xcodegen generate
+
+      - name: Show Xcode project info
+        run: |
+          xcodebuild -version
+          xcodebuild -project pineapplewm.xcodeproj -list
+          xcodebuild -project pineapplewm.xcodeproj -scheme pineapplewm -showdestinations
+
+      - name: Run tests
+        run: set -o pipefail && xcodebuild -project pineapplewm.xcodeproj -scheme pineapplewm -destination 'platform=macOS,name=My Mac' test | xcbeautify
+
