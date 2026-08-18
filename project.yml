@@ -1,18 +1,60 @@
 name: pineapplewm
 options:
-  bundleIdPrefix: pineappleinc
+  bundleIdPrefix: dev.longhi.pineappleinc
 targets:
-  PineappleWM:
+  
+  PaSettingsUI:
     type: application
     platform: macOS
     deploymentTarget: "26.0"
     sources:
-      - PineappleWM
+      - PaSettingsUI
     info:
-      path: PineappleWM/Info.plist
+      path: PaSettingsUI/Info.plist
       properties:
-        CFBundleDisplayName: PineappleWM
+        CFBundleDisplayName: "PineappleWM Settings"
     settings:
       MARKETING_VERSION: "0.0.0"
       SWIFT_VERSION: "6"
+    dependencies:
+      - target: PaEventKit
+      - target: PaWM
+        link: false
+        embed: true
+        copy:
+          destination: wrapper
+          subpath: Contents/Library/LoginItems
+  
+  PaWM:
+    type: application
+    platform: macOS
+    deploymentTarget: "26.0"
+    sources:
+      - PaWM
+    info:
+      path: PaWM/Info.plist
+      properties:
+        CFBundleDisplayName: "PineappleWM Launch Agent"
+        LSUIElement: true
+    settings:
+      MARKETING_VERSION: "0.0.0"
+      SWIFT_VERSION: "6"
+    dependencies:
+      - target: PaEventKit
+  
+  PaEventKit:
+    type: framework
+    platform: macOS
+    deploymentTarget: "26.0"
+    sources:
+      - PaEventKit
+    info:
+      path: PaEventKit/Info.plist
+      properties:
+        CFBundleDisplayName: "PineappleWM PaEventKit Framework"
+    settings:
+      MARKETING_VERSION: "0.0.0"
+      SWIFT_VERSION: "6"
+
+
 
