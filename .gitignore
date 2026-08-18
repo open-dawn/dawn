@@ -144,4 +144,4 @@ xcuserdata
 
 # XcodeGen Generated Project
 *.xcodeproj
-PineappleWM/Info.plist
+Info.plist
