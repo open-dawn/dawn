@@ -2,7 +2,7 @@ name: pineapplewm
 options:
   bundleIdPrefix: dev.longhi.pineappleinc
 targets:
-  
+
   PaSettingsUI:
     type: application
     platform: macOS
@@ -16,6 +16,9 @@ targets:
     settings:
       MARKETING_VERSION: "0.0.0"
       SWIFT_VERSION: "6"
+      configs:
+        debug:
+          ENABLE_TESTABILITY: YES
     dependencies:
       - target: PaEventKit
       - target: PaWM
@@ -24,7 +27,11 @@ targets:
         copy:
           destination: wrapper
           subpath: Contents/Library/LoginItems
-  
+    scheme:
+      testTargets:
+        - PaSettingsUITests
+      gatherCoverageData: true
+
   PaWM:
     type: application
     platform: macOS
@@ -39,8 +46,15 @@ targets:
     settings:
       MARKETING_VERSION: "0.0.0"
       SWIFT_VERSION: "6"
+      configs:
+        debug:
+          ENABLE_TESTABILITY: YES
     dependencies:
       - target: PaEventKit
+    scheme:
+      testTargets:
+        - PaWMTests
+      gatherCoverageData: true
   
   PaEventKit:
     type: framework
@@ -55,6 +69,66 @@ targets:
     settings:
       MARKETING_VERSION: "0.0.0"
       SWIFT_VERSION: "6"
+      configs:
+        debug:
+          ENABLE_TESTABILITY: YES
+    scheme:
+      testTargets:
+        - PaEventKitTests
+      gatherCoverageData: true
 
+  PaEventKitTests:
+    type: bundle.unit-test
+    platform: macOS
+    deploymentTarget: "26.0"
+    sources:
+      - PaEventKitTests
+    settings:
+      GENERATE_INFOPLIST_FILE: YES
+      SWIFT_VERSION: "6"
+    dependencies:
+      - target: PaEventKit
 
+  PaWMTests:
+    type: bundle.unit-test
+    platform: macOS
+    deploymentTarget: "26.0"
+    sources:
+      - PaWMTests
+    settings:
+      GENERATE_INFOPLIST_FILE: YES
+      SWIFT_VERSION: "6"
+      TEST_HOST: $(BUILT_PRODUCTS_DIR)/PaWM.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/PaWM
+      BUNDLE_LOADER: $(TEST_HOST)
+    dependencies:
+      - target: PaWM
 
+  PaSettingsUITests:
+    type: bundle.unit-test
+    platform: macOS
+    deploymentTarget: "26.0"
+    sources:
+      - PaSettingsUITests
+    settings:
+      GENERATE_INFOPLIST_FILE: YES
+      SWIFT_VERSION: "6"
+      TEST_HOST: $(BUILT_PRODUCTS_DIR)/PaSettingsUI.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/PaSettingsUI
+      BUNDLE_LOADER: $(TEST_HOST)
+    dependencies:
+      - target: PaSettingsUI
+
+schemes:
+  pineapplewm:
+    build:
+      targets:
+        PaEventKit: all
+        PaWM: all
+        PaSettingsUI: all
+        PaEventKitTests: [test]
+        PaWMTests: [test]
+        PaSettingsUITests: [test]
+    test:
+      targets:
+        - PaEventKitTests
+        - PaWMTests
+        - PaSettingsUITests
