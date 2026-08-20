@@ -5,7 +5,7 @@ struct PineappleWMApp: App {
     private let screens: [ConfigurationPane] = [
         ConfigurationPane("Profiles") { WorkspaceSwitcherView() },
         ConfigurationPane("General Settings") { Text("Settings") },
-        ConfigurationPane("About") { Text("About") }
+        ConfigurationPane("About") { AboutView() }
     ]
 
     var body: some Scene {
