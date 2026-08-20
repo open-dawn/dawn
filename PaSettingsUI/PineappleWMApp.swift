@@ -14,7 +14,7 @@ struct PineappleWMApp: App {
                 ForEach(screens, id: \.name) { screen in
                     Tab(screen.name, systemImage: "") {
                         screen.content
-                            // .padding(16)
+                            .padding(16)
                     }
                 }
             }
