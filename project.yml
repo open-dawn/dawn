@@ -74,6 +74,7 @@ targets:
     settings:
       base:
         MARKETING_VERSION: "0.0.0"
+        SWIFT_VERSION: "6"
       configs:
         Debug:
           ENABLE_TESTABILITY: YES
