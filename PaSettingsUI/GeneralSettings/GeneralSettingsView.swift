@@ -35,17 +35,33 @@ struct GeneralSettingsView: View {
 
     @ViewBuilder
     private func SettingRow(_ setting: SettingItem<Self.ViewModel>) -> some View {
-        switch setting.inputType {
-        case .toggle(let keyPath):
-            Toggle(setting.title, isOn: Binding(
-                get: { vm[keyPath: keyPath] },
-                set: { vm[keyPath: keyPath] = $0 }
-            ))
-        case .textField(let keyPath):
-            TextField(setting.title, text: Binding(
-                get: { vm[keyPath: keyPath] },
-                set: { vm[keyPath: keyPath] = $0 }
-            ))
+        HStack {
+            switch setting.inputType {
+            case .toggle(let keyPath):
+                Toggle(setting.title, isOn: Binding(
+                    get: { vm[keyPath: keyPath] },
+                    set: { vm[keyPath: keyPath] = $0 }
+                ))
+                
+                Button("Reset \(setting.title) to default value", systemImage: "arrow.circlepath") {
+                    vm.resetSettingToDefault(setting)
+                }
+                .labelStyle(.iconOnly)
+                .disabled(vm[keyPath: keyPath] == setting.defaultValue as? Bool)
+
+
+            case .textField(let keyPath):
+                TextField(setting.title, text: Binding(
+                    get: { vm[keyPath: keyPath] },
+                    set: { vm[keyPath: keyPath] = $0 }
+                ))
+                Button("Reset \(setting.title) to default value", systemImage: "arrow.circlepath") {
+                    vm.resetSettingToDefault(setting)
+                }
+                .labelStyle(.iconOnly)
+                .disabled(vm[keyPath: keyPath] == setting.defaultValue as? String)
+            }
         }
+        .tint(.gray)
     }
 }

@@ -6,7 +6,7 @@ extension GeneralSettingsView {
     final class ViewModel {
         private var openAtLogin: Bool
         private var defaultContextName: String
-        let sectionsWithSettings: [SettingSection<ViewModel>]
+        var sectionsWithSettings: [SettingSection<ViewModel>]
         var error: NSError?
 
         init() {
@@ -17,8 +17,9 @@ extension GeneralSettingsView {
                 SettingSection(
                     title: "Global",
                     settings: [
-                        SettingItem("Open at login", desc: "", type: .toggle(\.openAtLogin)),
-                        SettingItem("Default context name", desc: "", type: .textField(\.defaultContextName))
+                        SettingItem("Open at login", desc: "", type: .toggle(\.openAtLogin), defaultValue: false),
+                        SettingItem("Default context name", desc: "",
+                                    type: .textField(\.defaultContextName), defaultValue: "Testing")
                     ]
                 )
             ]
@@ -38,12 +39,29 @@ extension GeneralSettingsView {
         }
 
         public func resetSettingsToDefaults() {
-            // TODO: implement this function
-            print("Calling resetSettingsToDefaults()")
+            // TODO: implement this function with settings storage
+            for section in sectionsWithSettings {
+                for setting in section.settings {
+                    self.resetSettingToDefault(setting)
+                }
+            } 
         }
 
         public func getCurrentSettings() throws {
             // TODO: implement this function
+        }
+
+        public func resetSettingToDefault(_ setting: SettingItem<ViewModel>) {
+            let anyKeyPath = setting.inputType.getKeyPath(self)
+            
+            if let boolPath = anyKeyPath as? ReferenceWritableKeyPath<ViewModel, Bool>,
+               let boolValue = setting.defaultValue as? Bool {
+                self[keyPath: boolPath] = boolValue
+                
+            } else if let stringPath = anyKeyPath as? ReferenceWritableKeyPath<ViewModel, String>,
+                      let stringValue = setting.defaultValue as? String {
+                self[keyPath: stringPath] = stringValue
+            }
         }
     }
 }

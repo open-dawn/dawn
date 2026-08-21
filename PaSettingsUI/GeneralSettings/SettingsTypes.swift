@@ -10,6 +10,13 @@ enum SettingInputType<ViewModel> {
             case .textField(let keyPath): return vm[keyPath: keyPath]
         }
     }
+
+    func getKeyPath(_ vm: ViewModel) -> AnyKeyPath {
+        switch (self) {
+        case .toggle(let keyPath): return keyPath
+        case .textField(let keyPath): return keyPath
+        }
+    }
 }
 
 struct SettingItem<ViewModel>: Identifiable {
@@ -17,11 +24,13 @@ struct SettingItem<ViewModel>: Identifiable {
     let title: String
     let description: String
     let inputType: SettingInputType<ViewModel>
+    let defaultValue: Any
 
-    init(_ title: String, desc: String, type: SettingInputType<ViewModel>) {
+    init(_ title: String, desc: String, type: SettingInputType<ViewModel>, defaultValue: Any) {
         self.title = title
         self.description = desc
         self.inputType = type
+        self.defaultValue = defaultValue
     }
 }
 
