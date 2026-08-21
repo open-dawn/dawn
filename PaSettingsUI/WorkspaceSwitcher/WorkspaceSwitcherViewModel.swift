@@ -1,21 +1,20 @@
 import Foundation
 
-// TODO: PT-BR Commentary
-// Talvez seja necessario mudar a logica para esses valores sempre
-// existirem na memoria apos troca de tabs
 extension WorkspaceSwitcherView {
     @Observable
-    class ViewModel {
+    class ViewModel: BaseViewModel {
         private(set) var contexts: [Context]
         private(set) var contextActive: Context?
+        
         private(set) var error: NSError?
-        private(set) var loading: Bool
+        private(set) var errorMessage: String?
+        private(set) var isLoading: Bool
 
         init() {
             self.contexts = []
             self.error = nil
-            self.loading = true
-            defer { self.loading = false }
+            self.isLoading = true
+            defer { self.isLoading = false }
 
             try! self.fetchContexts()
         }

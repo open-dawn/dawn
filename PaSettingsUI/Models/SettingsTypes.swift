@@ -1,6 +1,6 @@
 import Foundation
 
-enum SettingInputType<ViewModel> {
+enum SettingInputType<ViewModel: BaseViewModel> {
     case toggle(ReferenceWritableKeyPath<ViewModel, Bool>)
     case textField(ReferenceWritableKeyPath<ViewModel, String>)
 
@@ -19,7 +19,7 @@ enum SettingInputType<ViewModel> {
     }
 }
 
-struct SettingItem<ViewModel>: Identifiable {
+struct SettingItem<ViewModel: BaseViewModel>: Identifiable {
     let id: UUID = UUID()
     let title: String
     let description: String
@@ -34,7 +34,7 @@ struct SettingItem<ViewModel>: Identifiable {
     }
 }
 
-struct SettingSection<ViewModel>: Identifiable {
+struct SettingSection<ViewModel: BaseViewModel>: Identifiable {
     let id: UUID = UUID()
     let title: String
     let settings: [SettingItem<ViewModel>]

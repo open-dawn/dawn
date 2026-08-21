@@ -3,23 +3,30 @@ import SwiftUI
 
 extension GeneralSettingsView {
     @Observable
-    final class ViewModel {
+    final class ViewModel: BaseViewModel {
         private var openAtLogin: Bool
         private var defaultContextName: String
+
         var sectionsWithSettings: [SettingSection<ViewModel>]
-        var error: NSError?
+
+        private(set) var error: NSError?
+        private(set) var errorMessage: String?
+        private(set) var isLoading: Bool
 
         init() {
+            self.isLoading = true
+            defer { self.isLoading = false }
+
             self.openAtLogin = false
             self.defaultContextName = "Context #id"
             self.error = nil
+            self.errorMessage = nil
             self.sectionsWithSettings = [
                 SettingSection(
                     title: "Global",
                     settings: [
                         SettingItem("Open at login", desc: "", type: .toggle(\.openAtLogin), defaultValue: false),
-                        SettingItem("Default context name", desc: "",
-                                    type: .textField(\.defaultContextName), defaultValue: "Testing")
+                        SettingItem("Default name", desc: "", type: .textField(\.defaultContextName), defaultValue: "Name")
                     ]
                 )
             ]
