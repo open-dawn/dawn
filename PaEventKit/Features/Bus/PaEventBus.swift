@@ -3,7 +3,8 @@ import Foundation
 public final class PaEventBus: @unchecked Sendable {
     private struct Registration {
         weak var listener: Listener?
-        let kinds: Set<PaEventKind>?
+        var kinds: Set<PaEventKind>?
+        let receivesAsks: Bool
     }
 
     private let lock = NSLock()
@@ -12,11 +13,35 @@ public final class PaEventBus: @unchecked Sendable {
     public init() {}
 
     public func addListener(_ listener: Listener, kinds: Set<PaEventKind>? = nil) {
+        register(listener, kinds: kinds, receivesAsks: true)
+    }
+
+    func addPublishOnlyListener(_ listener: Listener, kinds: Set<PaEventKind>? = nil) {
+        register(listener, kinds: kinds, receivesAsks: false)
+    }
+
+    func setListenerKinds(_ listener: Listener, kinds: Set<PaEventKind>?) {
+        lock.lock()
+        defer { lock.unlock() }
+
+        guard let index = registrations.firstIndex(where: { $0.listener === listener }) else {
+            return
+        }
+        registrations[index].kinds = kinds
+    }
+
+    private func register(
+        _ listener: Listener,
+        kinds: Set<PaEventKind>?,
+        receivesAsks: Bool
+    ) {
         lock.lock()
         defer { lock.unlock() }
 
         pruneDeadRegistrationsLocked()
-        registrations.append(Registration(listener: listener, kinds: kinds))
+        registrations.append(
+            Registration(listener: listener, kinds: kinds, receivesAsks: receivesAsks)
+        )
     }
 
     public func removeListener(_ listener: Listener) {
@@ -27,10 +52,8 @@ public final class PaEventBus: @unchecked Sendable {
     }
 
     public func publish(_ event: PaEvent) {
-        let listeners = matchingListeners(for: event.kind)
-
         Task { @MainActor in
-            for listener in listeners {
+            for listener in matchingListeners(for: event.kind) {
                 listener.handle(event, reply: nil)
             }
         }
@@ -40,8 +63,7 @@ public final class PaEventBus: @unchecked Sendable {
         _ event: PaEvent,
         timeout: Duration = .seconds(5)
     ) async throws -> PaEvent {
-        let listeners = matchingListeners(for: event.kind)
-        guard !listeners.isEmpty else {
+        guard !matchingListeners(for: event.kind, includingPublishOnly: false).isEmpty else {
             throw PaEventAskError.noHandler
         }
 
@@ -58,14 +80,17 @@ public final class PaEventBus: @unchecked Sendable {
             }
 
             Task { @MainActor in
-                for listener in listeners {
+                for listener in matchingListeners(for: event.kind, includingPublishOnly: false) {
                     listener.handle(event, reply: reply)
                 }
             }
         }
     }
 
-    private func matchingListeners(for kind: PaEventKind) -> [Listener] {
+    private func matchingListeners(
+        for kind: PaEventKind,
+        includingPublishOnly: Bool = true
+    ) -> [Listener] {
         lock.lock()
         defer { lock.unlock() }
 
@@ -73,6 +98,7 @@ public final class PaEventBus: @unchecked Sendable {
 
         return registrations.compactMap { registration in
             guard let listener = registration.listener else { return nil }
+            guard includingPublishOnly || registration.receivesAsks else { return nil }
             guard registration.kinds == nil || registration.kinds!.contains(kind) else {
                 return nil
             }
