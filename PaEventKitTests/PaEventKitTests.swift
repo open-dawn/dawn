@@ -14,7 +14,7 @@ struct PaEventTests {
         let events: [PaEvent] = [
             .debugPing(PaDebugPingEvent()),
             .debugPong(PaDebugPongEvent(message: "hello")),
-            .switchSpace(PaSwitchSpaceEvent(spaceIndex: 3)),
+            .switchSpace(PaSwitchSpaceEvent(spaceIndex: 3))
         ]
 
         let encoder = JSONEncoder()
