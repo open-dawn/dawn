@@ -18,83 +18,150 @@ private final class TestListener: Listener {
     }
 }
 
-@Test @MainActor func publishDeliversToMatchingListener() async throws {
-    let bus = PaEventBus()
-    let listener = TestListener()
-    bus.addListener(listener, kinds: [.switchSpace])
+@Suite("PaEventBus")
+@MainActor
+struct PaEventBusTests {
+    @Suite("Publish")
+    @MainActor
+    struct Publish {
+        @Test func deliversToMatchingListener() async throws {
+            let bus = PaEventBus()
+            let listener = TestListener()
+            bus.addListener(listener, kinds: [.switchSpace])
 
-    let event = PaEvent.switchSpace(PaSwitchSpaceEvent(spaceIndex: 1))
-    bus.publish(event)
+            let event = PaEvent.switchSpace(PaSwitchSpaceEvent(spaceIndex: 1))
+            bus.publish(event)
 
-    try await Task.sleep(for: .milliseconds(50))
+            try await Task.sleep(for: .milliseconds(50))
 
-    #expect(listener.handledEvents == [event])
-    #expect(listener.handledReplies == [false])
-}
+            #expect(listener.handledEvents == [event])
+            #expect(listener.handledReplies == [false])
+        }
 
-@Test @MainActor func publishRespectsKindFilter() async throws {
-    let bus = PaEventBus()
-    let listener = TestListener()
-    bus.addListener(listener, kinds: [.debugPing])
+        @Test func respectsKindFilter() async throws {
+            let bus = PaEventBus()
+            let listener = TestListener()
+            bus.addListener(listener, kinds: [.debugPing])
 
-    bus.publish(.switchSpace(PaSwitchSpaceEvent(spaceIndex: 1)))
+            bus.publish(.switchSpace(PaSwitchSpaceEvent(spaceIndex: 1)))
 
-    try await Task.sleep(for: .milliseconds(50))
+            try await Task.sleep(for: .milliseconds(50))
 
-    #expect(listener.handledEvents.isEmpty)
-}
+            #expect(listener.handledEvents.isEmpty)
+        }
 
-@Test @MainActor func askReturnsReplyFromHandler() async throws {
-    let bus = PaEventBus()
-    let listener = TestListener()
-    listener.replyHandler = { event, reply in
-        if case .debugPing = event {
-            reply?(.debugPong(PaDebugPongEvent(message: "ok")))
+        @Test func deliversToPublishOnlyListener() async throws {
+            let bus = PaEventBus()
+            let listener = TestListener()
+            bus.addPublishOnlyListener(listener, kinds: [.switchSpace])
+
+            let event = PaEvent.switchSpace(PaSwitchSpaceEvent(spaceIndex: 1))
+            bus.publish(event)
+
+            try await Task.sleep(for: .milliseconds(50))
+
+            #expect(listener.handledEvents == [event])
+        }
+
+        @Test func setListenerKindsUpdatesFilter() async throws {
+            let bus = PaEventBus()
+            let listener = TestListener()
+            bus.addPublishOnlyListener(listener, kinds: [])
+
+            bus.publish(.switchSpace(PaSwitchSpaceEvent(spaceIndex: 1)))
+            try await Task.sleep(for: .milliseconds(50))
+            #expect(listener.handledEvents.isEmpty)
+
+            bus.setListenerKinds(listener, kinds: [.switchSpace])
+            let event = PaEvent.switchSpace(PaSwitchSpaceEvent(spaceIndex: 2))
+            bus.publish(event)
+            try await Task.sleep(for: .milliseconds(50))
+            #expect(listener.handledEvents == [event])
+        }
+
+        @Test func removeListenerStopsDelivery() async throws {
+            let bus = PaEventBus()
+            let listener = TestListener()
+            bus.addListener(listener, kinds: [.switchSpace])
+
+            let event = PaEvent.switchSpace(PaSwitchSpaceEvent(spaceIndex: 1))
+            bus.publish(event)
+            try await Task.sleep(for: .milliseconds(50))
+            #expect(listener.handledEvents == [event])
+
+            bus.removeListener(listener)
+            bus.publish(.switchSpace(PaSwitchSpaceEvent(spaceIndex: 2)))
+            try await Task.sleep(for: .milliseconds(50))
+            #expect(listener.handledEvents == [event])
         }
     }
-    bus.addListener(listener)
 
-    let reply = try await bus.ask(.debugPing(PaDebugPingEvent()), timeout: .seconds(1))
+    @Suite("Ask")
+    @MainActor
+    struct Ask {
+        @Test func returnsReplyFromHandler() async throws {
+            let bus = PaEventBus()
+            let listener = TestListener()
+            listener.replyHandler = { event, reply in
+                if case .debugPing = event {
+                    reply?(.debugPong(PaDebugPongEvent(message: "ok")))
+                }
+            }
+            bus.addListener(listener)
 
-    #expect(reply == .debugPong(PaDebugPongEvent(message: "ok")))
-    #expect(listener.handledReplies == [true])
-}
+            let reply = try await bus.ask(.debugPing(PaDebugPingEvent()), timeout: .seconds(1))
 
-@Test @MainActor func askThrowsNoHandlerWhenNoListeners() async {
-    let bus = PaEventBus()
+            #expect(reply == .debugPong(PaDebugPongEvent(message: "ok")))
+            #expect(listener.handledReplies == [true])
+        }
 
-    await #expect(throws: PaEventAskError.noHandler) {
-        _ = try await bus.ask(.debugPing(PaDebugPingEvent()), timeout: .milliseconds(100))
+        @Test func throwsNoHandlerWhenNoListeners() async {
+            let bus = PaEventBus()
+
+            await #expect(throws: PaEventAskError.noHandler) {
+                _ = try await bus.ask(.debugPing(PaDebugPingEvent()), timeout: .milliseconds(100))
+            }
+        }
+
+        @Test func throwsTimeoutWhenHandlerDoesNotReply() async {
+            let bus = PaEventBus()
+            let listener = TestListener()
+            bus.addListener(listener, kinds: [.debugPing])
+
+            await #expect(throws: PaEventAskError.timeout) {
+                _ = try await bus.ask(.debugPing(PaDebugPingEvent()), timeout: .milliseconds(100))
+            }
+        }
+
+        @Test func throwsNoHandlerWhenOnlyPublishOnlyListenerMatches() async {
+            let bus = PaEventBus()
+            let listener = TestListener()
+            bus.addPublishOnlyListener(listener)
+
+            await #expect(throws: PaEventAskError.noHandler) {
+                _ = try await bus.ask(.debugPing(PaDebugPingEvent()), timeout: .milliseconds(100))
+            }
+        }
+
+        @Test func usesFirstReplyOnly() async throws {
+            let bus = PaEventBus()
+
+            let first = TestListener()
+            first.replyHandler = { _, reply in
+                reply?(.debugPong(PaDebugPongEvent(message: "first")))
+            }
+
+            let second = TestListener()
+            second.replyHandler = { _, reply in
+                reply?(.debugPong(PaDebugPongEvent(message: "second")))
+            }
+
+            bus.addListener(first)
+            bus.addListener(second)
+
+            let reply = try await bus.ask(.debugPing(PaDebugPingEvent()), timeout: .seconds(1))
+
+            #expect(reply == .debugPong(PaDebugPongEvent(message: "first")))
+        }
     }
-}
-
-@Test @MainActor func askThrowsTimeoutWhenHandlerDoesNotReply() async {
-    let bus = PaEventBus()
-    let listener = TestListener()
-    bus.addListener(listener, kinds: [.debugPing])
-
-    await #expect(throws: PaEventAskError.timeout) {
-        _ = try await bus.ask(.debugPing(PaDebugPingEvent()), timeout: .milliseconds(100))
-    }
-}
-
-@Test @MainActor func askUsesFirstReplyOnly() async throws {
-    let bus = PaEventBus()
-
-    let first = TestListener()
-    first.replyHandler = { _, reply in
-        reply?(.debugPong(PaDebugPongEvent(message: "first")))
-    }
-
-    let second = TestListener()
-    second.replyHandler = { _, reply in
-        reply?(.debugPong(PaDebugPongEvent(message: "second")))
-    }
-
-    bus.addListener(first)
-    bus.addListener(second)
-
-    let reply = try await bus.ask(.debugPing(PaDebugPingEvent()), timeout: .seconds(1))
-
-    #expect(reply == .debugPong(PaDebugPongEvent(message: "first")))
 }
