@@ -1,7 +1,7 @@
 import SwiftUI
 
 @main
-struct PineappleWMApp: App {
+struct MainApp: App {
     private let screens: [ConfigurationPane] = [
         ConfigurationPane("Profiles") { WorkspaceSwitcherView() },
         ConfigurationPane("General Settings") { GeneralSettingsView() },
