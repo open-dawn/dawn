@@ -6,6 +6,8 @@ extension WorkspaceSwitcherView {
         private(set) var contexts: [Context]
         private(set) var contextActive: Context?
         
+        private(set) var isCreatingOrEditing: Bool
+
         private(set) var error: NSError?
         private(set) var errorMessage: String?
         private(set) var isLoading: Bool
@@ -15,6 +17,8 @@ extension WorkspaceSwitcherView {
             self.error = nil
             self.isLoading = true
             defer { self.isLoading = false }
+
+            self.isCreatingOrEditing = false
 
             try! self.fetchContexts()
         }
@@ -37,7 +41,11 @@ extension WorkspaceSwitcherView {
 
         public func createContext() {
             // TODO: Implement the function
-            print("Creating a new context()")
+            self.isCreatingOrEditing = true
+        }
+
+        public func cancelCreateContext() {
+            self.isCreatingOrEditing = false
         }
 
 

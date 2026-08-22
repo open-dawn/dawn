@@ -2,11 +2,11 @@ import Foundation
 
 struct Context: Identifiable {
     let id: UUID
-    let name: String
-    let icon: String
-    let apps: [String]
+    var name: String
+    var icon: String
+    var apps: [ContextApp]
 
-    init(name: String, icon: String, apps: [String]) {
+    init(name: String, icon: String, apps: [ContextApp]) {
         self.id = UUID()
         self.name = name
         self.icon = icon
@@ -19,7 +19,7 @@ extension Context {
         Context(
             name: "New Context \(index)",
             icon: "gear",
-            apps: [ "VSCode", "Helium", "NaN" ]
+            apps: [ .init("VSCode"), .init("Helium"), .init("NaN") ]
         )
     }
 

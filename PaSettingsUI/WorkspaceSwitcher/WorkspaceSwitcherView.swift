@@ -10,7 +10,7 @@ struct WorkspaceSwitcherView: View {
                     Label(context.name, systemImage: context.icon)
                 }
                 TableColumn("Apps") { context in
-                    Text(context.apps.joined(separator: ", "))
+                    Text(context.apps.map{ $0.name }.joined(separator: ", "))
                 }
 
                 TableColumn("Actions") { context in
@@ -27,6 +27,7 @@ struct WorkspaceSwitcherView: View {
                             .tint(.red)
                     }
                 }
+                .width(100)
             }
 
             HStack {
@@ -37,6 +38,12 @@ struct WorkspaceSwitcherView: View {
                 Spacer()
 
                 Text("Total: \(vm.contexts.count), In use: \(vm.contextActive?.name ?? "...")")
+            }
+            .sheet(isPresented: Binding<Bool>(
+                get: { vm.isCreatingOrEditing },
+                set: { _ in vm.cancelCreateContext() }
+            )) {
+                ContextCreatorView()
             }
         }
     }
