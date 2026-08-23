@@ -50,7 +50,7 @@ extension WorkspaceSwitcherView {
 
 
         // MARK: - Fetch functions
-        private func fetchContexts() throws {
+        func fetchContexts() throws {
             self.contexts = Context.samples()
             self.contextActive = self.contexts[Int.random(in: 0..<contexts.count)]
             // TODO: Implement reading values from repository
