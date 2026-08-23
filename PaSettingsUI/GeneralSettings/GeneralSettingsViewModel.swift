@@ -4,8 +4,8 @@ import SwiftUI
 extension GeneralSettingsView {
     @Observable
     final class ViewModel: BaseViewModel {
-        private var openAtLogin: Bool
-        private var defaultContextName: String
+        private(set) var openAtLogin: Bool
+        private(set) var defaultContextName: String
 
         var sectionsWithSettings: [SettingSection<ViewModel>]
 

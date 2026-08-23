@@ -14,13 +14,11 @@ extension ContextCreatorView {
             self.isLoading = true
             defer { self.isLoading = false }
 
-            self.context = Context(name: "", icon: "", apps: [])
+            self.context = Context()
         }
 
         public func addNewDefaultApp() {
-            self.context.apps.append(
-                ContextApp("...")
-            )
+            self.context.apps.append(ContextApp())
         }
 
         public func removeApp(_ id: UUID) {

@@ -6,6 +6,13 @@ struct Context: Identifiable {
     var icon: String
     var apps: [ContextApp]
 
+    init() {
+        self.id = UUID()
+        self.name = ""
+        self.icon = ""
+        self.apps = [ContextApp]()
+    }
+
     init(name: String, icon: String, apps: [ContextApp]) {
         self.id = UUID()
         self.name = name
@@ -23,8 +30,8 @@ extension Context {
         )
     }
 
-    static func samples(_ length: Int = 8) -> [Context] {
-        guard (length > 0) else { return [] }
-        return (0 ..< length).map { i in Context.preview(i) }
+    static func samples(_ count: Int = 8) -> [Context] {
+        guard (count > 0) else { return [] }
+        return (0 ..< count).map { i in Context.preview(i) }
     }
 }
