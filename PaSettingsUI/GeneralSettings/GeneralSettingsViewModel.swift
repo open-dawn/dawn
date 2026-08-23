@@ -1,6 +1,7 @@
 import Foundation
 import SwiftUI
 
+// TODO: Create a different struct with settings for testing
 extension GeneralSettingsView {
     @Observable
     final class ViewModel: BaseViewModel {
@@ -64,11 +65,16 @@ extension GeneralSettingsView {
             if let boolPath = anyKeyPath as? ReferenceWritableKeyPath<ViewModel, Bool>,
                let boolValue = setting.defaultValue as? Bool {
                 self[keyPath: boolPath] = boolValue
+                return
                 
             } else if let stringPath = anyKeyPath as? ReferenceWritableKeyPath<ViewModel, String>,
                       let stringValue = setting.defaultValue as? String {
                 self[keyPath: stringPath] = stringValue
+                return
             }
+
+            error = NSError(domain: "PaSettingsUI", code: 404, userInfo: nil)
+            errorMessage = "Invalid setting"
         }
     }
 }
