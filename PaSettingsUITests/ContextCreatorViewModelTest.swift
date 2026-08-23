@@ -4,7 +4,7 @@ import Foundation
 
 @Suite("ContextCreator ViewModel")
 struct ContextCreatorViewModelTests{
-    @Test("starts a view model and check defaults values")
+    @Test("starts a view model with an empty context")
     func initialState() {
         let vm = ContextCreatorView.ViewModel()
     
@@ -48,7 +48,7 @@ struct ContextCreatorViewModelTests{
         #expect(vm.context.apps.count == 0)
     }
 
-    @Test("removing an app keeps the others apps")
+    @Test("removing an app keeps the other apps")
     func removeAppLeavesTheOthers() {
         let vm = ContextCreatorView.ViewModel()
         vm.addNewDefaultApp()

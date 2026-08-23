@@ -3,7 +3,7 @@ import Testing
 
 @Suite("GeneralSettings ViewModel")
 struct GeneralSettingsViewModelTests{
-    @Test("starts a view model and check defaults values")
+    @Test("starts a view model with no error")
     func initialState() {
         let vm = GeneralSettingsView.ViewModel()
         #expect(vm.error == nil)
@@ -39,5 +39,21 @@ struct GeneralSettingsViewModelTests{
                 #expect(value == defaultValue)
             }
         }
+
+        #expect(vm.error == nil)
+        #expect(vm.errorMessage == nil)
+    }
+
+    @Test("resetSettingToDefault sets error when default type mismatches")
+    func resetSettingToDefaultSetsErrorWhenTypeMismatches() {
+        let vm = GeneralSettingsView.ViewModel()
+        let toggle = vm.sectionsWithSettings[0].settings[0]
+        let invalid = SettingItem("Invalid item", desc: "Invalid description",
+                                   type: toggle.inputType,
+                                   defaultValue: "string isnt a bool")
+        vm.resetSettingToDefault(invalid)
+
+        #expect(vm.error != nil)
+        #expect(vm.errorMessage != nil)
     }
 }
