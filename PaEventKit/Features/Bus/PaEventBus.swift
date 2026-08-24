@@ -7,10 +7,13 @@ public final class PaEventBus: @unchecked Sendable {
         let receivesAsks: Bool
     }
 
-    private let lock = NSLock()
-    private var registrations: [Registration] = []
+    private let lock: NSLock
+    private var registrations: [Registration]
 
-    public init() {}
+    public init() {
+        self.lock = NSLock()
+        self.registrations = []
+    }
 
     public func addListener(_ listener: Listener, kinds: Set<PaEventKind>? = nil) {
         register(listener, kinds: kinds, receivesAsks: true)
