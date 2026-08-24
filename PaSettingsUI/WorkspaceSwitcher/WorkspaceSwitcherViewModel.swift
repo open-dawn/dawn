@@ -8,7 +8,7 @@ extension WorkspaceSwitcherView {
 
         private(set) var isCreatingOrEditing: Bool
 
-        private(set) var error: NSError?
+        private(set) var error: ViewModelError?
         private(set) var errorMessage: String?
         private(set) var isLoading: Bool
 
@@ -23,8 +23,8 @@ extension WorkspaceSwitcherView {
             do {
                 try self.fetchContexts()
             } catch {
-                self.error = error as NSError
-                self.errorMessage = error.localizedDescription
+                self.error = error
+                self.errorMessage = error.errorDescription
             }
         }
 
@@ -54,7 +54,7 @@ extension WorkspaceSwitcherView {
         }
 
         // MARK: - Fetch functions
-        func fetchContexts() throws {
+        func fetchContexts() throws(ViewModelError) {
             self.contexts = Context.samples()
             self.contextActive = self.contexts[Int.random(in: 0..<contexts.count)]
             // Pending: load contexts from a repository.

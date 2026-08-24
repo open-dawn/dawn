@@ -10,7 +10,7 @@ extension GeneralSettingsView {
 
         var sectionsWithSettings: [SettingSection<ViewModel>]
 
-        private(set) var error: NSError?
+        private(set) var error: ViewModelError?
         private(set) var errorMessage: String?
         private(set) var isLoading: Bool
 
@@ -40,8 +40,8 @@ extension GeneralSettingsView {
             do {
                 try self.getCurrentSettings()
             } catch {
-                self.error = error as NSError
-                self.errorMessage = error.localizedDescription
+                self.error = error
+                self.errorMessage = error.errorDescription
             }
         }
 
@@ -65,7 +65,7 @@ extension GeneralSettingsView {
             }
         }
 
-        public func getCurrentSettings() throws {
+        public func getCurrentSettings() throws(ViewModelError) {
             // Pending: load current settings from storage.
         }
 
@@ -82,8 +82,9 @@ extension GeneralSettingsView {
                 return
             }
 
-            error = NSError(domain: "PaSettingsUI", code: 404, userInfo: nil)
-            errorMessage = "Invalid setting"
+            let invalidError = ViewModelError.invalidSetting
+            self.error = invalidError
+            self.errorMessage = invalidError.errorDescription
         }
     }
 }

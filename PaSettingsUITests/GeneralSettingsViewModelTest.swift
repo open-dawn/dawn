@@ -54,7 +54,7 @@ struct GeneralSettingsViewModelTests {
                                    defaultValue: "string isnt a bool")
         viewModel.resetSettingToDefault(invalid)
 
-        #expect(viewModel.error != nil)
+        #expect(viewModel.error == ViewModelError.invalidSetting)
         #expect(viewModel.errorMessage != nil)
     }
 }

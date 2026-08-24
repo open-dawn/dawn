@@ -38,6 +38,8 @@ struct ContextCreatorViewModelTests {
         viewModel.addNewDefaultApp()
         viewModel.removeApp(UUID())
         #expect(viewModel.context.apps.count == 1)
+
+        #expect(viewModel.error == ViewModelError.invalidAccess)
     }
 
     @Test("removes the matching app")
