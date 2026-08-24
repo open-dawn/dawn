@@ -13,8 +13,8 @@ import Testing
 @MainActor
 @Suite("Settings Storage Integration Tests")
 struct SettingsStorageIntegrationTests {
-    @Test
-    func `Settings survive recreating repository and store`() async throws {
+    @Test("Settings survive recreating repository and store")
+    func settingsSurviveStoreRecreation() async throws {
         let suiteName = "SettingsStorageIntegrationTests.\(UUID().uuidString)"
         let defaults = try #require(
             UserDefaults(suiteName: suiteName)
