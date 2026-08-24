@@ -25,21 +25,7 @@ struct SettingsStorageIntegrationTests {
             defaults.removePersistentDomain(forName: suiteName)
         }
 
-        let taskReturn = Task { @MainActor in
-            return UserDefaultsSettingsRepository(
-                defaults: defaults
-            )
-        }
-
-        let firstRepository: UserDefaultsSettingsRepository
-
-        switch await taskReturn.result {
-        case .success(let returntedRepository):
-            firstRepository = returntedRepository
-        case .failure:
-            Issue.record("Error creating first UserDefaultsRepository")
-            return
-        }
+        let firstRepository = UserDefaultsSettingsRepository(defaults: defaults)
 
         let firstStore = try await SettingsStore(
             repository: firstRepository
@@ -80,21 +66,7 @@ struct SettingsStorageIntegrationTests {
             UserDefaults(suiteName: suiteName)
         )
 
-        let secondTaskReturn = Task { @MainActor in
-            return UserDefaultsSettingsRepository(
-                defaults: reloadedDefaults
-            )
-        }
-
-        let secondRepository: UserDefaultsSettingsRepository
-
-        switch await secondTaskReturn.result {
-        case .failure:
-            Issue.record("Error creating second UserDefaultsRepository")
-            return
-        case .success(let returnedRepository):
-            secondRepository = returnedRepository
-        }
+        let secondRepository = UserDefaultsSettingsRepository(defaults: reloadedDefaults)
 
         let secondStore = try await SettingsStore(
             repository: secondRepository
@@ -110,3 +82,5 @@ struct SettingsStorageIntegrationTests {
         )
     }
 }
+
+extension UserDefaults: @retroactive @unchecked Sendable { }
