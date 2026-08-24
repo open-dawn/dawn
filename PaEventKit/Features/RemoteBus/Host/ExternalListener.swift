@@ -9,13 +9,9 @@ final class ExternalListener: Listener {
     }
 
     func handle(_ event: PaEvent, reply: (@Sendable (PaEvent) -> Void)?) {
-        if reply != nil {
-            return
-        }
+        guard reply == nil else { return }
 
-        if let kinds, !kinds.contains(event.kind) {
-            return
-        }
+        guard kinds?.contains(event.kind) != false else { return }
 
         destination?.deliver(event)
     }
