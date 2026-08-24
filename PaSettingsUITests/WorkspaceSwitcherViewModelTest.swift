@@ -2,23 +2,23 @@ import Testing
 @testable import PaSettingsUI
 
 @Suite("WorkspaceSwitcher ViewModel")
-struct WorkspaceSwitcherViewModelTests{
+struct WorkspaceSwitcherViewModelTests {
     @Test("starts a view model with no modal")
     func initialState() {
-        let vm = WorkspaceSwitcherView.ViewModel()
-    
-        #expect(vm.error == nil)
-        #expect(vm.errorMessage == nil)
-        #expect(vm.isLoading == false)
-        #expect(vm.isCreatingOrEditing == false)
+        let viewModel = WorkspaceSwitcherView.ViewModel()
+
+        #expect(viewModel.error == nil)
+        #expect(viewModel.errorMessage == nil)
+        #expect(viewModel.isLoading == false)
+        #expect(viewModel.isCreatingOrEditing == false)
     }
 
     @Test("fetch contexts success doesnt throw error")
     func fetchContextsSuccess() {
-        let vm = WorkspaceSwitcherView.ViewModel()
-        try? vm.fetchContexts()
+        let viewModel = WorkspaceSwitcherView.ViewModel()
+        try? viewModel.fetchContexts()
 
-        #expect(vm.error == nil)
-        #expect(vm.errorMessage == nil)
+        #expect(viewModel.error == nil)
+        #expect(viewModel.errorMessage == nil)
     }
 }

@@ -5,7 +5,7 @@ extension WorkspaceSwitcherView {
     class ViewModel: BaseViewModel {
         private(set) var contexts: [Context]
         private(set) var contextActive: Context?
-        
+
         private(set) var isCreatingOrEditing: Bool
 
         private(set) var error: NSError?
@@ -20,27 +20,32 @@ extension WorkspaceSwitcherView {
 
             self.isCreatingOrEditing = false
 
-            try! self.fetchContexts()
+            do {
+                try self.fetchContexts()
+            } catch {
+                self.error = error as NSError
+                self.errorMessage = error.localizedDescription
+            }
         }
 
         // MARK: - User Interactions
         public func runContext(_ context: Context) {
-            // TODO: Implement the function
+            // Pending: run the selected context.
             print("Calling runContext()")
         }
 
         public func editContext(_ context: Context) {
-            // TODO: Implement the function
+            // Pending: edit the selected context.
             print("Calling editContext()")
         }
 
         public func deleteContext(_ context: Context) {
-            // TODO: Implement the function
+            // Pending: delete the selected context.
             print("Calling deleteContext()")
         }
 
         public func createContext() {
-            // TODO: Implement the function
+            // Pending: create a new context.
             self.isCreatingOrEditing = true
         }
 
@@ -48,12 +53,11 @@ extension WorkspaceSwitcherView {
             self.isCreatingOrEditing = false
         }
 
-
         // MARK: - Fetch functions
         func fetchContexts() throws {
             self.contexts = Context.samples()
             self.contextActive = self.contexts[Int.random(in: 0..<contexts.count)]
-            // TODO: Implement reading values from repository
+            // Pending: load contexts from a repository.
         }
     }
 }

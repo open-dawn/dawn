@@ -1,32 +1,32 @@
 import SwiftUI
 
 struct GeneralSettingsView: View {
-    @State private var vm = Self.ViewModel()
+    @State private var viewModel = Self.ViewModel()
 
     var body: some View {
         VStack {
             Form {
-                ForEach(vm.sectionsWithSettings, id: \.id) { section in
+                ForEach(viewModel.sectionsWithSettings, id: \.id) { section in
                     Section(section.title) {
                         ForEach(section.settings, id: \.id) { setting in
-                            SettingRow(setting)
+                            settingRow(setting)
                         }
                     }
                 }
             }
             .formStyle(.grouped)
-            
+
             Spacer()
 
             HStack {
                 Spacer()
                 Button("Reset defaults", systemImage: "arrow.circlepath") {
-                    vm.resetSettingsToDefaults()
+                    viewModel.resetSettingsToDefaults()
                 }
                 .tint(.yellow)
 
                 Button("Apply settings") {
-                    vm.setSettings()
+                    viewModel.setSettings()
                 }
                 .tint(.green)
             }
@@ -34,32 +34,31 @@ struct GeneralSettingsView: View {
     }
 
     @ViewBuilder
-    private func SettingRow(_ setting: SettingItem<Self.ViewModel>) -> some View {
+    private func settingRow(_ setting: SettingItem<Self.ViewModel>) -> some View {
         HStack {
             switch setting.inputType {
             case .toggle(let keyPath):
                 Toggle(setting.title, isOn: Binding(
-                    get: { vm[keyPath: keyPath] },
-                    set: { vm[keyPath: keyPath] = $0 }
+                    get: { viewModel[keyPath: keyPath] },
+                    set: { viewModel[keyPath: keyPath] = $0 }
                 ))
-                
+
                 Button("Reset \(setting.title) to default value", systemImage: "arrow.circlepath") {
-                    vm.resetSettingToDefault(setting)
+                    viewModel.resetSettingToDefault(setting)
                 }
                 .labelStyle(.iconOnly)
-                .disabled(vm[keyPath: keyPath] == setting.defaultValue as? Bool)
-
+                .disabled(viewModel[keyPath: keyPath] == setting.defaultValue as? Bool)
 
             case .textField(let keyPath):
                 TextField(setting.title, text: Binding(
-                    get: { vm[keyPath: keyPath] },
-                    set: { vm[keyPath: keyPath] = $0 }
+                    get: { viewModel[keyPath: keyPath] },
+                    set: { viewModel[keyPath: keyPath] = $0 }
                 ))
                 Button("Reset \(setting.title) to default value", systemImage: "arrow.circlepath") {
-                    vm.resetSettingToDefault(setting)
+                    viewModel.resetSettingToDefault(setting)
                 }
                 .labelStyle(.iconOnly)
-                .disabled(vm[keyPath: keyPath] == setting.defaultValue as? String)
+                .disabled(viewModel[keyPath: keyPath] == setting.defaultValue as? String)
             }
         }
         .tint(.gray)

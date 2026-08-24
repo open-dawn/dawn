@@ -1,28 +1,28 @@
 import SwiftUI
 
 struct WorkspaceSwitcherView: View {
-    @State private var vm = Self.ViewModel()
+    @State private var viewModel = Self.ViewModel()
 
     var body: some View {
         VStack {
-            Table(vm.contexts) {
+            Table(viewModel.contexts) {
                 TableColumn("Context") { context in
                     Label(context.name, systemImage: context.icon)
                 }
                 TableColumn("Apps") { context in
-                    Text(context.apps.map{ $0.name }.joined(separator: ", "))
+                    Text(context.apps.map { $0.name }.joined(separator: ", "))
                 }
 
                 TableColumn("Actions") { context in
                     HStack(spacing: 8) {
-                        Button("Run", systemImage: "figure.run") { vm.runContext(context) }
+                        Button("Run", systemImage: "figure.run") { viewModel.runContext(context) }
                             .tint(.green)
 
-                        Button("Edit", systemImage: "pencil") { vm.editContext(context) }
+                        Button("Edit", systemImage: "pencil") { viewModel.editContext(context) }
                             .labelStyle(.iconOnly)
                             .tint(.yellow)
 
-                        Button("Delete", systemImage: "trash", role: .destructive)  { vm.deleteContext(context) }
+                        Button("Delete", systemImage: "trash", role: .destructive) { viewModel.deleteContext(context) }
                             .labelStyle(.iconOnly)
                             .tint(.red)
                     }
@@ -32,16 +32,16 @@ struct WorkspaceSwitcherView: View {
 
             HStack {
                 Button("Create a new Context") {
-                    vm.createContext()
+                    viewModel.createContext()
                 }
 
                 Spacer()
 
-                Text("Total: \(vm.contexts.count), In use: \(vm.contextActive?.name ?? "...")")
+                Text("Total: \(viewModel.contexts.count), In use: \(viewModel.contextActive?.name ?? "...")")
             }
             .sheet(isPresented: Binding<Bool>(
-                get: { vm.isCreatingOrEditing },
-                set: { _ in vm.cancelCreateContext() }
+                get: { viewModel.isCreatingOrEditing },
+                set: { _ in viewModel.cancelCreateContext() }
             )) {
                 ContextCreatorView()
             }

@@ -3,62 +3,62 @@ import Foundation
 @testable import PaSettingsUI
 
 @Suite("ContextCreator ViewModel")
-struct ContextCreatorViewModelTests{
+struct ContextCreatorViewModelTests {
     @Test("starts a view model with an empty context")
     func initialState() {
-        let vm = ContextCreatorView.ViewModel()
-    
-        #expect(vm.error == nil)
-        #expect(vm.errorMessage == nil)
-        #expect(vm.isLoading == false)
+        let viewModel = ContextCreatorView.ViewModel()
 
-        #expect(vm.context.name.isEmpty)
-        #expect(vm.context.icon.isEmpty)
-        #expect(vm.context.apps.isEmpty)
+        #expect(viewModel.error == nil)
+        #expect(viewModel.errorMessage == nil)
+        #expect(viewModel.isLoading == false)
+
+        #expect(viewModel.context.name.isEmpty)
+        #expect(viewModel.context.icon.isEmpty)
+        #expect(viewModel.context.apps.isEmpty)
     }
-    
+
     @Test("append a new default app")
     func addNewDefaultApp() {
-        let vm = ContextCreatorView.ViewModel()
-        
-        vm.addNewDefaultApp()
-        #expect(vm.context.apps.count == 1)
-        
-        let newApp = vm.context.apps[0]
+        let viewModel = ContextCreatorView.ViewModel()
+
+        viewModel.addNewDefaultApp()
+        #expect(viewModel.context.apps.count == 1)
+
+        let newApp = viewModel.context.apps[0]
         #expect(newApp.name.isEmpty)
     }
-    
+
     @Test("ignores an unknown app id")
     func removeUnknownAppDoesNothing() {
-        let vm = ContextCreatorView.ViewModel()
-        
-        vm.removeApp(UUID())
-        #expect(vm.context.apps.count == 0)
-    
-        vm.addNewDefaultApp()
-        vm.removeApp(UUID())
-        #expect(vm.context.apps.count == 1)
+        let viewModel = ContextCreatorView.ViewModel()
+
+        viewModel.removeApp(UUID())
+        #expect(viewModel.context.apps.count == 0)
+
+        viewModel.addNewDefaultApp()
+        viewModel.removeApp(UUID())
+        #expect(viewModel.context.apps.count == 1)
     }
-    
+
     @Test("removes the matching app")
     func removeApp() {
-        let vm = ContextCreatorView.ViewModel()
-        vm.addNewDefaultApp()
-        vm.removeApp(vm.context.apps[0].id)
-        #expect(vm.context.apps.count == 0)
+        let viewModel = ContextCreatorView.ViewModel()
+        viewModel.addNewDefaultApp()
+        viewModel.removeApp(viewModel.context.apps[0].id)
+        #expect(viewModel.context.apps.count == 0)
     }
 
     @Test("removing an app keeps the other apps")
     func removeAppLeavesTheOthers() {
-        let vm = ContextCreatorView.ViewModel()
-        vm.addNewDefaultApp()
-        vm.addNewDefaultApp()
+        let viewModel = ContextCreatorView.ViewModel()
+        viewModel.addNewDefaultApp()
+        viewModel.addNewDefaultApp()
 
-        let firstAppId = vm.context.apps[0].id
-        let secondAppId = vm.context.apps[1].id
-        vm.removeApp(firstAppId)
+        let firstAppId = viewModel.context.apps[0].id
+        let secondAppId = viewModel.context.apps[1].id
+        viewModel.removeApp(firstAppId)
 
-        #expect(vm.context.apps.count == 1)
-        #expect(vm.context.apps[0].id == secondAppId)
+        #expect(viewModel.context.apps.count == 1)
+        #expect(viewModel.context.apps[0].id == secondAppId)
     }
 }

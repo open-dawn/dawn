@@ -2,36 +2,37 @@ import Testing
 @testable import PaSettingsUI
 
 @Suite("GeneralSettings ViewModel")
-struct GeneralSettingsViewModelTests{
+struct GeneralSettingsViewModelTests {
     @Test("starts a view model with no error")
     func initialState() {
-        let vm = GeneralSettingsView.ViewModel()
-        #expect(vm.error == nil)
-        #expect(vm.errorMessage == nil)
-        #expect(vm.isLoading == false)
-        #expect(!vm.sectionsWithSettings.isEmpty)
+        let viewModel = GeneralSettingsView.ViewModel()
+        #expect(viewModel.error == nil)
+        #expect(viewModel.errorMessage == nil)
+        #expect(viewModel.isLoading == false)
+        #expect(!viewModel.sectionsWithSettings.isEmpty)
     }
-    
+
     @Test("reset all settings to default value")
     func resetSettingsToDefault() {
-        let vm = GeneralSettingsView.ViewModel()
+        let viewModel = GeneralSettingsView.ViewModel()
         // Change values to random
-        for section in vm.sectionsWithSettings {
+        for section in viewModel.sectionsWithSettings {
             for setting in section.settings {
-                let anyKeyPath = setting.inputType.getKeyPath(vm)
+                let anyKeyPath = setting.inputType.getKeyPath(viewModel)
                 if let boolPath = anyKeyPath as? ReferenceWritableKeyPath<GeneralSettingsView.ViewModel, Bool> {
-                    vm[keyPath: boolPath].toggle()
-                } else if let stringPath = anyKeyPath as? ReferenceWritableKeyPath<GeneralSettingsView.ViewModel, String> {
-                    vm[keyPath: stringPath] += "__"
+                    viewModel[keyPath: boolPath].toggle()
+                } else if let stringPath = anyKeyPath
+                    as? ReferenceWritableKeyPath<GeneralSettingsView.ViewModel, String> {
+                    viewModel[keyPath: stringPath] += "__"
                 }
             }
         }
 
-        vm.resetSettingsToDefaults()
+        viewModel.resetSettingsToDefaults()
 
-        for section in vm.sectionsWithSettings {
+        for section in viewModel.sectionsWithSettings {
             for setting in section.settings {
-                let value = setting.inputType.getAssociatedValue(vm) as? AnyHashable
+                let value = setting.inputType.getAssociatedValue(viewModel) as? AnyHashable
                 let defaultValue = setting.defaultValue as? AnyHashable
 
                 #expect(value != nil)
@@ -40,20 +41,20 @@ struct GeneralSettingsViewModelTests{
             }
         }
 
-        #expect(vm.error == nil)
-        #expect(vm.errorMessage == nil)
+        #expect(viewModel.error == nil)
+        #expect(viewModel.errorMessage == nil)
     }
 
     @Test("resetSettingToDefault sets error when default type mismatches")
     func resetSettingToDefaultSetsErrorWhenTypeMismatches() {
-        let vm = GeneralSettingsView.ViewModel()
-        let toggle = vm.sectionsWithSettings[0].settings[0]
+        let viewModel = GeneralSettingsView.ViewModel()
+        let toggle = viewModel.sectionsWithSettings[0].settings[0]
         let invalid = SettingItem("Invalid item", desc: "Invalid description",
                                    type: toggle.inputType,
                                    defaultValue: "string isnt a bool")
-        vm.resetSettingToDefault(invalid)
+        viewModel.resetSettingToDefault(invalid)
 
-        #expect(vm.error != nil)
-        #expect(vm.errorMessage != nil)
+        #expect(viewModel.error != nil)
+        #expect(viewModel.errorMessage != nil)
     }
 }

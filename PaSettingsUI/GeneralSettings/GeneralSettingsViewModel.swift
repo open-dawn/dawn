@@ -1,7 +1,7 @@
 import Foundation
 import SwiftUI
 
-// TODO: Create a different struct with settings for testing
+// Pending: create a different struct with settings for testing.
 extension GeneralSettingsView {
     @Observable
     final class ViewModel: BaseViewModel {
@@ -27,17 +27,27 @@ extension GeneralSettingsView {
                     title: "Global",
                     settings: [
                         SettingItem("Open at login", desc: "", type: .toggle(\.openAtLogin), defaultValue: false),
-                        SettingItem("Default name", desc: "", type: .textField(\.defaultContextName), defaultValue: "Name")
+                        SettingItem(
+                            "Default name",
+                            desc: "",
+                            type: .textField(\.defaultContextName),
+                            defaultValue: "Name"
+                        )
                     ]
                 )
             ]
 
-            try! self.getCurrentSettings()
+            do {
+                try self.getCurrentSettings()
+            } catch {
+                self.error = error as NSError
+                self.errorMessage = error.localizedDescription
+            }
         }
 
         // MARK: - Sync function
         public func setSettings() {
-            // TODO: implement this function
+            // Pending: persist current settings.
             print("Calling setSettings()")
             for section in sectionsWithSettings {
                 for setting in section.settings {
@@ -47,26 +57,25 @@ extension GeneralSettingsView {
         }
 
         public func resetSettingsToDefaults() {
-            // TODO: implement this function with settings storage
+            // Pending: reset settings using persistent storage.
             for section in sectionsWithSettings {
                 for setting in section.settings {
                     self.resetSettingToDefault(setting)
                 }
-            } 
+            }
         }
 
         public func getCurrentSettings() throws {
-            // TODO: implement this function
+            // Pending: load current settings from storage.
         }
 
         public func resetSettingToDefault(_ setting: SettingItem<ViewModel>) {
             let anyKeyPath = setting.inputType.getKeyPath(self)
-            
+
             if let boolPath = anyKeyPath as? ReferenceWritableKeyPath<ViewModel, Bool>,
                let boolValue = setting.defaultValue as? Bool {
                 self[keyPath: boolPath] = boolValue
                 return
-                
             } else if let stringPath = anyKeyPath as? ReferenceWritableKeyPath<ViewModel, String>,
                       let stringValue = setting.defaultValue as? String {
                 self[keyPath: stringPath] = stringValue

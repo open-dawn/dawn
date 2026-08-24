@@ -1,25 +1,25 @@
 import SwiftUI
 
 struct ContextCreatorView: View {
-    @State private var vm: ViewModel = Self.ViewModel()
+    @State private var viewModel: ViewModel = Self.ViewModel()
     @Environment(\.dismiss) private var dismiss
 
     var body: some View {
         VStack {
             Form {
                 Section("Context information") {
-                    TextField("Context name", text: $vm.context.name)
-                    TextField("Icon", text: $vm.context.icon)
+                    TextField("Context name", text: $viewModel.context.name)
+                    TextField("Icon", text: $viewModel.context.icon)
                 }
 
                 Section("Apps to open") {
                     HStack {
                         Text("Insert a new app")
                         Spacer()
-                        Button("Add a new context") { vm.addNewDefaultApp() }
+                        Button("Add a new context") { viewModel.addNewDefaultApp() }
                     }
 
-                    ForEach($vm.context.apps, id: \.id) { $app in
+                    ForEach($viewModel.context.apps, id: \.id) { $app in
                         appRow($app)
                     }
                 }
@@ -28,7 +28,7 @@ struct ContextCreatorView: View {
             .formStyle(.grouped)
 
             Button("Create the context") {
-                vm.saveContext()
+                viewModel.saveContext()
                 dismiss()
             }
         }
@@ -39,7 +39,7 @@ struct ContextCreatorView: View {
         HStack {
             TextField("App name", text: app.name)
             Button("Delete \(app.wrappedValue.name)", systemImage: "trash", role: .destructive) {
-                vm.removeApp(app.wrappedValue.id)
+                viewModel.removeApp(app.wrappedValue.id)
             }
             .tint(.red)
             .labelStyle(.iconOnly)

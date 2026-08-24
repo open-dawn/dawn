@@ -31,7 +31,7 @@ extension Context {
     }
 
     static func samples(_ count: Int = 8) -> [Context] {
-        guard (count > 0) else { return [] }
-        return (0 ..< count).map { i in Context.preview(i) }
+        guard count > 0 else { return [] }
+        return (0 ..< count).map { index in Context.preview(index) }
     }
 }

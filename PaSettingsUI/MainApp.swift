@@ -23,4 +23,3 @@ struct MainApp: App {
         .windowResizability(.contentSize)
     }
 }
-

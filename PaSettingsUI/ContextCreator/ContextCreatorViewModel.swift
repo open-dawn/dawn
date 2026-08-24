@@ -5,7 +5,7 @@ extension ContextCreatorView {
     final class ViewModel: BaseViewModel {
         private(set) var error: NSError?
         private(set) var errorMessage: String?
-        private(set) var isLoading: Bool 
+        private(set) var isLoading: Bool
         var context: Context
 
         init() {
@@ -24,11 +24,11 @@ extension ContextCreatorView {
         public func removeApp(_ id: UUID) {
             if let index = context.apps.firstIndex(where: { $0.id == id }) {
                 context.apps.remove(at: index)
-            } 
+            }
         }
 
         public func saveContext() {
-            // TODO: Implement
-        } 
+            // Pending: persist the created context.
+        }
     }
 }
