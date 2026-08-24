@@ -13,8 +13,8 @@ import Testing
 @MainActor
 @Suite("SettingsStore Tests")
 struct SettingsStoreTests {
-    @Test
-    func `Missing repository document produces empty document`() async throws {
+    @Test("Missing repository document produces empty document")
+    func missingDocumentUsesEmptySettings() async throws {
         let repository = SettingsRepositorySpy()
         let sut = try await SettingsStore(repository: repository)
 
@@ -23,8 +23,8 @@ struct SettingsStoreTests {
         #expect(snapshot == .empty)
     }
 
-    @Test
-    func `Existing repository document becomes the initial snapshot`() async throws {
+    @Test("Existing repository document becomes the initial snapshot")
+    func existingDocumentBecomesSnapshot() async throws {
         let application = WorkspaceApplication(
             bundleIdentifier: "com.apple.Safari",
             displayName: "Safari",
@@ -53,8 +53,8 @@ struct SettingsStoreTests {
         #expect(initialSnapshot == storedDocument)
     }
 
-    @Test
-    func `Repository load errors propagate from initialization`() async {
+    @Test("Repository load errors propagate from initialization")
+    func loadErrorsPropagate() async {
         let expectedError = SettingsRepositoryError.corruptedData(
             description: "Invalid test data"
         )
@@ -70,8 +70,8 @@ struct SettingsStoreTests {
         }
     }
 
-    @Test
-    func `Invalid loaded documents are rejected`() async throws {
+    @Test("Invalid loaded documents are rejected")
+    func invalidDocumentsAreRejected() async throws {
         let duplicatedID = UUID()
 
         let firstContext = WorkspaceContext(
@@ -106,8 +106,8 @@ struct SettingsStoreTests {
         }
     }
 
-    @Test
-    func `Calling snapshot does not save anything`() async throws {
+    @Test("Calling snapshot does not save anything")
+    func snapshotDoesNotSave() async throws {
         let storedDocument = SettingsDocument.empty
         let repository = SettingsRepositorySpy(
             storedDocument: storedDocument
@@ -122,8 +122,8 @@ struct SettingsStoreTests {
         #expect(savedDocuments.isEmpty)
     }
 
-    @Test
-    func `Whitespace context name returns emptyContextName error`() async throws {
+    @Test("Whitespace context name returns emptyContextName error")
+    func emptyContextNameIsRejected() async throws {
         let application = makeApplication()
         let context = WorkspaceContext(
             name: "  \n   ",
@@ -148,8 +148,8 @@ struct SettingsStoreTests {
         }
     }
 
-    @Test
-    func `Whitespace symbol returns emptyContextSymbol error`() async throws {
+    @Test("Whitespace symbol returns emptyContextSymbol error")
+    func emptyContextSymbolIsRejected() async throws {
         let application = makeApplication()
         let context = WorkspaceContext(
             name: "Study",
@@ -174,8 +174,8 @@ struct SettingsStoreTests {
         }
     }
 
-    @Test
-    func `Whitespace bundle identifier returns emptyApplicationBundleIdentifier error`() async throws {
+    @Test("Whitespace bundle identifier returns emptyApplicationBundleIdentifier error")
+    func emptyBundleIdentifierIsRejected() async throws {
         let application = makeApplication(bundleIdentifier: "  \n   ")
         let context = WorkspaceContext(
             name: "Study",
@@ -200,8 +200,8 @@ struct SettingsStoreTests {
         }
     }
 
-    @Test
-    func `Whitespace display name returns emptyApplicationDisplayName error`() async throws {
+    @Test("Whitespace display name returns emptyApplicationDisplayName error")
+    func emptyDisplayNameIsRejected() async throws {
         let application = makeApplication(displayName: "   \n   ")
         let context = WorkspaceContext(
             name: "Study",
@@ -226,8 +226,8 @@ struct SettingsStoreTests {
         }
     }
 
-    @Test
-    func `Duplicate app UUID returns duplicateApplicationIdentifier error`() async throws {
+    @Test("Duplicate app UUID returns duplicateApplicationIdentifier error")
+    func duplicateApplicationIDIsRejected() async throws {
         let duplicateID = UUID()
         let firstApplication = makeApplication(id: duplicateID)
         let secondApplication = makeApplication(id: duplicateID)
@@ -254,8 +254,8 @@ struct SettingsStoreTests {
         }
     }
 
-    @Test
-    func `Duplicate bundle id returns duplicateApplication error`() async throws {
+    @Test("Duplicate bundle ID returns duplicateApplication error")
+    func duplicateBundleIdentifierIsRejected() async throws {
         let bundleID = "com.apple.Safari"
         let duplicateBundleID = "   \(bundleID.uppercased())   \n"
         let firstApplication = makeApplication(bundleIdentifier: bundleID)
@@ -283,8 +283,8 @@ struct SettingsStoreTests {
         }
     }
 
-    @Test
-    func `Create context persists and caches the new context`() async throws {
+    @Test("Create context persists and caches the new context")
+    func createContextPersistsAndCaches() async throws {
         let repository = SettingsRepositorySpy()
         let sut = try await SettingsStore(repository: repository)
         let applications = makeApplication()
@@ -305,8 +305,8 @@ struct SettingsStoreTests {
         #expect(savedDocuments == [snapshot])
     }
 
-    @Test
-    func `Create context does not save or modify cache when validation fails`() async throws {
+    @Test("Create context does not save or modify cache when validation fails")
+    func invalidCreateDoesNotMutate() async throws {
         let repository = SettingsRepositorySpy()
         let sut = try await SettingsStore(repository: repository)
 
@@ -329,8 +329,8 @@ struct SettingsStoreTests {
         #expect(savedDocuments.isEmpty)
     }
 
-    @Test
-    func `Create context leaves cache unchanged when persistence fails`() async throws {
+    @Test("Create context leaves cache unchanged when persistence fails")
+    func failedCreateDoesNotMutate() async throws {
         let repository = SettingsRepositorySpy(
             saveError: TestError.saveFailed
         )
@@ -355,8 +355,8 @@ struct SettingsStoreTests {
         #expect(savedDocuments.isEmpty)
     }
 
-    @Test
-    func `Concurrent context creations preserve every context`() async throws {
+    @Test("Concurrent context creations preserve every context")
+    func concurrentCreatesPreserveAllContexts() async throws {
         let repository = SettingsRepositorySpy(
             yieldBeforeSaving: true
         )
@@ -385,8 +385,8 @@ struct SettingsStoreTests {
         #expect(storedDocument == snapshot)
     }
 
-    @Test
-    func `Update context persists replacement while preserving order`() async throws {
+    @Test("Update context persists replacement while preserving order")
+    func updateContextPreservesOrder() async throws {
         let study = WorkspaceContext(
             name: "Study",
             symbol: "book"
@@ -420,8 +420,8 @@ struct SettingsStoreTests {
         #expect(savedDocuments == [snapshot])
     }
 
-    @Test
-    func `Update context rejects an unknown identifier without saving`() async throws {
+    @Test("Update context rejects an unknown identifier without saving")
+    func unknownContextUpdateIsRejected() async throws {
         let existing = WorkspaceContext(
             name: "Study",
             symbol: "book"
@@ -453,8 +453,8 @@ struct SettingsStoreTests {
         #expect(savedDocuments.isEmpty)
     }
 
-    @Test
-    func `Update context leaves original unchanged when validation fails`() async throws {
+    @Test("Update context leaves original unchanged when validation fails")
+    func invalidUpdateDoesNotMutate() async throws {
         let existing = WorkspaceContext(
             name: "Study",
             symbol: "book"
@@ -484,8 +484,8 @@ struct SettingsStoreTests {
         #expect(await repository.savedDocuments.isEmpty)
     }
 
-    @Test
-    func `Update context leaves original unchanged when persistence fails`() async throws {
+    @Test("Update context leaves original unchanged when persistence fails")
+    func failedUpdateDoesNotMutate() async throws {
         let existing = WorkspaceContext(
             name: "Study",
             symbol: "book"
@@ -516,8 +516,8 @@ struct SettingsStoreTests {
         #expect(await repository.savedDocuments.isEmpty)
     }
 
-    @Test
-    func `Delete context persists removal while preserving remaining order`() async throws {
+    @Test("Delete context persists removal while preserving remaining order")
+    func deleteContextPreservesOrder() async throws {
         let study = WorkspaceContext(
             name: "Study",
             symbol: "book"
@@ -548,8 +548,8 @@ struct SettingsStoreTests {
         #expect(savedDocuments == [snapshot])
     }
 
-    @Test
-    func `Delete context rejects an unknown identifier without saving`() async throws {
+    @Test("Delete context rejects an unknown identifier without saving")
+    func unknownContextDeleteIsRejected() async throws {
         let existing = WorkspaceContext(
             name: "Study",
             symbol: "book"
@@ -574,8 +574,8 @@ struct SettingsStoreTests {
         #expect(await repository.savedDocuments.isEmpty)
     }
 
-    @Test
-    func `Delete context leaves original unchanged when persistence fails`() async throws {
+    @Test("Delete context leaves original unchanged when persistence fails")
+    func failedDeleteDoesNotMutate() async throws {
         let existing = WorkspaceContext(
             name: "Study",
             symbol: "book"
@@ -600,8 +600,8 @@ struct SettingsStoreTests {
         #expect(await repository.savedDocuments.isEmpty)
     }
 
-    @Test
-    func `Set launch at login persists preference without changing contexts`() async throws {
+    @Test("Set launch at login persists preference without changing contexts")
+    func launchAtLoginPreservesContexts() async throws {
         let context = WorkspaceContext(
             name: "Study",
             symbol: "book"
@@ -622,8 +622,8 @@ struct SettingsStoreTests {
         #expect(savedDocuments == [snapshot])
     }
 
-    @Test
-    func `Set launch at login supports enabling and disabling`() async throws {
+    @Test("Set launch at login supports enabling and disabling")
+    func launchAtLoginCanBeToggled() async throws {
         let repository = SettingsRepositorySpy()
         let sut = try await SettingsStore(repository: repository)
 
@@ -643,8 +643,8 @@ struct SettingsStoreTests {
         )
     }
 
-    @Test
-    func `Set launch at login leaves preference unchanged when persistence fails`() async throws {
+    @Test("Set launch at login leaves preference unchanged when persistence fails")
+    func failedLaunchAtLoginDoesNotMutate() async throws {
         let initialDocument = SettingsDocument.empty
         let repository = SettingsRepositorySpy(
             storedDocument: initialDocument,

@@ -13,8 +13,8 @@ import Testing
 @MainActor
 @Suite("UserDefaultsSettingsRepository Tests")
 struct UserDefaultsSettingsRepositoryTests {
-    @Test
-    func `Load returns nil when no document exists`() async throws {
+    @Test("Load returns nil when no document exists")
+    func loadReturnsNilWhenMissing() async throws {
         let sut = RepositoryFixture()
         defer { sut.cleanUp() }
 
@@ -23,8 +23,8 @@ struct UserDefaultsSettingsRepositoryTests {
         #expect(document == nil)
     }
 
-    @Test
-    func `Save and load preserves the complete document`() async throws {
+    @Test("Save and load preserves the complete document")
+    func saveAndLoadRoundTripsDocument() async throws {
         let sut = RepositoryFixture()
         defer { sut.cleanUp() }
 
@@ -54,8 +54,8 @@ struct UserDefaultsSettingsRepositoryTests {
         #expect(loaded == expected)
     }
 
-    @Test
-    func `Load rejects a stored value that is not data`() async {
+    @Test("Load rejects a stored value that is not data")
+    func loadRejectsNonDataValue() async {
         let sut = RepositoryFixture()
         defer { sut.cleanUp() }
 
@@ -83,8 +83,8 @@ struct UserDefaultsSettingsRepositoryTests {
         )
     }
 
-    @Test
-    func `Load rejects malformed document data without deleting it`() async {
+    @Test("Load rejects malformed document data without deleting it")
+    func loadRejectsMalformedData() async {
         let sut = RepositoryFixture()
         defer { sut.cleanUp() }
 
@@ -114,8 +114,8 @@ struct UserDefaultsSettingsRepositoryTests {
         )
     }
 
-    @Test
-    func `Load rejects an unsupported schema version`() async throws {
+    @Test("Load rejects an unsupported schema version")
+    func loadRejectsUnsupportedSchema() async throws {
         let sut = RepositoryFixture()
         defer { sut.cleanUp() }
 
@@ -148,8 +148,8 @@ struct UserDefaultsSettingsRepositoryTests {
         )
     }
 
-    @Test
-    func `Save rejects unsupported schema without replacing existing data`() async throws {
+    @Test("Save rejects unsupported schema without replacing existing data")
+    func saveRejectsUnsupportedSchema() async throws {
         let sut = RepositoryFixture()
         defer { sut.cleanUp() }
 
