@@ -7,13 +7,13 @@
 
 import Foundation
 
-struct WorkspaceContext: Identifiable, Codable, Sendable, Equatable {
-    let id: UUID
-    var name: String
-    var symbol: String
-    var applications: [WorkspaceApplication]
+public struct WorkspaceContext: Identifiable, Codable, Sendable, Equatable {
+    public let id: UUID
+    public var name: String
+    public var symbol: String
+    public var applications: [WorkspaceApplication]
 
-    init(
+    public init(
         id: UUID = UUID(),
         name: String,
         symbol: String,

@@ -6,6 +6,7 @@
 //
 
 import Foundation
+import PaEventKit
 
 struct SettingsDocument: Codable, Equatable, Sendable {
 

@@ -6,6 +6,7 @@
 //
 
 import Foundation
+import PaEventKit
 
 actor SettingsStore {
     private let repository: any SettingsRepository

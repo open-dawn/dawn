@@ -107,6 +107,7 @@ targets:
       BUNDLE_LOADER: $(TEST_HOST)
     dependencies:
       - target: PaWM
+      - target: PaEventKit
 
   PaSettingsUITests:
     type: bundle.unit-test
