@@ -1,5 +1,5 @@
-import Testing
 @testable import PaSettingsUI
+import Testing
 
 @Suite("GeneralSettings ViewModel")
 struct GeneralSettingsViewModelTests {
@@ -22,7 +22,8 @@ struct GeneralSettingsViewModelTests {
                 if let boolPath = anyKeyPath as? ReferenceWritableKeyPath<GeneralSettingsView.ViewModel, Bool> {
                     viewModel[keyPath: boolPath].toggle()
                 } else if let stringPath = anyKeyPath
-                    as? ReferenceWritableKeyPath<GeneralSettingsView.ViewModel, String> {
+                    as? ReferenceWritableKeyPath<GeneralSettingsView.ViewModel, String>
+                {
                     viewModel[keyPath: stringPath] += "__"
                 }
             }
@@ -50,8 +51,8 @@ struct GeneralSettingsViewModelTests {
         let viewModel = GeneralSettingsView.ViewModel()
         let toggle = viewModel.sectionsWithSettings[0].settings[0]
         let invalid = SettingItem("Invalid item", desc: "Invalid description",
-                                   type: toggle.inputType,
-                                   defaultValue: "string isnt a bool")
+                                  type: toggle.inputType,
+                                  defaultValue: "string isnt a bool")
         viewModel.resetSettingToDefault(invalid)
 
         #expect(viewModel.error == ViewModelError.invalidSetting)

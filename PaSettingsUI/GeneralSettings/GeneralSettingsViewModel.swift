@@ -15,38 +15,39 @@ extension GeneralSettingsView {
         private(set) var isLoading: Bool
 
         init() {
-            self.isLoading = true
+            isLoading = true
             defer { self.isLoading = false }
 
-            self.openAtLogin = false
-            self.defaultContextName = "Context #id"
-            self.error = nil
-            self.errorMessage = nil
-            self.sectionsWithSettings = [
+            openAtLogin = false
+            defaultContextName = "Context #id"
+            error = nil
+            errorMessage = nil
+            sectionsWithSettings = [
                 SettingSection(
-                    title: "Global",
-                    settings: [
-                        SettingItem("Open at login", desc: "", type: .toggle(\.openAtLogin), defaultValue: false),
-                        SettingItem(
-                            "Default name",
-                            desc: "",
-                            type: .textField(\.defaultContextName),
-                            defaultValue: "Name"
-                        )
+                    title: "Global", settings: [
+                        SettingItem("Open at login",
+                                    desc: "",
+                                    type: .toggle(\.openAtLogin),
+                                    defaultValue: false),
+                        SettingItem("Default name",
+                                    desc: "",
+                                    type: .textField(\.defaultContextName),
+                                    defaultValue: "Name")
                     ]
                 )
             ]
 
             do {
-                try self.getCurrentSettings()
+                try getCurrentSettings()
             } catch {
                 self.error = error
-                self.errorMessage = error.errorDescription
+                errorMessage = error.errorDescription
             }
         }
 
         // MARK: - Sync function
-        public func setSettings() {
+
+        func setSettings() {
             // Pending: persist current settings.
             print("Calling setSettings()")
             for section in sectionsWithSettings {
@@ -56,35 +57,39 @@ extension GeneralSettingsView {
             }
         }
 
-        public func resetSettingsToDefaults() {
+        func resetSettingsToDefaults() {
             // Pending: reset settings using persistent storage.
             for section in sectionsWithSettings {
                 for setting in section.settings {
-                    self.resetSettingToDefault(setting)
+                    resetSettingToDefault(setting)
                 }
             }
         }
 
-        public func getCurrentSettings() throws(ViewModelError) {
-            // Pending: load current settings from storage.
+        func getCurrentSettings() throws(ViewModelError) {
+            // Pending: implement this function
         }
 
-        public func resetSettingToDefault(_ setting: SettingItem<ViewModel>) {
+        func resetSettingToDefault(_ setting: SettingItem<ViewModel>) {
             let anyKeyPath = setting.inputType.getKeyPath(self)
 
             if let boolPath = anyKeyPath as? ReferenceWritableKeyPath<ViewModel, Bool>,
-               let boolValue = setting.defaultValue as? Bool {
+               let boolValue = setting.defaultValue as? Bool
+            {
                 self[keyPath: boolPath] = boolValue
                 return
-            } else if let stringPath = anyKeyPath as? ReferenceWritableKeyPath<ViewModel, String>,
-                      let stringValue = setting.defaultValue as? String {
+            }
+
+            if let stringPath = anyKeyPath as? ReferenceWritableKeyPath<ViewModel, String>,
+               let stringValue = setting.defaultValue as? String
+            {
                 self[keyPath: stringPath] = stringValue
                 return
             }
 
             let invalidError = ViewModelError.invalidSetting
-            self.error = invalidError
-            self.errorMessage = invalidError.errorDescription
+            error = invalidError
+            errorMessage = invalidError.errorDescription
         }
     }
 }

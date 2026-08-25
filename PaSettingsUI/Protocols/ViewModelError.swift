@@ -7,7 +7,7 @@ enum ViewModelError: Error, LocalizedError, Equatable {
     case unknown
 
     var errorDescription: String? {
-        switch (self) {
+        switch self {
         case .invalidSetting: return "Invalid setting"
         case .invalidAccess: return "Attempt to access invalid position"
         default: return "unknown error"

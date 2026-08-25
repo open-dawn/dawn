@@ -1,6 +1,6 @@
-import Testing
 import Foundation
 @testable import PaSettingsUI
+import Testing
 
 @Suite("ContextCreator ViewModel")
 struct ContextCreatorViewModelTests {

@@ -1,5 +1,5 @@
-import Testing
 @testable import PaSettingsUI
+import Testing
 
 @Suite("WorkspaceSwitcher ViewModel")
 struct WorkspaceSwitcherViewModelTests {
