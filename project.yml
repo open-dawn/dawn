@@ -1,6 +1,11 @@
 name: pineapplewm
 options:
   bundleIdPrefix: dev.longhi.pineappleinc
+
+settings:
+  base:
+    SWIFT_VERSION: "6"
+
 targets:
 
   PaSettingsUI:
@@ -14,10 +19,10 @@ targets:
       properties:
         CFBundleDisplayName: "PineappleWM Settings"
     settings:
-      MARKETING_VERSION: "0.0.0"
-      SWIFT_VERSION: "6"
+      base:
+        MARKETING_VERSION: "0.0.0"
       configs:
-        debug:
+        Debug:
           ENABLE_TESTABILITY: YES
     dependencies:
       - target: PaEventKit
@@ -44,10 +49,10 @@ targets:
         CFBundleDisplayName: "PineappleWM Launch Agent"
         LSUIElement: true
     settings:
-      MARKETING_VERSION: "0.0.0"
-      SWIFT_VERSION: "6"
+      base:
+        MARKETING_VERSION: "0.0.0"
       configs:
-        debug:
+        Debug:
           ENABLE_TESTABILITY: YES
     dependencies:
       - target: PaEventKit
@@ -67,10 +72,10 @@ targets:
       properties:
         CFBundleDisplayName: "PineappleWM PaEventKit Framework"
     settings:
-      MARKETING_VERSION: "0.0.0"
-      SWIFT_VERSION: "6"
+      base:
+        MARKETING_VERSION: "0.0.0"
       configs:
-        debug:
+        Debug:
           ENABLE_TESTABILITY: YES
     scheme:
       testTargets:
