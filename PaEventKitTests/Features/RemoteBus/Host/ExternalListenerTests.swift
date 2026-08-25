@@ -20,7 +20,8 @@ private final class MockEventDelivering: EventDelivering, @unchecked Sendable {
 @Suite("ExternalListener")
 @MainActor
 struct ExternalListenerTests {
-    @Test func deliversPublishEvents() {
+    @Test("delivers matching publish events")
+    func deliversPublishEvents() {
         let destination = MockEventDelivering()
         let listener = ExternalListener(destination: destination, kinds: [.switchSpace])
 
@@ -29,7 +30,8 @@ struct ExternalListenerTests {
         #expect(destination.deliveredEvents() == [.switchSpace(PaSwitchSpaceEvent(spaceIndex: 1))])
     }
 
-    @Test func respectsKindFilter() {
+    @Test("ignores unsubscribed kinds")
+    func respectsKindFilter() {
         let destination = MockEventDelivering()
         let listener = ExternalListener(destination: destination, kinds: [.debugPing])
 
@@ -38,7 +40,22 @@ struct ExternalListenerTests {
         #expect(destination.deliveredEvents().isEmpty)
     }
 
-    @Test func doesNotDeliverAskReplies() {
+    @Test("nil filter delivers all kinds")
+    func deliversAllKindsWhenFilterIsNil() {
+        let destination = MockEventDelivering()
+        let listener = ExternalListener(destination: destination)
+
+        listener.handle(.switchSpace(PaSwitchSpaceEvent(spaceIndex: 1)), reply: nil)
+        listener.handle(.debugPing(PaDebugPingEvent()), reply: nil)
+
+        #expect(destination.deliveredEvents() == [
+            .switchSpace(PaSwitchSpaceEvent(spaceIndex: 1)),
+            .debugPing(PaDebugPingEvent())
+        ])
+    }
+
+    @Test("does not deliver ask replies")
+    func doesNotDeliverAskReplies() {
         let destination = MockEventDelivering()
         let listener = ExternalListener(destination: destination)
 

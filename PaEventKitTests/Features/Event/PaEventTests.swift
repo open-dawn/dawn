@@ -4,13 +4,15 @@ import Testing
 
 @Suite("PaEvent")
 struct PaEventTests {
-    @Test func exposesKind() {
+    @Test("kind matches each event case")
+    func exposesKind() {
         #expect(PaEvent.debugPing(PaDebugPingEvent()).kind == .debugPing)
         #expect(PaEvent.debugPong(PaDebugPongEvent()).kind == .debugPong)
         #expect(PaEvent.switchSpace(PaSwitchSpaceEvent(spaceIndex: 2)).kind == .switchSpace)
     }
 
-    @Test func roundTripsThroughJSON() throws {
+    @Test("Codable round-trips all cases")
+    func roundTripsThroughJSON() throws {
         let events: [PaEvent] = [
             .debugPing(PaDebugPingEvent()),
             .debugPong(PaDebugPongEvent(message: "hello")),

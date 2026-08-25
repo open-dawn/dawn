@@ -24,7 +24,8 @@ struct PaEventBusTests {
     @Suite("Publish")
     @MainActor
     struct Publish {
-        @Test func deliversToMatchingListener() async throws {
+        @Test("delivers to matching listener")
+        func deliversToMatchingListener() async throws {
             let bus = PaEventBus()
             let listener = TestListener()
             bus.addListener(listener, kinds: [.switchSpace])
@@ -38,7 +39,8 @@ struct PaEventBusTests {
             #expect(listener.handledReplies == [false])
         }
 
-        @Test func respectsKindFilter() async throws {
+        @Test("ignores unsubscribed kinds")
+        func respectsKindFilter() async throws {
             let bus = PaEventBus()
             let listener = TestListener()
             bus.addListener(listener, kinds: [.debugPing])
@@ -50,7 +52,62 @@ struct PaEventBusTests {
             #expect(listener.handledEvents.isEmpty)
         }
 
-        @Test func deliversToPublishOnlyListener() async throws {
+        @Test("nil filter delivers all kinds")
+        func deliversAllKindsWhenFilterIsNil() async throws {
+            let bus = PaEventBus()
+            let listener = TestListener()
+            bus.addListener(listener)
+
+            let ping = PaEvent.debugPing(PaDebugPingEvent())
+            let space = PaEvent.switchSpace(PaSwitchSpaceEvent(spaceIndex: 1))
+            bus.publish(ping)
+            bus.publish(space)
+
+            try await Task.sleep(for: .milliseconds(50))
+
+            #expect(listener.handledEvents == [ping, space])
+        }
+
+        @Test("drops deallocated listeners")
+        func dropsDeallocatedListener() async throws {
+            let bus = PaEventBus()
+            let remaining = TestListener()
+            bus.addListener(remaining, kinds: [.switchSpace])
+
+            var ephemeral: TestListener? = TestListener()
+            bus.addListener(ephemeral!, kinds: [.switchSpace])
+            weak let weakEphemeral = ephemeral
+            ephemeral = nil
+
+            #expect(weakEphemeral == nil)
+
+            let event = PaEvent.switchSpace(PaSwitchSpaceEvent(spaceIndex: 1))
+            bus.publish(event)
+
+            try await Task.sleep(for: .milliseconds(50))
+
+            #expect(remaining.handledEvents == [event])
+        }
+
+        @Test("setListenerKinds ignores unknown listener")
+        func setListenerKindsIgnoresUnknownListener() async throws {
+            let bus = PaEventBus()
+            let unknown = TestListener()
+            bus.setListenerKinds(unknown, kinds: [.switchSpace])
+
+            let listener = TestListener()
+            bus.addListener(listener, kinds: [])
+
+            bus.publish(.switchSpace(PaSwitchSpaceEvent(spaceIndex: 1)))
+
+            try await Task.sleep(for: .milliseconds(50))
+
+            #expect(unknown.handledEvents.isEmpty)
+            #expect(listener.handledEvents.isEmpty)
+        }
+
+        @Test("delivers to publish-only listener")
+        func deliversToPublishOnlyListener() async throws {
             let bus = PaEventBus()
             let listener = TestListener()
             bus.addPublishOnlyListener(listener, kinds: [.switchSpace])
@@ -63,7 +120,8 @@ struct PaEventBusTests {
             #expect(listener.handledEvents == [event])
         }
 
-        @Test func setListenerKindsUpdatesFilter() async throws {
+        @Test("setListenerKinds updates the filter")
+        func setListenerKindsUpdatesFilter() async throws {
             let bus = PaEventBus()
             let listener = TestListener()
             bus.addPublishOnlyListener(listener, kinds: [])
@@ -75,23 +133,30 @@ struct PaEventBusTests {
             bus.setListenerKinds(listener, kinds: [.switchSpace])
             let event = PaEvent.switchSpace(PaSwitchSpaceEvent(spaceIndex: 2))
             bus.publish(event)
+
             try await Task.sleep(for: .milliseconds(50))
+
             #expect(listener.handledEvents == [event])
         }
 
-        @Test func removeListenerStopsDelivery() async throws {
+        @Test("removeListener stops delivery")
+        func removeListenerStopsDelivery() async throws {
             let bus = PaEventBus()
             let listener = TestListener()
             bus.addListener(listener, kinds: [.switchSpace])
 
             let event = PaEvent.switchSpace(PaSwitchSpaceEvent(spaceIndex: 1))
             bus.publish(event)
+
             try await Task.sleep(for: .milliseconds(50))
+
             #expect(listener.handledEvents == [event])
 
             bus.removeListener(listener)
             bus.publish(.switchSpace(PaSwitchSpaceEvent(spaceIndex: 2)))
+
             try await Task.sleep(for: .milliseconds(50))
+
             #expect(listener.handledEvents == [event])
         }
     }
@@ -99,7 +164,8 @@ struct PaEventBusTests {
     @Suite("Ask")
     @MainActor
     struct Ask {
-        @Test func returnsReplyFromHandler() async throws {
+        @Test("ask returns the handler reply")
+        func returnsReplyFromHandler() async throws {
             let bus = PaEventBus()
             let listener = TestListener()
             listener.replyHandler = { event, reply in
@@ -115,7 +181,8 @@ struct PaEventBusTests {
             #expect(listener.handledReplies == [true])
         }
 
-        @Test func throwsNoHandlerWhenNoListeners() async {
+        @Test("ask throws noHandler with no listeners")
+        func throwsNoHandlerWhenNoListeners() async {
             let bus = PaEventBus()
 
             await #expect(throws: PaEventAskError.noHandler) {
@@ -123,7 +190,8 @@ struct PaEventBusTests {
             }
         }
 
-        @Test func throwsTimeoutWhenHandlerDoesNotReply() async {
+        @Test("ask throws timeout when handler does not reply")
+        func throwsTimeoutWhenHandlerDoesNotReply() async {
             let bus = PaEventBus()
             let listener = TestListener()
             bus.addListener(listener, kinds: [.debugPing])
@@ -133,7 +201,8 @@ struct PaEventBusTests {
             }
         }
 
-        @Test func throwsNoHandlerWhenOnlyPublishOnlyListenerMatches() async {
+        @Test("ask throws noHandler for publish-only listeners")
+        func throwsNoHandlerWhenOnlyPublishOnlyListenerMatches() async {
             let bus = PaEventBus()
             let listener = TestListener()
             bus.addPublishOnlyListener(listener)
@@ -143,7 +212,8 @@ struct PaEventBusTests {
             }
         }
 
-        @Test func usesFirstReplyOnly() async throws {
+        @Test("ask uses the first reply only")
+        func usesFirstReplyOnly() async throws {
             let bus = PaEventBus()
 
             let first = TestListener()
