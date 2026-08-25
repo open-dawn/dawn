@@ -6,6 +6,7 @@
 //
 
 import Foundation
+import PaEventKit
 import Testing
 
 @testable import PaWM
