@@ -38,19 +38,18 @@ public final class PaEventServer: @unchecked Sendable {
             self.detach(transport)
         }
 
-        lock.lock()
-        attachments[ObjectIdentifier(transport)] = Attachment(
-            transport: transport,
-            listener: listener
-        )
-        lock.unlock()
+        lock.withLock {
+            attachments[ObjectIdentifier(transport)] = Attachment(
+                transport: transport,
+                listener: listener
+            )
+        }
     }
 
     public func detach(_ transport: any RemoteEventTransportServer) {
-        let attachment: Attachment?
-        lock.lock()
-        attachment = attachments.removeValue(forKey: ObjectIdentifier(transport))
-        lock.unlock()
+        let attachment = lock.withLock {
+            attachments.removeValue(forKey: ObjectIdentifier(transport))
+        }
 
         guard let attachment else { return }
 
@@ -65,9 +64,9 @@ public final class PaEventServer: @unchecked Sendable {
     }
 
     public func stop() {
-        lock.lock()
-        let transports = attachments.values.map(\.transport)
-        lock.unlock()
+        let transports = lock.withLock {
+            attachments.values.map(\.transport)
+        }
 
         for transport in transports {
             detach(transport)

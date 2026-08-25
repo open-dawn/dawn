@@ -21,51 +21,51 @@ final class XPCRemoteEventTransportServer: NSObject, RemoteEventTransportServer,
     }
 
     func close() {
-        lock.lock()
-        let shouldInvalidate = !closed
-        closed = true
-        lock.unlock()
+        let shouldInvalidate = lock.withLock {
+            let shouldInvalidate = !closed
+            closed = true
+            return shouldInvalidate
+        }
 
         guard shouldInvalidate else { return }
+
         connection.invalidate()
     }
 
     func setPublishHandler(_ handler: (@Sendable (PaEvent) -> Void)?) {
-        lock.lock()
-        publishHandler = handler
-        lock.unlock()
+        lock.withLock {
+            publishHandler = handler
+        }
     }
 
     func setSubscribeHandler(_ handler: (@Sendable (Set<PaEventKind>?) -> Void)?) {
-        lock.lock()
-        subscribeHandler = handler
-        lock.unlock()
+        lock.withLock {
+            subscribeHandler = handler
+        }
     }
 
     func setAskHandler(_ handler: (@Sendable (PaEvent) async throws -> PaEvent)?) {
-        lock.lock()
-        askHandler = handler
-        lock.unlock()
+        lock.withLock {
+            askHandler = handler
+        }
     }
 
     func setCloseHandler(_ handler: (@Sendable () -> Void)?) {
-        lock.lock()
-        closeHandler = handler
-        lock.unlock()
+        lock.withLock {
+            closeHandler = handler
+        }
     }
 
     func publish(_ data: Data) {
         guard let event = try? PaEventCodec.decode(data) else { return }
-        lock.lock()
-        let handler = publishHandler
-        lock.unlock()
+
+        let handler = lock.withLock { publishHandler }
+
         handler?(event)
     }
 
     func subscribe(_ kindNames: [String], includeAll: Bool) {
-        lock.lock()
-        let handler = subscribeHandler
-        lock.unlock()
+        let handler = lock.withLock { subscribeHandler }
 
         if includeAll {
             handler?(nil)
@@ -76,9 +76,7 @@ final class XPCRemoteEventTransportServer: NSObject, RemoteEventTransportServer,
     }
 
     func ask(_ data: Data, withReply reply: @escaping (Data?, Error?) -> Void) {
-        lock.lock()
-        let handler = askHandler
-        lock.unlock()
+        let handler = lock.withLock { askHandler }
 
         nonisolated(unsafe) let reply = reply
         Task {
@@ -97,9 +95,7 @@ final class XPCRemoteEventTransportServer: NSObject, RemoteEventTransportServer,
     }
 
     func handleInvalidation() {
-        lock.lock()
-        let handler = closeHandler
-        lock.unlock()
+        let handler = lock.withLock { closeHandler }
         handler?()
     }
 }

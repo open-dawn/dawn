@@ -24,15 +24,13 @@ public final class XPCRemoteEventTransportClient: NSObject, RemoteEventTransport
     }
 
     public var isConnected: Bool {
-        lock.lock()
-        defer { lock.unlock() }
-        return connection != nil
+        lock.withLock { connection != nil }
     }
 
     public func setDeliveryHandler(_ handler: @escaping @Sendable (PaEvent) -> Void) {
-        lock.lock()
-        deliveryHandler = handler
-        lock.unlock()
+        lock.withLock {
+            deliveryHandler = handler
+        }
     }
 
     public func publish(_ event: PaEvent) {
@@ -62,58 +60,56 @@ public final class XPCRemoteEventTransportClient: NSObject, RemoteEventTransport
             let resumeLock = NSLock()
 
             hostProxy.ask(data) { responseData, error in
-                resumeLock.lock()
-                defer { resumeLock.unlock() }
-                guard !resumed else { return }
-                resumed = true
+                resumeLock.withLock {
+                    guard !resumed else { return }
+                    resumed = true
 
-                if let error {
-                    continuation.resume(throwing: error)
-                    return
-                }
+                    if let error {
+                        continuation.resume(throwing: error)
+                        return
+                    }
 
-                guard let responseData else {
-                    continuation.resume(throwing: PaEventRemoteError.invalidPayload)
-                    return
-                }
+                    guard let responseData else {
+                        continuation.resume(throwing: PaEventRemoteError.invalidPayload)
+                        return
+                    }
 
-                do {
-                    continuation.resume(returning: try PaEventCodec.decode(responseData))
-                } catch {
-                    continuation.resume(throwing: error)
+                    do {
+                        continuation.resume(returning: try PaEventCodec.decode(responseData))
+                    } catch {
+                        continuation.resume(throwing: error)
+                    }
                 }
             }
         }
     }
 
     public func close() {
-        lock.lock()
+        let connection = lock.withLock {
+            let connection = self.connection
+            self.connection = nil
+            self.hostProxy = nil
+            return connection
+        }
         connection?.invalidate()
-        connection = nil
-        hostProxy = nil
-        lock.unlock()
     }
 
     private func handleInvalidation() {
-        lock.lock()
-        connection = nil
-        hostProxy = nil
-        lock.unlock()
+        lock.withLock {
+            connection = nil
+            hostProxy = nil
+        }
     }
 
     private func currentHostProxy() -> PaEventHostXPC? {
-        lock.lock()
-        defer { lock.unlock() }
-        return hostProxy
+        lock.withLock { hostProxy }
     }
 }
 
 extension XPCRemoteEventTransportClient: PaRemoteEventBusXPC {
     func deliver(_ data: Data) {
         guard let event = try? PaEventCodec.decode(data) else { return }
-        lock.lock()
-        let handler = deliveryHandler
-        lock.unlock()
+        let handler = lock.withLock { deliveryHandler }
         handler?(event)
     }
 }

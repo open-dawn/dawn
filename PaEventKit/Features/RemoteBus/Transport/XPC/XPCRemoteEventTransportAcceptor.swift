@@ -16,24 +16,24 @@ public final class XPCRemoteEventTransportAcceptor: NSObject, NSXPCListenerDeleg
     }
 
     public func start() {
-        lock.lock()
-        defer { lock.unlock() }
+        lock.withLock {
+            guard listener == nil else { return }
 
-        guard listener == nil else { return }
-
-        let listener = NSXPCListener.anonymous()
-        listener.delegate = self
-        listener.resume()
-        self.listener = listener
+            let listener = NSXPCListener.anonymous()
+            listener.delegate = self
+            listener.resume()
+            self.listener = listener
+        }
     }
 
     public func stop() {
-        lock.lock()
-        let transports = self.transports
-        self.transports = []
-        let listener = self.listener
-        self.listener = nil
-        lock.unlock()
+        let (transports, listener) = lock.withLock {
+            let transports = self.transports
+            self.transports = []
+            let listener = self.listener
+            self.listener = nil
+            return (transports, listener)
+        }
 
         listener?.invalidate()
         for transport in transports {
@@ -56,9 +56,9 @@ public final class XPCRemoteEventTransportAcceptor: NSObject, NSXPCListenerDeleg
             self.removeTransport(transport)
         }
 
-        lock.lock()
-        transports.append(transport)
-        lock.unlock()
+        lock.withLock {
+            transports.append(transport)
+        }
 
         eventServer.attach(transport)
         connection.resume()
@@ -66,8 +66,8 @@ public final class XPCRemoteEventTransportAcceptor: NSObject, NSXPCListenerDeleg
     }
 
     private func removeTransport(_ transport: XPCRemoteEventTransportServer) {
-        lock.lock()
-        transports.removeAll { $0 === transport }
-        lock.unlock()
+        lock.withLock {
+            transports.removeAll { $0 === transport }
+        }
     }
 }

@@ -7,15 +7,13 @@ public final class LoopbackRemoteEventTransportClient: RemoteEventTransportClien
     weak var server: LoopbackRemoteEventTransportServer?
 
     public var isConnected: Bool {
-        lock.lock()
-        defer { lock.unlock() }
-        return connected
+        lock.withLock { connected }
     }
 
     public func setDeliveryHandler(_ handler: @escaping @Sendable (PaEvent) -> Void) {
-        lock.lock()
-        deliveryHandler = handler
-        lock.unlock()
+        lock.withLock {
+            deliveryHandler = handler
+        }
     }
 
     public func publish(_ event: PaEvent) {
@@ -34,22 +32,19 @@ public final class LoopbackRemoteEventTransportClient: RemoteEventTransportClien
     }
 
     public func close() {
-        lock.lock()
-        guard connected else {
-            lock.unlock()
-            return
+        let shouldClose = lock.withLock {
+            guard connected else { return false }
+            connected = false
+            deliveryHandler = nil
+            return true
         }
-        connected = false
-        deliveryHandler = nil
-        lock.unlock()
 
+        guard shouldClose else { return }
         server?.handleClose()
     }
 
     func receiveDeliver(_ event: PaEvent) {
-        lock.lock()
-        let handler = deliveryHandler
-        lock.unlock()
+        let handler = lock.withLock { deliveryHandler }
         handler?(event)
     }
 }

@@ -10,20 +10,18 @@ final class AskSession: @unchecked Sendable {
     }
 
     func complete(with event: PaEvent) {
-        lock.lock()
-        defer { lock.unlock() }
-
-        guard !fulfilled else { return }
-        fulfilled = true
-        continuation.resume(returning: event)
+        lock.withLock {
+            guard !fulfilled else { return }
+            fulfilled = true
+            continuation.resume(returning: event)
+        }
     }
 
     func fail(with error: Error) {
-        lock.lock()
-        defer { lock.unlock() }
-
-        guard !fulfilled else { return }
-        fulfilled = true
-        continuation.resume(throwing: error)
+        lock.withLock {
+            guard !fulfilled else { return }
+            fulfilled = true
+            continuation.resume(throwing: error)
+        }
     }
 }

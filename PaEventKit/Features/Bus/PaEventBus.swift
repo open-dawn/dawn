@@ -24,13 +24,12 @@ public final class PaEventBus: @unchecked Sendable {
     }
 
     func setListenerKinds(_ listener: Listener, kinds: Set<PaEventKind>?) {
-        lock.lock()
-        defer { lock.unlock() }
-
-        guard let index = registrations.firstIndex(where: { $0.listener === listener }) else {
-            return
+        lock.withLock {
+            guard let index = registrations.firstIndex(where: { $0.listener === listener }) else {
+                return
+            }
+            registrations[index].kinds = kinds
         }
-        registrations[index].kinds = kinds
     }
 
     private func register(
@@ -38,20 +37,18 @@ public final class PaEventBus: @unchecked Sendable {
         kinds: Set<PaEventKind>?,
         receivesAsks: Bool
     ) {
-        lock.lock()
-        defer { lock.unlock() }
-
-        pruneDeadRegistrationsLocked()
-        registrations.append(
-            Registration(listener: listener, kinds: kinds, receivesAsks: receivesAsks)
-        )
+        lock.withLock {
+            pruneDeadRegistrationsLocked()
+            registrations.append(
+                Registration(listener: listener, kinds: kinds, receivesAsks: receivesAsks)
+            )
+        }
     }
 
     public func removeListener(_ listener: Listener) {
-        lock.lock()
-        defer { lock.unlock() }
-
-        registrations.removeAll { $0.listener === listener || $0.listener == nil }
+        lock.withLock {
+            registrations.removeAll { $0.listener === listener || $0.listener == nil }
+        }
     }
 
     public func publish(_ event: PaEvent) {
@@ -94,18 +91,17 @@ public final class PaEventBus: @unchecked Sendable {
         for kind: PaEventKind,
         includingPublishOnly: Bool = true
     ) -> [Listener] {
-        lock.lock()
-        defer { lock.unlock() }
+        return lock.withLock {
+            pruneDeadRegistrationsLocked()
 
-        pruneDeadRegistrationsLocked()
-
-        return registrations.compactMap { registration in
-            guard let listener = registration.listener else { return nil }
-            guard includingPublishOnly || registration.receivesAsks else { return nil }
-            guard registration.kinds == nil || registration.kinds!.contains(kind) else {
-                return nil
+            return registrations.compactMap { registration in
+                guard let listener = registration.listener else { return nil }
+                guard includingPublishOnly || registration.receivesAsks else { return nil }
+                guard registration.kinds == nil || registration.kinds!.contains(kind) else {
+                    return nil
+                }
+                return listener
             }
-            return listener
         }
     }
 

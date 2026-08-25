@@ -26,20 +26,18 @@ public final class PaRemoteEventBus: @unchecked Sendable {
     }
 
     public func addListener(_ listener: Listener, kinds: Set<PaEventKind>? = nil) {
-        lock.lock()
-        defer { lock.unlock() }
-
-        pruneDeadRegistrationsLocked()
-        registrations.append(Registration(listener: listener, kinds: kinds))
-        syncSubscriptionLocked()
+        lock.withLock {
+            pruneDeadRegistrationsLocked()
+            registrations.append(Registration(listener: listener, kinds: kinds))
+            syncSubscriptionLocked()
+        }
     }
 
     public func removeListener(_ listener: Listener) {
-        lock.lock()
-        defer { lock.unlock() }
-
-        registrations.removeAll { $0.listener === listener || $0.listener == nil }
-        syncSubscriptionLocked()
+        lock.withLock {
+            registrations.removeAll { $0.listener === listener || $0.listener == nil }
+            syncSubscriptionLocked()
+        }
     }
 
     public func publish(_ event: PaEvent) {
@@ -94,17 +92,16 @@ public final class PaRemoteEventBus: @unchecked Sendable {
     }
 
     private func matchingListeners(for kind: PaEventKind) -> [Listener] {
-        lock.lock()
-        defer { lock.unlock() }
+        return lock.withLock {
+            pruneDeadRegistrationsLocked()
 
-        pruneDeadRegistrationsLocked()
-
-        return registrations.compactMap { registration in
-            guard let listener = registration.listener else { return nil }
-            guard registration.kinds == nil || registration.kinds!.contains(kind) else {
-                return nil
+            return registrations.compactMap { registration in
+                guard let listener = registration.listener else { return nil }
+                guard registration.kinds == nil || registration.kinds!.contains(kind) else {
+                    return nil
+                }
+                return listener
             }
-            return listener
         }
     }
 

@@ -7,15 +7,13 @@ private final class MockEventDelivering: EventDelivering, @unchecked Sendable {
     private var events: [PaEvent] = []
 
     func deliver(_ event: PaEvent) {
-        lock.lock()
-        events.append(event)
-        lock.unlock()
+        lock.withLock {
+            events.append(event)
+        }
     }
 
     func deliveredEvents() -> [PaEvent] {
-        lock.lock()
-        defer { lock.unlock() }
-        return events
+        lock.withLock { events }
     }
 }
 
