@@ -64,9 +64,12 @@ targets:
   PaEventKit:
     type: framework
     platform: macOS
-    deploymentTarget: "26.0"
+    deploymentTarget: "15.0"
     sources:
-      - PaEventKit
+      - path: PaEventKit
+        excludes:
+          - README.md
+          - Docs/**
     info:
       path: PaEventKit/Info.plist
       properties:
@@ -74,6 +77,7 @@ targets:
     settings:
       base:
         MARKETING_VERSION: "0.0.0"
+        SWIFT_VERSION: "6"
       configs:
         Debug:
           ENABLE_TESTABILITY: YES
