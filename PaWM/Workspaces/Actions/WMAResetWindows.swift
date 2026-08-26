@@ -9,7 +9,10 @@ struct WMAResetWindows: WMAction {
         NSWorkspace.shared.hideOtherApplications()
     }
 
-    init(_ app: WorkspaceApplication) {
-        self.app = app
+    init() {
+        app = WorkspaceApplication(bundleIdentifier: "",
+                                   displayName: "",
+                                   applicationURL: nil,
+                                   createNewInstance: false)
     }
 }
