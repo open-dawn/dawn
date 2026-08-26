@@ -38,7 +38,7 @@ struct WMActionsTests {
 
     @Test("WMActionOpenApp open an app with valid filepath")
     func validPathOpen() async throws {
-        let app = WorkspaceApplication(bundleIdentifier: "com.apple.safari",
+        let app = WorkspaceApplication(bundleIdentifier: "com.apple.Safari",
                                        displayName: "Safari",
                                        applicationURL: URL(filePath: "Applications/Safari.app"))
         let action = WMAOpenApp(app)
@@ -49,11 +49,10 @@ struct WMActionsTests {
 
     @Test("WMActionHideApp hides an valid and running app")
     func validAppHides() async throws {
-        let app = WorkspaceApplication(bundleIdentifier: "com.apple.safari",
+        let app = WorkspaceApplication(bundleIdentifier: "com.apple.Safari",
                                        displayName: "Safari",
                                        applicationURL: URL(filePath: "Applications/Safari.app"))
-        let action = WMAOpenApp(app)
-        try #require(app.applicationURL != nil)
+        let action = WMAHideApp(app)
         await #expect(throws: Never.self) { try await action.execute() }
     }
 }
