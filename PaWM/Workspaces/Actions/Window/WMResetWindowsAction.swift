@@ -2,7 +2,7 @@ import AppKit
 import Foundation
 import PaEventKit
 
-struct WMAResetWindows: WMAction {
+struct WMResetWindowsAction: WMAction {
     private(set) var app: WorkspaceApplication
 
     func execute() throws(WMActionError) {

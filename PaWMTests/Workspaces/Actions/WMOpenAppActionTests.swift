@@ -4,14 +4,14 @@ import PaEventKit
 @testable import PaWM
 import Testing
 
-struct WMAOpenAppTests {
+struct WMOpenAppActionTests {
     @Test("throws invalidURL if app has nil URL")
     func nullPathOpen() async {
         let mockApp = WorkspaceApplication(bundleIdentifier: "", displayName: "", applicationURL: nil)
         let fakeWorkspace = FakeWorkspace()
         let fakeFileManager = FakeFileManager()
 
-        let action = WMAOpenApp(mockApp, workspace: fakeWorkspace, fileManager: fakeFileManager)
+        let action = WMOpenAppAction(mockApp, workspace: fakeWorkspace, fileManager: fakeFileManager)
 
         await #expect(throws: WMActionError.invalidURL) {
             try await action.execute()
@@ -27,7 +27,7 @@ struct WMAOpenAppTests {
         let fakeFileManager = FakeFileManager()
         fakeFileManager.shouldReturnExists = false
 
-        let action = WMAOpenApp(mockApp, workspace: fakeWorkspace, fileManager: fakeFileManager)
+        let action = WMOpenAppAction(mockApp, workspace: fakeWorkspace, fileManager: fakeFileManager)
 
         let appURL = try #require(mockApp.applicationURL)
         await #expect(throws: WMActionError.notFound(filePath: appURL.path())) {
@@ -44,14 +44,14 @@ struct WMAOpenAppTests {
     // @Test("")
     // func unknownErrorOpenApp() {}
 
-    @Test("WMAOpenApp success open an app")
+    @Test("WMOpenAppAction success open an app")
     func validPathOpen() async throws {
         let mockApp = WorkspaceApplication(bundleIdentifier: "com.apple.Safari",
                                            displayName: "Safari",
                                            applicationURL: URL(filePath: "Applications/Safari.app"))
         let fakeWorkspace = FakeWorkspace()
         let fakeFileManager = FakeFileManager()
-        let action = WMAOpenApp(mockApp, workspace: fakeWorkspace, fileManager: fakeFileManager)
+        let action = WMOpenAppAction(mockApp, workspace: fakeWorkspace, fileManager: fakeFileManager)
 
         try #require(mockApp.applicationURL != nil)
         await #expect(throws: Never.self) { try await action.execute() }

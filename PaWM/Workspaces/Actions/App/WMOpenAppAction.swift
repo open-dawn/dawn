@@ -2,7 +2,7 @@ import AppKit
 import Foundation
 import PaEventKit
 
-struct WMAOpenApp: WMAction {
+struct WMOpenAppAction: WMAction {
     private(set) var app: WorkspaceApplication
     private(set) var workspace: WorkspaceOpener
     private(set) var fileManager: FileChecker
