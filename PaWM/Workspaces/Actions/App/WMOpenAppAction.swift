@@ -5,13 +5,9 @@ import PaEventKit
 struct WMOpenAppAction: WMAction {
     private(set) var app: WorkspaceApplication
     private(set) var workspace: WorkspaceOpener
-    private(set) var fileManager: FileChecker
 
     func execute() async throws(WMActionError) {
         guard let appUrl: URL = app.applicationURL else { throw WMActionError.invalidURL }
-        guard fileManager.fileExists(atPath: appUrl.path()) else {
-            throw WMActionError.notFound(filePath: appUrl.path())
-        }
 
         let configuration = NSWorkspace.OpenConfiguration()
         configuration.activates = true
@@ -27,31 +23,27 @@ struct WMOpenAppAction: WMAction {
         do {
             _ = try await workspace.openApplication(at: appUrl, configuration: configuration)
         } catch {
-            throw map(workspaceError: error)
+            throw map(workspaceError: error, filePath: appUrl.path())
         }
     }
 
-    private func map(workspaceError error: Error) -> WMActionError {
+    private func map(workspaceError error: Error, filePath: String) -> WMActionError {
         let nsError = error as NSError
-
-        if nsError.domain == NSCocoaErrorDomain {
-            switch nsError.code {
-            case NSFileReadNoPermissionError: return .permissionDenied
-            case NSFileReadCorruptFileError: return .corruptedFile
-            default: break
-            }
+        guard nsError.domain == NSCocoaErrorDomain else {
+            return .unknown(reason: error.localizedDescription)
         }
 
-        return .unknown(reason: error.localizedDescription)
+        return switch nsError.code {
+        case NSFileReadNoPermissionError: .permissionDenied
+        case NSFileReadCorruptFileError: .corruptedFile
+        case NSFileReadNoSuchFileError: .notFound(filePath: filePath)
+        default: .unknown(reason: error.localizedDescription)
+        }
     }
 
-    init(_ app: WorkspaceApplication,
-         workspace: WorkspaceOpener = NSWorkspace.shared,
-         fileManager: FileChecker = FileManager.default)
-    {
+    init(_ app: WorkspaceApplication, workspace: WorkspaceOpener = NSWorkspace.shared) {
         self.app = app
         self.workspace = workspace
-        self.fileManager = fileManager
     }
 }
 
@@ -61,9 +53,4 @@ protocol WorkspaceOpener {
     func openApplication(at url: URL, configuration: NSWorkspace.OpenConfiguration) async throws -> NSRunningApplication
 }
 
-protocol FileChecker {
-    func fileExists(atPath path: String) -> Bool
-}
-
 extension NSWorkspace: WorkspaceOpener {}
-extension FileManager: FileChecker {}

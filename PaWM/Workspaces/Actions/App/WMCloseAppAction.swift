@@ -8,7 +8,8 @@ struct WMCloseAppAction: WMAction {
     func execute() throws(WMActionError) {
         if let targetApp = NSRunningApplication.runningApplications(withBundleIdentifier: app.bundleIdentifier).first {
             targetApp.activate()
-            targetApp.terminate()
+            targetApp.terminate() // Setting about forcing close
+            // targetApp.forceTerminate()
             return
         }
 

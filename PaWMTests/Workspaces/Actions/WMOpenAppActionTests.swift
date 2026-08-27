@@ -4,14 +4,14 @@ import PaEventKit
 @testable import PaWM
 import Testing
 
+@Suite("WMOpenAppAction Testing")
 struct WMOpenAppActionTests {
     @Test("throws invalidURL if app has nil URL")
-    func nullPathOpen() async {
+    func nullFilePathError() async {
         let mockApp = WorkspaceApplication(bundleIdentifier: "", displayName: "", applicationURL: nil)
         let fakeWorkspace = FakeWorkspace()
-        let fakeFileManager = FakeFileManager()
 
-        let action = WMOpenAppAction(mockApp, workspace: fakeWorkspace, fileManager: fakeFileManager)
+        let action = WMOpenAppAction(mockApp, workspace: fakeWorkspace)
 
         await #expect(throws: WMActionError.invalidURL) {
             try await action.execute()
@@ -19,15 +19,14 @@ struct WMOpenAppActionTests {
     }
 
     @Test("throws notFound with filepath does not exist")
-    func invalidPathOpen() async throws {
+    func invalidPathError() async throws {
         let mockApp = WorkspaceApplication(bundleIdentifier: "",
                                            displayName: "",
                                            applicationURL: URL(filePath: ".invalid_file.swift"))
         let fakeWorkspace = FakeWorkspace()
-        let fakeFileManager = FakeFileManager()
-        fakeFileManager.shouldReturnExists = false
+        fakeWorkspace.errorToThrow = NSError(domain: NSCocoaErrorDomain, code: NSFileReadNoSuchFileError, userInfo: [:])
 
-        let action = WMOpenAppAction(mockApp, workspace: fakeWorkspace, fileManager: fakeFileManager)
+        let action = WMOpenAppAction(mockApp, workspace: fakeWorkspace)
 
         let appURL = try #require(mockApp.applicationURL)
         await #expect(throws: WMActionError.notFound(filePath: appURL.path())) {
@@ -35,14 +34,53 @@ struct WMOpenAppActionTests {
         }
     }
 
-    // @Test("")
-    // func permissionDenied() {}
+    @Test("throws CorruptedFile with corrupted file")
+    func corruptedFileError() async throws {
+        let mockApp = WorkspaceApplication(bundleIdentifier: "",
+                                           displayName: "",
+                                           applicationURL: URL(filePath: ".corrupted_file.swift"))
+        let fakeWorkspace = FakeWorkspace()
+        fakeWorkspace.errorToThrow = NSError(domain: NSCocoaErrorDomain, code: NSFileReadCorruptFileError, userInfo: [:])
 
-    // @Test("")
-    // func corruptedFile() {}
-    //
-    // @Test("")
-    // func unknownErrorOpenApp() {}
+        let action = WMOpenAppAction(mockApp, workspace: fakeWorkspace)
+
+        try #require(mockApp.applicationURL != nil)
+        await #expect(throws: WMActionError.corruptedFile) {
+            try await action.execute()
+        }
+    }
+
+    @Test("throws PermissionDenied with root file")
+    func permissionDeniedError() async throws {
+        let mockApp = WorkspaceApplication(bundleIdentifier: "",
+                                           displayName: "",
+                                           applicationURL: URL(filePath: ".root.swift"))
+        let fakeWorkspace = FakeWorkspace()
+        fakeWorkspace.errorToThrow = NSError(domain: NSCocoaErrorDomain, code: NSFileReadNoPermissionError, userInfo: [:])
+
+        let action = WMOpenAppAction(mockApp, workspace: fakeWorkspace)
+
+        try #require(mockApp.applicationURL != nil)
+        await #expect(throws: WMActionError.permissionDenied) {
+            try await action.execute()
+        }
+    }
+
+    @Test("throws unknown with no mapped error")
+    func unknownError() async throws {
+        let mockApp = WorkspaceApplication(bundleIdentifier: "",
+                                           displayName: "",
+                                           applicationURL: URL(filePath: "???.swift"))
+        let fakeWorkspace = FakeWorkspace()
+        fakeWorkspace.errorToThrow = NSError(domain: "idkw", code: 5, userInfo: [:])
+
+        let action = WMOpenAppAction(mockApp, workspace: fakeWorkspace)
+
+        try #require(mockApp.applicationURL != nil)
+        await #expect(throws: try WMActionError.unknown(reason: #require(fakeWorkspace.errorToThrow?.localizedDescription))) {
+            try await action.execute()
+        }
+    }
 
     @Test("WMOpenAppAction success open an app")
     func validPathOpen() async throws {
@@ -50,8 +88,7 @@ struct WMOpenAppActionTests {
                                            displayName: "Safari",
                                            applicationURL: URL(filePath: "Applications/Safari.app"))
         let fakeWorkspace = FakeWorkspace()
-        let fakeFileManager = FakeFileManager()
-        let action = WMOpenAppAction(mockApp, workspace: fakeWorkspace, fileManager: fakeFileManager)
+        let action = WMOpenAppAction(mockApp, workspace: fakeWorkspace)
 
         try #require(mockApp.applicationURL != nil)
         await #expect(throws: Never.self) { try await action.execute() }
@@ -60,26 +97,16 @@ struct WMOpenAppActionTests {
 
 final class FakeWorkspace: WorkspaceOpener {
     var didCallOpenApplication: Bool = false
-    var urlPassed: URL?
     var errorToThrow: Error?
 
-    func openApplication(at url: URL,
+    func openApplication(at _: URL,
                          configuration _: NSWorkspace.OpenConfiguration) async throws -> NSRunningApplication
     {
         didCallOpenApplication = true
-        urlPassed = url
         if let error = errorToThrow {
             throw error
         }
 
         return NSRunningApplication()
-    }
-}
-
-final class FakeFileManager: FileChecker {
-    var shouldReturnExists: Bool = true
-
-    func fileExists(atPath _: String) -> Bool {
-        return shouldReturnExists
     }
 }
