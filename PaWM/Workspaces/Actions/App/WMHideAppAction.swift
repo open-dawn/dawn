@@ -4,9 +4,10 @@ import PaEventKit
 
 struct WMHideAppAction: WMAction {
     private(set) var app: WorkspaceApplication
+    private let provider: ApplicationProvider
 
-    func execute() throws(WMActionError) {
-        if let targetApp = NSRunningApplication.runningApplications(withBundleIdentifier: app.bundleIdentifier).first {
+    func execute() async throws(WMActionError) {
+        if let targetApp = provider.runningApplications(withBundleIdentifier: app.bundleIdentifier).first {
             targetApp.activate()
             targetApp.hide()
             return
@@ -15,7 +16,8 @@ struct WMHideAppAction: WMAction {
         throw WMActionError.notRunning
     }
 
-    init(_ app: WorkspaceApplication) {
+    init(_ app: WorkspaceApplication, provider: ApplicationProvider = SystemApplicationProvider()) {
         self.app = app
+        self.provider = provider
     }
 }

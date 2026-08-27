@@ -40,7 +40,9 @@ struct WMOpenAppActionTests {
                                            displayName: "",
                                            applicationURL: URL(filePath: ".corrupted_file.swift"))
         let fakeWorkspace = FakeWorkspace()
-        fakeWorkspace.errorToThrow = NSError(domain: NSCocoaErrorDomain, code: NSFileReadCorruptFileError, userInfo: [:])
+        fakeWorkspace.errorToThrow = NSError(domain: NSCocoaErrorDomain,
+                                             code: NSFileReadCorruptFileError,
+                                             userInfo: [:])
 
         let action = WMOpenAppAction(mockApp, workspace: fakeWorkspace)
 
@@ -56,7 +58,9 @@ struct WMOpenAppActionTests {
                                            displayName: "",
                                            applicationURL: URL(filePath: ".root.swift"))
         let fakeWorkspace = FakeWorkspace()
-        fakeWorkspace.errorToThrow = NSError(domain: NSCocoaErrorDomain, code: NSFileReadNoPermissionError, userInfo: [:])
+        fakeWorkspace.errorToThrow = NSError(domain: NSCocoaErrorDomain,
+                                             code: NSFileReadNoPermissionError,
+                                             userInfo: [:])
 
         let action = WMOpenAppAction(mockApp, workspace: fakeWorkspace)
 
@@ -77,12 +81,13 @@ struct WMOpenAppActionTests {
         let action = WMOpenAppAction(mockApp, workspace: fakeWorkspace)
 
         try #require(mockApp.applicationURL != nil)
-        await #expect(throws: try WMActionError.unknown(reason: #require(fakeWorkspace.errorToThrow?.localizedDescription))) {
+        let errorMessage = fakeWorkspace.errorToThrow?.localizedDescription
+        await #expect(throws: WMActionError.unknown(reason: errorMessage)) {
             try await action.execute()
         }
     }
 
-    @Test("WMOpenAppAction success open an app")
+    @Test("success open an app")
     func validPathOpen() async throws {
         let mockApp = WorkspaceApplication(bundleIdentifier: "com.apple.Safari",
                                            displayName: "Safari",
