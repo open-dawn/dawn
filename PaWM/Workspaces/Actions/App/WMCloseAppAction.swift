@@ -3,7 +3,7 @@ import Foundation
 import PaEventKit
 
 /// In future create a NSRunningApplicationMock to fake .terminate()
-struct WMCloseAppAction: WMAction {
+struct WMCloseAppAction: WMAppAction {
     private(set) var app: WorkspaceApplication
     private let provider: ApplicationProvider
 

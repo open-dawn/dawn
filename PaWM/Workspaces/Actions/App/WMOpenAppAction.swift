@@ -2,7 +2,7 @@ import AppKit
 import Foundation
 import PaEventKit
 
-struct WMOpenAppAction: WMAction {
+struct WMOpenAppAction: WMAppAction {
     private(set) var app: WorkspaceApplication
     private(set) var workspace: WorkspaceOpener
 

@@ -2,7 +2,7 @@ import AppKit
 import Foundation
 import PaEventKit
 
-struct WMHideAppAction: WMAction {
+struct WMHideAppAction: WMAppAction {
     private(set) var app: WorkspaceApplication
     private let provider: ApplicationProvider
 
