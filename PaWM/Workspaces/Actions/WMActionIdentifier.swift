@@ -6,10 +6,10 @@ public enum WMActionIdentifier {
     case resetWindows // Hide and reset windows of all apps
 
     var action: WMAction {
-        switch self {
-        case let .hideApp(app): return WMHideAppAction(app)
-        case let .openApp(app): return WMOpenAppAction(app)
-        case .resetWindows: return WMResetWindowsAction()
+        return switch self {
+        case let .hideApp(app): WMHideAppAction(app)
+        case let .openApp(app): WMOpenAppAction(app)
+        case .resetWindows: WMResetWindowsAction()
         }
     }
 }

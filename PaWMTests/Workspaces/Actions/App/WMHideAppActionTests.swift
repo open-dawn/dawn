@@ -18,7 +18,7 @@ struct WMHideAppActionTests {
         }
     }
 
-    @Test("success open an app")
+    @Test("success hides an app")
     func validPathOpen() async throws {
         let mockApp = WorkspaceApplication(bundleIdentifier: "com.apple.Safari",
                                            displayName: "Safari",
