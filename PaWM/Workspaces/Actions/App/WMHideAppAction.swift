@@ -7,13 +7,12 @@ struct WMHideAppAction: WMAppAction {
     private let provider: ApplicationProvider
 
     func execute() async throws(WMActionError) {
-        if let targetApp = provider.runningApplications(withBundleIdentifier: app.bundleIdentifier).first {
-            targetApp.activate()
-            targetApp.hide()
-            return
+        guard let targetApp = provider.runningApplications(withBundleIdentifier: app.bundleIdentifier).first else {
+            throw WMActionError.notRunning
         }
 
-        throw WMActionError.notRunning
+        targetApp.activate()
+        targetApp.hide()
     }
 
     init(_ app: WorkspaceApplication, provider: ApplicationProvider = SystemApplicationProvider()) {

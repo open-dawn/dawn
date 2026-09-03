@@ -2,22 +2,20 @@ import AppKit
 import Foundation
 import PaEventKit
 
-/// In future create a NSRunningApplicationMock to fake .terminate()
 struct WMCloseAppAction: WMAppAction {
     private(set) var app: WorkspaceApplication
     private let provider: ApplicationProvider
 
     func execute() throws(WMActionError) {
-        if let targetApp = provider.runningApplications(withBundleIdentifier: app.bundleIdentifier).first {
-            targetApp.activate()
-            if type(of: provider) == SystemApplicationProvider.self, !targetApp.terminate() {
-                throw WMActionError.permissionDenied
-            }
-
-            return
+        // In future create a NSRunningApplicationMock to fake .terminate()
+        guard let targetApp = provider.runningApplications(withBundleIdentifier: app.bundleIdentifier).first else {
+            throw WMActionError.notRunning
         }
 
-        throw WMActionError.notRunning
+        targetApp.activate()
+        if type(of: provider) == SystemApplicationProvider.self, !targetApp.terminate() {
+            throw WMActionError.permissionDenied
+        }
     }
 
     init(_ app: WorkspaceApplication, provider: ApplicationProvider = SystemApplicationProvider()) {
