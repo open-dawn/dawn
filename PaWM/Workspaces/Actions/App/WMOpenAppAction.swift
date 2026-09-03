@@ -21,7 +21,7 @@ struct WMOpenAppAction: WMAppAction {
         // configuration.architecture = x86_64
 
         do {
-            _ = try await workspace.openApplication(at: appUrl, configuration: configuration)
+            try await workspace.openApplication(at: appUrl, configuration: configuration)
         } catch {
             throw map(workspaceError: error, filePath: appUrl.path())
         }
@@ -47,9 +47,8 @@ struct WMOpenAppAction: WMAppAction {
     }
 }
 
-// MARK: - Protocols to testing with mock
-
 protocol WorkspaceOpener {
+    @discardableResult
     func openApplication(at url: URL, configuration: NSWorkspace.OpenConfiguration) async throws -> NSRunningApplication
 }
 
