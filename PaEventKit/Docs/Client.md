@@ -6,22 +6,23 @@ Clients never talk to `PaEventBus` directly. They use `PaRemoteEventBus` with a 
 
 > Note: This is the XPC connection procedure. Protocols differ.
 
-You need the host’s `NSXPCListenerEndpoint`.
-
-Discovery is app glue: read the ticket the host wrote in the app group, then:
+PaWM advertises a Mach service named as its bundle ID. Connect with that name:
 
 ```swift
 import PaEventKit
 
-let endpoint: NSXPCListenerEndpoint = /* unarchive from app group */
-let transport = XPCRemoteEventTransportClient(endpoint: endpoint)
+let transport = XPCRemoteEventTransportClient(
+    machServiceName: "dev.longhi.pineappleinc.PaWM"
+)
 let remote = PaRemoteEventBus(transport: transport)
 
 remote.isConnected  // false after the connection invalidates
 remote.disconnect()
 ```
 
-On launch, the ticket may already exist. Subscribe to the host’s distributed notification (empty payload), reconnect when it fires, and reconnect when XPC invalidates.
+On launch, subscribe to the host’s empty distributed notification (`dev.longhi.pineappleinc.PaWM.eventBusReady`). Create a new transport and `PaRemoteEventBus` when the ping fires, and again when XPC invalidates.
+
+In-process tests can still use `XPCRemoteEventTransportClient(endpoint:)` with an anonymous listener.
 
 This rendezvous is implemented by the host and client. The client API is the `PaRemoteEventBus`.
 

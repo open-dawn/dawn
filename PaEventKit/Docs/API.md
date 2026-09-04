@@ -123,7 +123,7 @@ public protocol RemoteEventTransportClient: AnyObject, Sendable {
 `PaRemoteEventBus` is the usual caller. Incoming host fan-out arrives through `setDeliveryHandler`. `subscribe(kinds: nil)` means all; empty set means none.
 
 #### Currently available transports
-* **XPC:** `XPCRemoteEventTransportClient(endpoint: NSXPCListenerEndpoint)`.
+* **XPC:** `XPCRemoteEventTransportClient(machServiceName:)` for PaWM; `XPCRemoteEventTransportClient(endpoint:)` for anonymous in-process tests.
 * **Loopback:** (used for testing) `LoopbackEventLink().client`.
 
 ### Server
@@ -147,14 +147,23 @@ public protocol RemoteEventTransportServer: EventDelivering {
 
 `deliver` is host → client. Incoming client verbs are the handlers. `PaEventServer.attach` installs those handlers.
 
-**XPC:** `XPCRemoteEventTransportAcceptor(eventServer:)` accepts connections and attaches them. DO NOT instantiate the Server.
+**XPC:** `XPCRemoteEventTransportAcceptor(eventServer:)` accepts anonymous connections for tests. Pass `machServiceName:` for a login-item Mach service (PaWM). DO NOT instantiate the Server.
 
 ```swift
 public final class XPCRemoteEventTransportAcceptor: NSObject, NSXPCListenerDelegate, @unchecked Sendable {
-    public init(eventServer: PaEventServer)
+    public init(eventServer: PaEventServer, machServiceName: String? = nil)
     public var endpoint: NSXPCListenerEndpoint? { get }
     public func start()
     public func stop()
+}
+```
+
+`machServiceName: nil` (the default) uses `NSXPCListener.anonymous()`. A non-nil name uses `NSXPCListener(machServiceName:)`.
+
+```swift
+public final class XPCRemoteEventTransportClient: NSObject, RemoteEventTransportClient, @unchecked Sendable {
+    public init(endpoint: NSXPCListenerEndpoint)
+    public init(machServiceName: String, options: NSXPCConnection.Options = [])
 }
 ```
 
