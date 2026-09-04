@@ -1,9 +1,20 @@
 import AppKit
 
+@MainActor
 @main
 final class PaWMAppDelegate: NSObject, NSApplicationDelegate {
+    private let eventBusService = PaWMEventBusService()
+
     func applicationDidFinishLaunching(_ notification: Notification) {
-        print("hello world!")
+        guard ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"] == nil else {
+            return
+        }
+
+        eventBusService.start()
+    }
+
+    func applicationWillTerminate(_ notification: Notification) {
+        eventBusService.stop()
     }
 
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {
