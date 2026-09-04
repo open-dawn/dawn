@@ -145,3 +145,5 @@ xcuserdata
 # XcodeGen Generated Project
 *.xcodeproj
 Info.plist
+
+run.sh
