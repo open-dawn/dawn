@@ -1,7 +1,6 @@
 import AppKit
 
 @MainActor
-@main
 final class PaWMAppDelegate: NSObject, NSApplicationDelegate {
     private let eventBusService = PaWMEventBusService()
 
