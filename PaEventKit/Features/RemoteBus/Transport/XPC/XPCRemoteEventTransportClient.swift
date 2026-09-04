@@ -8,8 +8,15 @@ public final class XPCRemoteEventTransportClient: NSObject, RemoteEventTransport
 
     public init(endpoint: NSXPCListenerEndpoint) {
         super.init()
+        configure(connection: NSXPCConnection(listenerEndpoint: endpoint))
+    }
 
-        let connection = NSXPCConnection(listenerEndpoint: endpoint)
+    public init(machServiceName: String, options: NSXPCConnection.Options = []) {
+        super.init()
+        configure(connection: NSXPCConnection(machServiceName: machServiceName, options: options))
+    }
+
+    private func configure(connection: NSXPCConnection) {
         connection.exportedInterface = NSXPCInterface(with: PaRemoteEventBusXPC.self)
         connection.exportedObject = self
         connection.remoteObjectInterface = NSXPCInterface(with: PaEventHostXPC.self)
