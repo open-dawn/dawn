@@ -16,9 +16,13 @@ struct PaWMEventBusServiceTests {
 
         try await Task.sleep(for: .milliseconds(200))
 
-        #expect(fixture.readyCapture.didReceive)
-        #expect(fixture.readyCapture.objectIsNil)
-        #expect(fixture.readyCapture.userInfoIsNil)
+        guard let snapshot = await fixture.readyCapture.recordedSnapshot() else {
+            Issue.record("Expected ready notification")
+            return
+        }
+
+        #expect(snapshot.objectIsNil)
+        #expect(snapshot.userInfoIsNil)
     }
 
     @Test("Bus matches the runtime bus instance")
@@ -37,14 +41,14 @@ struct PaWMEventBusServiceTests {
 
         fixture.service.start()
         try await Task.sleep(for: .milliseconds(200))
-        #expect(fixture.readyCapture.didReceive)
+        #expect(await fixture.readyCapture.recordedSnapshot() != nil)
 
-        fixture.readyCapture.reset()
+        await fixture.readyCapture.reset()
 
         fixture.service.start()
         try await Task.sleep(for: .milliseconds(200))
 
-        #expect(fixture.readyCapture.didReceive)
+        #expect(await fixture.readyCapture.recordedSnapshot() != nil)
     }
 }
 
@@ -71,10 +75,10 @@ private struct ServiceFixture {
             object: nil,
             queue: .main
         ) { notification in
-            readyCapture.record(
-                object: notification.object,
-                userInfo: notification.userInfo
-            )
+            let snapshot = ServiceReadyCapture.Snapshot(notification)
+            Task {
+                await readyCapture.record(snapshot)
+            }
         }
     }
 
@@ -86,37 +90,28 @@ private struct ServiceFixture {
     }
 }
 
-private final class ServiceReadyCapture: @unchecked Sendable {
-    private let lock = NSLock()
-    private var _didReceive = false
-    private var _objectIsNil = false
-    private var _userInfoIsNil = false
+private actor ServiceReadyCapture {
+    struct Snapshot: Sendable {
+        let objectIsNil: Bool
+        let userInfoIsNil: Bool
 
-    var didReceive: Bool {
-        lock.withLock { _didReceive }
-    }
-
-    var objectIsNil: Bool {
-        lock.withLock { _objectIsNil }
-    }
-
-    var userInfoIsNil: Bool {
-        lock.withLock { _userInfoIsNil }
-    }
-
-    func record(object: Any?, userInfo: [AnyHashable: Any]?) {
-        lock.withLock {
-            _didReceive = true
-            _objectIsNil = object == nil
-            _userInfoIsNil = userInfo == nil
+        init(_ notification: Notification) {
+            self.objectIsNil = notification.object == nil
+            self.userInfoIsNil = notification.userInfo == nil
         }
+    }
+
+    private var snapshot: Snapshot?
+
+    func record(_ snapshot: Snapshot) {
+        self.snapshot = snapshot
+    }
+
+    func recordedSnapshot() -> Snapshot? {
+        snapshot
     }
 
     func reset() {
-        lock.withLock {
-            _didReceive = false
-            _objectIsNil = false
-            _userInfoIsNil = false
-        }
+        snapshot = nil
     }
 }
