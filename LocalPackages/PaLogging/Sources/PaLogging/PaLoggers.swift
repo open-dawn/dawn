@@ -8,7 +8,9 @@
 import OSLog
 
 public enum PaLoggers {
-    private static let subsystem = "dev.longhi.pineappleinc.pineapplewm"
+    private static let subsystem =
+        Bundle.main.bundleIdentifier
+        ?? "dev.longhi.pineappleinc"
 
     public static let general = Logger(
         subsystem: subsystem,

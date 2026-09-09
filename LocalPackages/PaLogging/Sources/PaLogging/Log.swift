@@ -5,7 +5,7 @@ public macro log(
     _ message: OSLogMessage,
     level: PaLogLevel = .debug,
     category: PaLogCategory = .general
-) -> Void = #externalMacro(
+) = #externalMacro(
     module: "PaLoggingMacros",
     type: "LogMacro"
 )

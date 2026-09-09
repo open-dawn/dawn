@@ -12,7 +12,7 @@ public struct LogMacro: ExpressionMacro {
         "notice",
         "warning",
         "error",
-        "critical"
+        "critical",
     ]
 
     private static let supportedCategories = [
@@ -21,18 +21,14 @@ public struct LogMacro: ExpressionMacro {
         "settings",
         "userInterface",
         "eventBus",
-        "transport"
+        "transport",
     ]
 
     public static func expansion(
         of node: some FreestandingMacroExpansionSyntax,
         in context: some MacroExpansionContext
     ) throws -> ExprSyntax {
-        guard let message = node.arguments.first?.expression.as(StringLiteralExprSyntax.self) else {
-            throw MacroExpansionErrorMessage(
-                "#log requires a string literal"
-            )
-        }
+        let message = try messageLiteral(from: node)
 
         let level = try argumentCase(
             named: "level",
@@ -46,23 +42,7 @@ public struct LogMacro: ExpressionMacro {
             from: node
         )
 
-        guard supportedLevels.contains(level) else {
-            throw MacroExpansionErrorMessage(
-                "Unsupported log level: \(level)"
-            )
-        }
-
-        guard supportedCategories.contains(category) else {
-            throw MacroExpansionErrorMessage(
-                "Unsupported log category: \(category)"
-            )
-        }
-
-        guard message.openingQuote.tokenKind != .multilineStringQuote else {
-            throw MacroExpansionErrorMessage(
-                "#log does not currently support multiline string literals"
-            )
-        }
+        try validate(level: level, category: category)
 
         var messageWithCallSite = message
         let pounds = message.openingPounds
@@ -97,24 +77,68 @@ public struct LogMacro: ExpressionMacro {
         }
 
         return """
-        PaLoggers.\(raw: category).\(raw: level)(\(messageWithCallSite))
-        """
+            PaLoggers.\(raw: category).\(raw: level)(\(messageWithCallSite))
+            """
+    }
+
+    private static func messageLiteral(
+        from node: some FreestandingMacroExpansionSyntax
+    ) throws -> StringLiteralExprSyntax {
+        guard
+            let message = node.arguments.first?
+                .expression.as(StringLiteralExprSyntax.self)
+        else {
+            throw MacroExpansionErrorMessage(
+                "#log requires a string literal."
+            )
+        }
+
+        let isMultiline = message.openingQuote.tokenKind == .multilineStringQuote
+
+        guard !isMultiline else {
+            throw MacroExpansionErrorMessage(
+                "#log does nto currently support multiline string literals"
+            )
+        }
+
+        return message
+    }
+
+    private static func validate(
+        level: String,
+        category: String
+    ) throws {
+        guard supportedLevels.contains(level) else {
+            throw MacroExpansionErrorMessage(
+                "Unsupported log level: \(level)"
+            )
+        }
+
+        guard supportedCategories.contains(category) else {
+            throw MacroExpansionErrorMessage(
+                "Unsupported log category: \(category)"
+            )
+        }
     }
 
     private static func argumentCase(
-    named label: String,
-    default defaultValue: String,
-    from node: some FreestandingMacroExpansionSyntax
+        named label: String,
+        default defaultValue: String,
+        from node: some FreestandingMacroExpansionSyntax
     ) throws -> String {
-        guard let argument = node.arguments.first(
-            where: { $0.label?.text == label }
-        ) else {
+        guard
+            let argument = node.arguments.first(
+                where: { $0.label?.text == label }
+            )
+        else {
             return defaultValue
         }
 
-        guard let memberAccess = argument.expression.as(
-            MemberAccessExprSyntax.self
-        ) else {
+        guard
+            let memberAccess = argument.expression.as(
+                MemberAccessExprSyntax.self
+            )
+        else {
             throw MacroExpansionErrorMessage(
                 "\(label) must be an enum case"
             )

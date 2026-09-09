@@ -4,12 +4,11 @@ import SwiftSyntaxMacros
 import SwiftSyntaxMacrosTestSupport
 import XCTest
 
-// Macro implementations build for the host, so the corresponding module is not available when cross-compiling. Cross-compiled tests may still make use of the macro itself in end-to-end tests.
 #if canImport(PaLoggingMacros)
 import PaLoggingMacros
 
 let testMacros: [String: Macro.Type] = [
-    "log": LogMacro.self,
+    "log": LogMacro.self
 ]
 #endif
 
@@ -20,7 +19,8 @@ final class PaLoggingTests: XCTestCase {
             #log("Hello")
             """,
             expandedSource: #"""
-            PaLoggers.general.debug("[\(#fileID, privacy: .public):\(#line, privacy: .public) \(#function, privacy: .public)] Hello")
+            PaLoggers.general.debug("[\(#fileID, privacy: .public):\(#line, privacy: .public) \#
+            \(#function, privacy: .public)] Hello")
             """#,
             macros: testMacros
         )
@@ -32,7 +32,8 @@ final class PaLoggingTests: XCTestCase {
             #log("Connection established", level: .info, category: .transport)
             """,
             expandedSource: #"""
-            PaLoggers.transport.info("[\(#fileID, privacy: .public):\(#line, privacy: .public) \(#function, privacy: .public)] Connection established")
+            PaLoggers.transport.info("[\(#fileID, privacy: .public):\(#line, privacy: .public) \#
+            \(#function, privacy: .public)] Connection established")
             """#,
             macros: testMacros
         )
@@ -44,7 +45,8 @@ final class PaLoggingTests: XCTestCase {
             #log("ID: \(id, privacy: .private)", level: .info, category: .settings)
             """#,
             expandedSource: #"""
-            PaLoggers.settings.info("[\(#fileID, privacy: .public):\(#line, privacy: .public) \(#function, privacy: .public)] ID: \(id, privacy: .private)")
+            PaLoggers.settings.info("[\(#fileID, privacy: .public):\(#line, privacy: .public) \#
+            \(#function, privacy: .public)] ID: \(id, privacy: .private)")
             """#,
             macros: testMacros
         )
@@ -56,7 +58,7 @@ final class PaLoggingTests: XCTestCase {
           #log(#"ID: \#(id, privacy: .private)"#, category: .settings)
           """##,
           expandedSource: ##"""
-          PaLoggers.settings.debug(#"[\#(#fileID, privacy: .public):\#(#line, privacy: .public)
+          PaLoggers.settings.debug(#"[\#(#fileID, privacy: .public):\#(#line, privacy: .public) \##
           \#(#function, privacy: .public)] ID: \#(id, privacy: .private)"#)
           """##,
           macros: testMacros

@@ -1,3 +1,8 @@
+excluded:
+  - .build
+  - "**/.build"
+
 disabled_rules:
   - comma
   - opening_brace
+  - trailing_comma
