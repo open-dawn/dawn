@@ -73,12 +73,21 @@ public final class PaEventBus: @unchecked Sendable {
 Mirror for a bus in another process. Same verbs as `PaEventBus`.
 
 ```swift
+public enum PaRemoteConnectionState: Sendable, Equatable {
+    case disconnected, connecting, connected
+}
+
 public final class PaRemoteEventBus: @unchecked Sendable {
     public init(transport: any RemoteEventTransportClient)
 
     public var isConnected: Bool { get }
+    public var connectionState: PaRemoteConnectionState { get }
     public func disconnect()
+    public func attemptReconnect() async throws
 
+    public func setConnectionStateHandler(
+        _ handler: (@Sendable (PaRemoteConnectionState) -> Void)?
+    )
     public func addListener(_ listener: Listener, kinds: Set<PaEventKind>? = nil)
     public func removeListener(_ listener: Listener)
     public func publish(_ event: PaEvent)
@@ -112,10 +121,16 @@ public final class PaEventServer: @unchecked Sendable {
 ```swift
 public protocol RemoteEventTransportClient: AnyObject, Sendable {
     var isConnected: Bool { get }
+    var connectionState: PaRemoteConnectionState { get }
+
     func setDeliveryHandler(_ handler: @escaping @Sendable (PaEvent) -> Void)
+    func setConnectionStateHandler(
+        _ handler: (@Sendable (PaRemoteConnectionState) -> Void)?
+    )
     func publish(_ event: PaEvent)
     func subscribe(kinds: Set<PaEventKind>?)
     func ask(_ event: PaEvent) async throws -> PaEvent
+    func attemptReconnect() async throws
     func close()
 }
 ```

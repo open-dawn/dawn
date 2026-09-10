@@ -16,11 +16,13 @@ let transport = XPCRemoteEventTransportClient(
 )
 let remote = PaRemoteEventBus(transport: transport)
 
-remote.isConnected  // false after the connection invalidates
+remote.isConnected  // true only after a transport handshake with the host
 remote.disconnect()
 ```
 
-On launch, subscribe to the host’s empty distributed notification (`dev.longhi.pineappleinc.PaWM.eventBusReady`). Create a new transport and `PaRemoteEventBus` when the ping fires, and again when XPC invalidates.
+On launch, subscribe to the host’s empty distributed notification (`dev.longhi.pineappleinc.PaWM.eventBusReady`). Keep one `PaRemoteEventBus` and call `attemptReconnect()` when the ping fires, and once when a live connection drops. Do not retry in a loop after a failed handshake; wait for the next ready ping.
+
+`publish` is best-effort. Use `ask` when you need confirmation from a host listener.
 
 In-process tests can still use `XPCRemoteEventTransportClient(endpoint:)` with an anonymous listener.
 
