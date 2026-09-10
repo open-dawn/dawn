@@ -2,6 +2,10 @@ import PaEventKit
 
 @MainActor
 final class WindowManagerListener: Listener {
+    init(bus: PaEventBus) {
+        bus.addListener(self, kinds: [.switchSpace, .getContexts])
+    }
+
     func handle(_ event: PaEvent, reply: (@Sendable (PaEvent) -> Void)?) {
         switch event {
         case let .switchSpace(payload):
@@ -11,7 +15,7 @@ final class WindowManagerListener: Listener {
 
         case .getContexts:
             let contexts = getAllContexts()
-            reply?(.contextsFetched(PaContextsFetchedEvent(contexts)))
+            reply?(.contextsFetched(PaContextsFetchedEvent(contexts: contexts)))
 
         // case let .initializedEvent(payload),
         default:
