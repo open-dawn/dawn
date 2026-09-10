@@ -69,4 +69,99 @@ struct XPCRemoteEventTransportTests {
         acceptor.stop()
         eventServer.stop()
     }
+
+    @Test("host stop leaves the client disconnected")
+    func hostStopLeavesClientDisconnected() async throws {
+        let hostBus = PaEventBus()
+        let eventServer = PaEventServer(bus: hostBus)
+        let acceptor = XPCRemoteEventTransportAcceptor(eventServer: eventServer)
+        acceptor.start()
+
+        guard let endpoint = acceptor.endpoint else {
+            Issue.record("Expected anonymous XPC listener endpoint")
+            return
+        }
+
+        let remoteBus = PaRemoteEventBus(transport: XPCRemoteEventTransportClient(endpoint: endpoint))
+        defer { remoteBus.disconnect() }
+
+        guard await waitUntilConnected(remoteBus) else {
+            Issue.record("Expected XPC handshake to succeed")
+            return
+        }
+
+        acceptor.stop()
+        eventServer.stop()
+
+        #expect(await waitUntilDisconnected(remoteBus))
+        await #expect(throws: PaEventRemoteError.notConnected) {
+            try await remoteBus.attemptReconnect()
+        }
+    }
+
+    @Test("missing mach service stays disconnected")
+    func missingMachServiceStaysDisconnected() async throws {
+        let transport = XPCRemoteEventTransportClient(
+            machServiceName: "dev.longhi.pineappleinc.missing.\(UUID().uuidString)"
+        )
+        // Snapshot before wrapping so an optimistic connected flash during init is not missed.
+        var sawConnected = transport.isConnected || transport.connectionState == .connected
+        let remoteBus = PaRemoteEventBus(transport: transport)
+        defer { remoteBus.disconnect() }
+
+        // Wait through the handshake timeout so a late connected cannot slip through.
+        let deadline = ContinuousClock.now + .seconds(2.5)
+        while ContinuousClock.now < deadline {
+            if remoteBus.isConnected || remoteBus.connectionState == .connected {
+                sawConnected = true
+                break
+            }
+            try await Task.sleep(for: .milliseconds(50))
+        }
+
+        #expect(!sawConnected)
+        #expect(remoteBus.connectionState != .connected)
+        #expect(!remoteBus.isConnected)
+    }
+
+    @Test("stale invalidation does not drop a newer connection")
+    func staleInvalidationDoesNotDropNewerConnection() async throws {
+        let hostBus = PaEventBus()
+        let eventServer = PaEventServer(bus: hostBus)
+        let acceptor = XPCRemoteEventTransportAcceptor(eventServer: eventServer)
+        acceptor.start()
+        defer {
+            acceptor.stop()
+            eventServer.stop()
+        }
+
+        guard let endpoint = acceptor.endpoint else {
+            Issue.record("Expected anonymous XPC listener endpoint")
+            return
+        }
+
+        let transport = XPCRemoteEventTransportClient(endpoint: endpoint)
+        let remoteBus = PaRemoteEventBus(transport: transport)
+        defer { remoteBus.disconnect() }
+
+        guard await waitUntilConnected(remoteBus) else {
+            Issue.record("Expected XPC handshake to succeed")
+            return
+        }
+
+        let staleGeneration = transport.currentGeneration()
+        try await remoteBus.attemptReconnect()
+
+        guard await waitUntilConnected(remoteBus) else {
+            Issue.record("Expected reconnect handshake to succeed")
+            return
+        }
+
+        #expect(transport.currentGeneration() != staleGeneration)
+
+        transport.handleInvalidation(generation: staleGeneration)
+        transport.handleInterruption(generation: staleGeneration)
+
+        #expect(remoteBus.isConnected)
+    }
 }

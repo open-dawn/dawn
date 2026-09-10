@@ -31,3 +31,17 @@ func waitUntilConnected(
     }
     return bus.isConnected
 }
+
+func waitUntilDisconnected(
+    _ bus: PaRemoteEventBus,
+    timeout: Duration = .seconds(2)
+) async -> Bool {
+    let deadline = ContinuousClock.now + timeout
+    while ContinuousClock.now < deadline {
+        if !bus.isConnected {
+            return true
+        }
+        try? await Task.sleep(for: .milliseconds(50))
+    }
+    return !bus.isConnected
+}
