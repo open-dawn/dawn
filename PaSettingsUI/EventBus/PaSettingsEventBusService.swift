@@ -9,6 +9,7 @@ final class PaSettingsEventBusService {
     private let readyObserver: PaSettingsEventBusReadyObserver
     private var isRunning = false
     private var reconnectTask: Task<Void, Never>?
+    private var retryAfterInitialHandshake = false
 
     private(set) var bus: PaRemoteEventBus
     private(set) var isConnected = false
@@ -30,6 +31,7 @@ final class PaSettingsEventBusService {
     func start() {
         guard !isRunning else { return }
         isRunning = true
+        retryAfterInitialHandshake = true
 
         bus.setConnectionStateHandler { [weak self] state in
             Task { @MainActor in
@@ -44,11 +46,12 @@ final class PaSettingsEventBusService {
         }
 
         handleConnectionStateChange(bus.connectionState)
-        scheduleReconnect()
+        reconnectIfNeeded()
     }
 
     func stop() {
         isRunning = false
+        retryAfterInitialHandshake = false
         reconnectTask?.cancel()
         reconnectTask = nil
         readyObserver.stop()
@@ -60,44 +63,43 @@ final class PaSettingsEventBusService {
     }
 
     private func handleReadyPing() {
-        scheduleReconnect()
+        reconnectIfNeeded()
     }
 
     private func handleConnectionStateChange(_ state: PaRemoteConnectionState) {
         let droppedWhileConnected = connectionState == .connected && state == .disconnected
+        let initialHandshakeFailed =
+            retryAfterInitialHandshake
+            && connectionState == .connecting
+            && state == .disconnected
+
         connectionState = state
         isConnected = state == .connected
 
-        if droppedWhileConnected {
-            scheduleReconnect()
+        if state == .connected {
+            retryAfterInitialHandshake = false
+        }
+
+        if droppedWhileConnected || initialHandshakeFailed {
+            retryAfterInitialHandshake = false
+            reconnectIfNeeded()
         }
     }
 
-    private func scheduleReconnect() {
+    private func reconnectIfNeeded() {
         guard isRunning else { return }
         guard reconnectTask == nil else { return }
 
+        switch bus.connectionState {
+        case .connected, .connecting:
+            return
+        case .disconnected:
+            break
+        }
+
         reconnectTask = Task { @MainActor in
             defer { reconnectTask = nil }
-            guard isRunning else { return }
-
-            for _ in 0..<40 {
-                guard isRunning else { return }
-                switch bus.connectionState {
-                case .connected:
-                    handleConnectionStateChange(.connected)
-                    return
-                case .connecting:
-                    try? await Task.sleep(for: .milliseconds(50))
-                case .disconnected:
-                    break
-                }
-                if bus.connectionState != .connecting {
-                    break
-                }
-            }
-
-            guard isRunning, bus.connectionState != .connected else { return }
+            guard isRunning, bus.connectionState == .disconnected else { return }
 
             do {
                 try await bus.attemptReconnect()
