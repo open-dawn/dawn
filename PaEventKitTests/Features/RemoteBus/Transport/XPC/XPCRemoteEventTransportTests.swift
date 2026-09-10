@@ -21,6 +21,11 @@ struct XPCRemoteEventTransportTests {
         let listener = RecordingListener()
         remoteBus.addListener(listener)
 
+        guard await waitUntilConnected(remoteBus) else {
+            Issue.record("Expected XPC handshake to succeed")
+            return
+        }
+
         let event = PaEvent.switchSpace(PaSwitchSpaceEvent(spaceIndex: 4))
         remoteBus.publish(event)
 
@@ -51,6 +56,11 @@ struct XPCRemoteEventTransportTests {
         }
 
         let remoteBus = PaRemoteEventBus(transport: XPCRemoteEventTransportClient(endpoint: endpoint))
+        guard await waitUntilConnected(remoteBus) else {
+            Issue.record("Expected XPC handshake to succeed")
+            return
+        }
+
         let reply = try await remoteBus.ask(.debugPing(PaDebugPingEvent()), timeout: .seconds(2))
 
         #expect(reply == .debugPong(PaDebugPongEvent(message: "remote-ok")))

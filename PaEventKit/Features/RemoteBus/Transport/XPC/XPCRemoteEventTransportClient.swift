@@ -12,26 +12,30 @@ public final class XPCRemoteEventTransportClient: NSObject, RemoteEventTransport
     private var hostProxy: PaEventHostXPC?
     private var deliveryHandler: (@Sendable (PaEvent) -> Void)?
     private var connectionStateHandler: (@Sendable (PaRemoteConnectionState) -> Void)?
+    private var state: PaRemoteConnectionState = .disconnected
+    private var connectionGeneration: UInt64 = 0
     private var stopped = false
 
     public init(endpoint: NSXPCListenerEndpoint) {
         self.connectionSource = .endpoint(endpoint)
         super.init()
-        establishConnectionLocked()
+        establishConnectionLocked(generation: 0)
+        Task { await self.completeHandshake(generation: 0) }
     }
 
     public init(machServiceName: String, options: NSXPCConnection.Options = []) {
         self.connectionSource = .mach(name: machServiceName, options: options)
         super.init()
-        establishConnectionLocked()
+        establishConnectionLocked(generation: 0)
+        Task { await self.completeHandshake(generation: 0) }
     }
 
     public var isConnected: Bool {
-        lock.withLock { connection != nil }
+        lock.withLock { state == .connected }
     }
 
     public var connectionState: PaRemoteConnectionState {
-        lock.withLock { connection != nil ? .connected : .disconnected }
+        lock.withLock { state }
     }
 
     public func setDeliveryHandler(_ handler: @escaping @Sendable (PaEvent) -> Void) {
@@ -100,31 +104,37 @@ public final class XPCRemoteEventTransportClient: NSObject, RemoteEventTransport
     }
 
     public func attemptReconnect() async throws {
-        let canReconnect = lock.withLock { !stopped }
-        guard canReconnect else {
-            notifyConnectionState(.disconnected)
+        let generation = lock.withLock { () -> UInt64 in
+            guard !stopped else { return 0 }
+            connectionGeneration &+= 1
+            return connectionGeneration
+        }
+
+        guard generation != 0 else {
             throw PaEventRemoteError.notConnected
         }
 
-        let connectionToInvalidate = lock.withLock { () -> NSXPCConnection? in
-            let connection = self.connection
-            tearDownConnectionLocked(clearHandlers: false)
-            return connection
-        }
-        connectionToInvalidate?.invalidate()
+        setConnection(.connecting, generation: generation)
+        tearDownConnectionLocked(clearHandlers: false)
 
-        let established = lock.withLock { () -> Bool in
-            guard !stopped else { return false }
-            establishConnectionLocked()
-            return connection != nil
+        let established = lock.withLock {
+            guard connectionGeneration == generation, !stopped else { return false }
+            establishConnectionLocked(generation: generation)
+            return true
         }
 
         guard established else {
-            notifyConnectionState(.disconnected)
+            setConnection(.disconnected, generation: generation)
             throw PaEventRemoteError.notConnected
         }
 
-        notifyConnectionState(.connected)
+        let connected = await completeHandshake(generation: generation)
+        if connected {
+            return
+        }
+
+        setConnection(.disconnected, generation: generation)
+        throw PaEventRemoteError.notConnected
     }
 
     public func close() {
@@ -132,13 +142,13 @@ public final class XPCRemoteEventTransportClient: NSObject, RemoteEventTransport
             stopped = true
             let connection = self.connection
             tearDownConnectionLocked(clearHandlers: true)
+            state = .disconnected
             return connection
         }
         connection?.invalidate()
-        notifyConnectionState(.disconnected)
     }
 
-    private func establishConnectionLocked() {
+    private func establishConnectionLocked(generation: UInt64) {
         let connection: NSXPCConnection
         switch connectionSource {
         case let .mach(name, options):
@@ -150,18 +160,25 @@ public final class XPCRemoteEventTransportClient: NSObject, RemoteEventTransport
         connection.exportedInterface = NSXPCInterface(with: PaRemoteEventBusXPC.self)
         connection.exportedObject = self
         connection.remoteObjectInterface = NSXPCInterface(with: PaEventHostXPC.self)
+        connection.interruptionHandler = { [weak self] in
+            self?.handleInterruption(generation: generation)
+        }
         connection.invalidationHandler = { [weak self] in
-            self?.handleInvalidation()
+            self?.handleInvalidation(generation: generation)
         }
         connection.resume()
 
         self.connection = connection
-        self.hostProxy = connection.remoteObjectProxyWithErrorHandler { _ in
+        self.hostProxy = connection.remoteObjectProxyWithErrorHandler { [weak self] _ in
+            self?.handleInterruption(generation: generation)
         } as? PaEventHostXPC
+        state = hostProxy == nil ? .disconnected : .connecting
     }
 
     private func tearDownConnectionLocked(clearHandlers: Bool) {
         connection?.invalidationHandler = nil
+        connection?.interruptionHandler = nil
+        connection?.invalidate()
         connection = nil
         hostProxy = nil
 
@@ -171,21 +188,94 @@ public final class XPCRemoteEventTransportClient: NSObject, RemoteEventTransport
         }
     }
 
-    private func handleInvalidation() {
+    func handleInterruption(generation: UInt64) {
+        setConnection(.disconnected, generation: generation)
+    }
+
+    func handleInvalidation(generation: UInt64) {
         lock.withLock {
+            guard connectionGeneration == generation else { return }
             connection = nil
             hostProxy = nil
         }
-        notifyConnectionState(.disconnected)
+        setConnection(.disconnected, generation: generation)
     }
 
-    private func notifyConnectionState(_ state: PaRemoteConnectionState) {
-        let handler = lock.withLock { connectionStateHandler }
-        handler?(state)
+    private func setConnection(_ newState: PaRemoteConnectionState, generation: UInt64) {
+        let handler = lock.withLock { () -> (@Sendable (PaRemoteConnectionState) -> Void)? in
+            guard connectionGeneration == generation else { return nil }
+            state = newState
+            return connectionStateHandler
+        }
+        handler?(newState)
+    }
+
+    private func completeHandshake(generation: UInt64) async -> Bool {
+        let snapshot = lock.withLock { () -> (Bool, PaRemoteConnectionState) in
+            (connectionGeneration == generation && !stopped, state)
+        }
+        guard snapshot.0 else { return false }
+        if snapshot.1 == .disconnected {
+            return false
+        }
+
+        let ok = await performHandshake(generation: generation)
+        guard ok else {
+            setConnection(.disconnected, generation: generation)
+            return false
+        }
+
+        setConnection(.connected, generation: generation)
+        return true
+    }
+
+    private func performHandshake(generation: UInt64) async -> Bool {
+        guard let hostProxy = currentHostProxy() else { return false }
+
+        return await withCheckedContinuation { continuation in
+            let session = HandshakeSession(continuation: continuation)
+
+            hostProxy.handshake { [weak self] ok in
+                guard let self else {
+                    session.complete(false)
+                    return
+                }
+                let isCurrent = self.lock.withLock {
+                    self.connectionGeneration == generation && !self.stopped
+                }
+                session.complete(isCurrent && ok)
+            }
+
+            Task {
+                try? await Task.sleep(for: .seconds(2))
+                session.complete(false)
+            }
+        }
+    }
+
+    func currentGeneration() -> UInt64 {
+        lock.withLock { connectionGeneration }
     }
 
     private func currentHostProxy() -> PaEventHostXPC? {
         lock.withLock { hostProxy }
+    }
+}
+
+private final class HandshakeSession: @unchecked Sendable {
+    private let lock = NSLock()
+    private var continuation: CheckedContinuation<Bool, Never>?
+
+    init(continuation: CheckedContinuation<Bool, Never>) {
+        self.continuation = continuation
+    }
+
+    func complete(_ value: Bool) {
+        let continuation = lock.withLock { () -> CheckedContinuation<Bool, Never>? in
+            defer { self.continuation = nil }
+            return self.continuation
+        }
+        continuation?.resume(returning: value)
     }
 }
 

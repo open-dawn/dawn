@@ -22,7 +22,12 @@ struct PaWMEventBusRuntimeTests {
         )
         defer { remoteBus.disconnect() }
 
-        #expect(remoteBus.isConnected)
+        var connected = remoteBus.isConnected
+        for _ in 0..<40 where !connected {
+            try await Task.sleep(for: .milliseconds(50))
+            connected = remoteBus.isConnected
+        }
+        #expect(connected)
 
         do {
             _ = try await remoteBus.ask(
@@ -81,7 +86,12 @@ struct PaWMEventBusRuntimeTests {
         )
         defer { remoteBus.disconnect() }
 
-        #expect(remoteBus.isConnected)
+        var connected = remoteBus.isConnected
+        for _ in 0..<40 where !connected {
+            try await Task.sleep(for: .milliseconds(50))
+            connected = remoteBus.isConnected
+        }
+        #expect(connected)
 
         runtime.stop()
 
