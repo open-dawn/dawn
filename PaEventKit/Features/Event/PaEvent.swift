@@ -11,9 +11,9 @@ public enum PaEvent: Codable, Sendable, Equatable {
         case .debugPing: .debugPing
         case .debugPong: .debugPong
         case .switchSpace: .switchSpace
-        case .initialized: .initializedEvent
-        case .getContexts: .getContextsEvent
-        case .contextsFetched: .contextsFetchedEvent
+        case .initialized: .initialized
+        case .getContexts: .getContexts
+        case .contextsFetched: .contextsFetched
         }
     }
 }

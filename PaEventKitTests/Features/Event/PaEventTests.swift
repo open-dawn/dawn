@@ -1,6 +1,6 @@
 import Foundation
-import Testing
 @testable import PaEventKit
+import Testing
 
 @Suite("PaEvent")
 struct PaEventTests {
@@ -9,6 +9,9 @@ struct PaEventTests {
         #expect(PaEvent.debugPing(PaDebugPingEvent()).kind == .debugPing)
         #expect(PaEvent.debugPong(PaDebugPongEvent()).kind == .debugPong)
         #expect(PaEvent.switchSpace(PaSwitchSpaceEvent(spaceIndex: 2)).kind == .switchSpace)
+        #expect(PaEvent.initialized(PaInitializedEvent).kind == .initialized)
+        #expect(PaEvent.getContexts(PaGetContextsEvent).kind == .getContexts)
+        #expect(PaEvent.contextsFetched(PaContextsFetchedEvent(contexts: [])).kind == .contextsFetched)
     }
 
     @Test("Codable round-trips all cases")
@@ -16,7 +19,10 @@ struct PaEventTests {
         let events: [PaEvent] = [
             .debugPing(PaDebugPingEvent()),
             .debugPong(PaDebugPongEvent(message: "hello")),
-            .switchSpace(PaSwitchSpaceEvent(spaceIndex: 3))
+            .switchSpace(PaSwitchSpaceEvent(spaceIndex: 3)),
+            .initialized(PaInitializedEvent()),
+            .getContexts(PaGetContextsEvent()),
+            .contextsFetched(PaContextsFetchedEvent(contexts: []))
         ]
 
         let encoder = JSONEncoder()
