@@ -219,8 +219,7 @@ public final class XPCRemoteEventTransportClient: NSObject, RemoteEventTransport
             return false
         }
 
-        let ok = await performHandshake(generation: generation)
-        guard ok else {
+        guard await performHandshake(generation: generation) else {
             setConnection(.disconnected, generation: generation)
             return false
         }
@@ -235,7 +234,7 @@ public final class XPCRemoteEventTransportClient: NSObject, RemoteEventTransport
         return await withCheckedContinuation { continuation in
             let session = HandshakeSession(continuation: continuation)
 
-            hostProxy.handshake { [weak self] ok in
+            hostProxy.handshake { [weak self] isOk in
                 guard let self else {
                     session.complete(false)
                     return
@@ -243,7 +242,7 @@ public final class XPCRemoteEventTransportClient: NSObject, RemoteEventTransport
                 let isCurrent = self.lock.withLock {
                     self.connectionGeneration == generation && !self.stopped
                 }
-                session.complete(isCurrent && ok)
+                session.complete(isCurrent && isOk)
             }
 
             Task {

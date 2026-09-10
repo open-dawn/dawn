@@ -19,6 +19,5 @@ struct PaWMEventBusReadyNotifier {
             userInfo: nil,
             deliverImmediately: true
         )
-        
     }
 }

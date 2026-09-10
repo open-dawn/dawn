@@ -11,7 +11,7 @@ struct AboutView: View {
                 if eventBusService.connectionState == .connecting {
                     ProgressView()
                 }
-
+                
                 Text(connectionLabel)
                     .foregroundStyle(.secondary)
             }
