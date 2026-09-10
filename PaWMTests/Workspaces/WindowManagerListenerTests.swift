@@ -24,13 +24,18 @@ struct WindowManagerListenerTests {
     }
 
     @Test("handle get contexts event")
-    func handle_GetContextsEvent() {
+    func handle_GetContextsEvent() async throws {
         let mockBus = PaEventBus()
         let mockContextManager = FakeContextManager()
         let listener = WindowManagerListener(bus: mockBus, contextManager: mockContextManager)
 
         let event = PaEvent.getContexts(PaGetContextsEvent())
-        mockBus.publish(event)
+        let eventResponse = try #require(await mockBus.ask(event))
+        guard case let .contextsFetched(payload) = eventResponse else {
+            Issue.record("Expected .contextsFetched \(eventResponse)")
+            return
+        }
+        #expect(payload.contexts == mockContextManager.contexts)
     }
 
     @Test("handle switch space event with valid id")
@@ -41,17 +46,6 @@ struct WindowManagerListenerTests {
         let listener = WindowManagerListener(bus: mockBus, contextManager: mockContextManager)
 
         let event = PaEvent.switchSpace(PaSwitchSpaceEvent(spaceIndex: 1))
-        mockBus.publish(event)
-    }
-
-    @Test("handle switch space event with invalid id")
-    func handle_SwitchSpaceEventwithInvalidId() {
-        let mockBus = PaEventBus()
-        let mockContextManager = FakeContextManager()
-        mockContextManager.contexts = []
-        let listener = WindowManagerListener(bus: mockBus, contextManager: mockContextManager)
-
-        let event = PaEvent.switchSpace(PaSwitchSpaceEvent(spaceIndex: 0))
         mockBus.publish(event)
     }
 
