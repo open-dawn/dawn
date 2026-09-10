@@ -1,42 +1,50 @@
 import Foundation
 
 public final class XPCRemoteEventTransportClient: NSObject, RemoteEventTransportClient, @unchecked Sendable {
+    private enum ConnectionSource: Sendable {
+        case mach(name: String, options: NSXPCConnection.Options)
+        case endpoint(NSXPCListenerEndpoint)
+    }
+
     private let lock = NSLock()
+    private let connectionSource: ConnectionSource
     private var connection: NSXPCConnection?
     private var hostProxy: PaEventHostXPC?
     private var deliveryHandler: (@Sendable (PaEvent) -> Void)?
+    private var connectionStateHandler: (@Sendable (PaRemoteConnectionState) -> Void)?
+    private var stopped = false
 
     public init(endpoint: NSXPCListenerEndpoint) {
+        self.connectionSource = .endpoint(endpoint)
         super.init()
-        configure(connection: NSXPCConnection(listenerEndpoint: endpoint))
+        establishConnectionLocked()
     }
 
     public init(machServiceName: String, options: NSXPCConnection.Options = []) {
+        self.connectionSource = .mach(name: machServiceName, options: options)
         super.init()
-        configure(connection: NSXPCConnection(machServiceName: machServiceName, options: options))
-    }
-
-    private func configure(connection: NSXPCConnection) {
-        connection.exportedInterface = NSXPCInterface(with: PaRemoteEventBusXPC.self)
-        connection.exportedObject = self
-        connection.remoteObjectInterface = NSXPCInterface(with: PaEventHostXPC.self)
-        connection.invalidationHandler = { [weak self] in
-            self?.handleInvalidation()
-        }
-        connection.resume()
-
-        self.connection = connection
-        self.hostProxy = connection.remoteObjectProxyWithErrorHandler { _ in
-        } as? PaEventHostXPC
+        establishConnectionLocked()
     }
 
     public var isConnected: Bool {
         lock.withLock { connection != nil }
     }
 
+    public var connectionState: PaRemoteConnectionState {
+        lock.withLock { connection != nil ? .connected : .disconnected }
+    }
+
     public func setDeliveryHandler(_ handler: @escaping @Sendable (PaEvent) -> Void) {
         lock.withLock {
             deliveryHandler = handler
+        }
+    }
+
+    public func setConnectionStateHandler(
+        _ handler: (@Sendable (PaRemoteConnectionState) -> Void)?
+    ) {
+        lock.withLock {
+            connectionStateHandler = handler
         }
     }
 
@@ -91,14 +99,76 @@ public final class XPCRemoteEventTransportClient: NSObject, RemoteEventTransport
         }
     }
 
-    public func close() {
-        let connection = lock.withLock {
+    public func attemptReconnect() async throws {
+        let canReconnect = lock.withLock { !stopped }
+        guard canReconnect else {
+            notifyConnectionState(.disconnected)
+            throw PaEventRemoteError.notConnected
+        }
+
+        let connectionToInvalidate = lock.withLock { () -> NSXPCConnection? in
             let connection = self.connection
-            self.connection = nil
-            self.hostProxy = nil
+            tearDownConnectionLocked(clearHandlers: false)
+            return connection
+        }
+        connectionToInvalidate?.invalidate()
+
+        let established = lock.withLock { () -> Bool in
+            guard !stopped else { return false }
+            establishConnectionLocked()
+            return connection != nil
+        }
+
+        guard established else {
+            notifyConnectionState(.disconnected)
+            throw PaEventRemoteError.notConnected
+        }
+
+        notifyConnectionState(.connected)
+    }
+
+    public func close() {
+        let connection = lock.withLock { () -> NSXPCConnection? in
+            stopped = true
+            let connection = self.connection
+            tearDownConnectionLocked(clearHandlers: true)
             return connection
         }
         connection?.invalidate()
+        notifyConnectionState(.disconnected)
+    }
+
+    private func establishConnectionLocked() {
+        let connection: NSXPCConnection
+        switch connectionSource {
+        case let .mach(name, options):
+            connection = NSXPCConnection(machServiceName: name, options: options)
+        case let .endpoint(endpoint):
+            connection = NSXPCConnection(listenerEndpoint: endpoint)
+        }
+
+        connection.exportedInterface = NSXPCInterface(with: PaRemoteEventBusXPC.self)
+        connection.exportedObject = self
+        connection.remoteObjectInterface = NSXPCInterface(with: PaEventHostXPC.self)
+        connection.invalidationHandler = { [weak self] in
+            self?.handleInvalidation()
+        }
+        connection.resume()
+
+        self.connection = connection
+        self.hostProxy = connection.remoteObjectProxyWithErrorHandler { _ in
+        } as? PaEventHostXPC
+    }
+
+    private func tearDownConnectionLocked(clearHandlers: Bool) {
+        connection?.invalidationHandler = nil
+        connection = nil
+        hostProxy = nil
+
+        if clearHandlers {
+            deliveryHandler = nil
+            connectionStateHandler = nil
+        }
     }
 
     private func handleInvalidation() {
@@ -106,6 +176,12 @@ public final class XPCRemoteEventTransportClient: NSObject, RemoteEventTransport
             connection = nil
             hostProxy = nil
         }
+        notifyConnectionState(.disconnected)
+    }
+
+    private func notifyConnectionState(_ state: PaRemoteConnectionState) {
+        let handler = lock.withLock { connectionStateHandler }
+        handler?(state)
     }
 
     private func currentHostProxy() -> PaEventHostXPC? {

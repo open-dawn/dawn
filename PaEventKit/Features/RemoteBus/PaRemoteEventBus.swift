@@ -21,8 +21,33 @@ public final class PaRemoteEventBus: @unchecked Sendable {
         transport.isConnected
     }
 
+    public var connectionState: PaRemoteConnectionState {
+        transport.connectionState
+    }
+
+    public func setConnectionStateHandler(
+        _ handler: (@Sendable (PaRemoteConnectionState) -> Void)?
+    ) {
+        guard let handler else {
+            transport.setConnectionStateHandler(nil)
+            return
+        }
+
+        transport.setConnectionStateHandler { [weak self] state in
+            handler(state)
+            if state == .connected {
+                self?.restoreSubscriptions()
+            }
+        }
+    }
+
     public func disconnect() {
         transport.close()
+    }
+
+    public func attemptReconnect() async throws {
+        try await transport.attemptReconnect()
+        restoreSubscriptions()
     }
 
     public func addListener(_ listener: Listener, kinds: Set<PaEventKind>? = nil) {
@@ -76,6 +101,12 @@ public final class PaRemoteEventBus: @unchecked Sendable {
             for listener in matchingListeners(for: event.kind) {
                 listener.handle(event, reply: nil)
             }
+        }
+    }
+
+    private func restoreSubscriptions() {
+        lock.withLock {
+            syncSubscriptionLocked()
         }
     }
 
