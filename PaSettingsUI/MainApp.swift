@@ -5,7 +5,11 @@ struct MainApp: App {
     private let screens: [ConfigurationPane] = [
         ConfigurationPane("Profiles") { WorkspaceSwitcherView() },
         ConfigurationPane("General Settings") { GeneralSettingsView() },
-        ConfigurationPane("About") { AboutView() }
+        ConfigurationPane("About") {
+            AboutView(
+                content: AboutMetadataLoader.loadRequired()
+            )
+        }
     ]
 
     var body: some Scene {

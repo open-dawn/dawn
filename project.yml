@@ -22,9 +22,12 @@ targets:
       path: PaSettingsUI/Info.plist
       properties:
         CFBundleDisplayName: "PineappleWM Settings"
+        CFBundleShortVersionString: "$(MARKETING_VERSION)"
+        CFBundleVersion: "$(CURRENT_PROJECT_VERSION)"
     settings:
       base:
         MARKETING_VERSION: &mktversion "0.0.0"
+        CURRENT_PROJECT_VERSION: &buildversion "1"
       configs:
         Debug:
           ENABLE_TESTABILITY: YES
