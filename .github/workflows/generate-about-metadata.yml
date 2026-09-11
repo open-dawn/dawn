@@ -1,0 +1,46 @@
+name: Generate About metadata
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  generate_metadata:
+    name: Generate AboutMetadata.json
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.13"
+
+      - name: Generate metadata
+        env:
+          COMMIT_SHA: ${{ github.sha }}
+          COMMIT_REFERENCE: ${{ github.ref_name }}
+          REPOSITORY_URL: ${{ github.server_url }}/${{ github.repository }}
+        run: |
+          python Scripts/generate_about_metadata.py \
+          --sha "$COMMIT_SHA" \
+          --reference "$COMMIT_REFERENCE" \
+          --repository_url "$REPOSITORY_URL" \
+          --output PaSettingsUI/About/AboutMetadata.json
+
+      - name: Validate generated JSON
+        run: | 
+          python -m json.tool \
+            PaSettingsUI/About/AboutMetadata.json
+
+      - name: Upload generated metadata
+        uses: actions/upload-artifact@v7
+        with:
+          name: about-metadata
+          path: PaSettingsUI/About/AboutMetadata.json
+          if-no-files-found: error
+          retention-days: 7
