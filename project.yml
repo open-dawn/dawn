@@ -6,6 +6,10 @@ settings:
   base:
     SWIFT_VERSION: &swiftversion "6"
 
+packages:
+  PaLogging:
+    path: LocalPackages/PaLogging
+
 targets:
 
   PaSettingsUI:
@@ -32,6 +36,7 @@ targets:
         copy:
           destination: wrapper
           subpath: Contents/Library/LoginItems
+      - package: PaLogging
     scheme:
       testTargets:
         - PaSettingsUITests
@@ -56,6 +61,7 @@ targets:
           ENABLE_TESTABILITY: YES
     dependencies:
       - target: PaEventKit
+      - package: PaLogging
     scheme:
       testTargets:
         - PaWMTests
@@ -81,6 +87,8 @@ targets:
       configs:
         Debug:
           ENABLE_TESTABILITY: YES
+    dependencies:
+      - package: PaLogging
     scheme:
       testTargets:
         - PaEventKitTests
@@ -142,3 +150,4 @@ schemes:
         - PaEventKitTests
         - PaWMTests
         - PaSettingsUITests
+        - package: PaLogging/PaLoggingTests
