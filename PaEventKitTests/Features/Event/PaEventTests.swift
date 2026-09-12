@@ -9,8 +9,8 @@ struct PaEventTests {
         #expect(PaEvent.debugPing(PaDebugPingEvent()).kind == .debugPing)
         #expect(PaEvent.debugPong(PaDebugPongEvent()).kind == .debugPong)
         #expect(PaEvent.switchSpace(PaSwitchSpaceEvent(spaceIndex: 2)).kind == .switchSpace)
-        #expect(PaEvent.initialized(PaInitializedEvent).kind == .initialized)
-        #expect(PaEvent.getContexts(PaGetContextsEvent).kind == .getContexts)
+        #expect(PaEvent.initialized(PaInitializedEvent()).kind == .initialized)
+        #expect(PaEvent.getContexts(PaGetContextsEvent()).kind == .getContexts)
         #expect(PaEvent.contextsFetched(PaContextsFetchedEvent(contexts: [])).kind == .contextsFetched)
     }
 

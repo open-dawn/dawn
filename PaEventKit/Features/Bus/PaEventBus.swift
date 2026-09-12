@@ -1,6 +1,6 @@
 import Foundation
 
-public final class PaEventBus: @unchecked Sendable {
+public class PaEventBus: @unchecked Sendable {
     private struct Registration {
         weak var listener: Listener?
         var kinds: Set<PaEventKind>?
@@ -11,8 +11,8 @@ public final class PaEventBus: @unchecked Sendable {
     private var registrations: [Registration]
 
     public init() {
-        self.lock = NSLock()
-        self.registrations = []
+        lock = NSLock()
+        registrations = []
     }
 
     public func addListener(_ listener: Listener, kinds: Set<PaEventKind>? = nil) {
@@ -57,6 +57,14 @@ public final class PaEventBus: @unchecked Sendable {
                 listener.handle(event, reply: nil)
             }
         }
+    }
+
+    public func hasListeners(for event: PaEvent? = nil) -> Bool {
+        guard let event else {
+            return !(registrations.isEmpty)
+        }
+
+        return !(matchingListeners(for: event.kind).isEmpty)
     }
 
     public func ask(

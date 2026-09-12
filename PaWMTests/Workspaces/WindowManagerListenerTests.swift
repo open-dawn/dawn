@@ -5,22 +5,24 @@ import Testing
 @MainActor
 @Suite("WindowManagerListener")
 struct WindowManagerListenerTests {
-    @Test("handle invalid event does nothing")
-    func handle_invalidEventdoesNothing() {
+    @Test("bus uses WindowManagerListener as EventHandler")
+    func busUseListernerAsHandler() throws {
+        let events: [(event: PaEvent, afterResult: Bool)] = [
+            (event: PaEvent.debugPing(PaDebugPingEvent()), afterResult: false),
+            (event: PaEvent.initialized(PaInitializedEvent()), afterResult: true),
+            (event: PaEvent.getContexts(PaGetContextsEvent()), afterResult: true),
+            (event: PaEvent.switchSpace(PaSwitchSpaceEvent(spaceIndex: 1)), afterResult: true)
+        ]
+
         let mockBus = PaEventBus()
+        for event in events {
+            try #require(mockBus.hasListeners(for: event.event) == false)
+        }
+
         let listener = WindowManagerListener(bus: mockBus)
-
-        let event = PaEvent.debugPing(PaDebugPingEvent())
-        mockBus.publish(event)
-    }
-
-    @Test("handle initialize event")
-    func handle_InitializeEvent() {
-        let mockBus = PaEventBus()
-        let listener = WindowManagerListener(bus: mockBus)
-
-        let event = PaEvent.initialized(PaInitializedEvent())
-        mockBus.publish(event)
+        for event in events {
+            #expect(mockBus.hasListeners(for: event.event) == event.afterResult)
+        }
     }
 
     @Test("handle get contexts event")
@@ -30,7 +32,8 @@ struct WindowManagerListenerTests {
         let listener = WindowManagerListener(bus: mockBus, contextManager: mockContextManager)
 
         let event = PaEvent.getContexts(PaGetContextsEvent())
-        let eventResponse = try #require(await mockBus.ask(event))
+        let eventResponse = try await mockBus.ask(event)
+
         guard case let .contextsFetched(payload) = eventResponse else {
             Issue.record("Expected .contextsFetched \(eventResponse)")
             return
@@ -38,15 +41,34 @@ struct WindowManagerListenerTests {
         #expect(payload.contexts == mockContextManager.contexts)
     }
 
-    @Test("handle switch space event with valid id")
-    func handle_SwitchSpaceEventwithValidId() {
-        let mockBus = PaEventBus()
+    @Test("switchSpace with valid index switches that context")
+    func handle_switchSpaceValidIndex() {
         let mockContextManager = FakeContextManager()
         mockContextManager.contexts = [WorkspaceContext](repeating: createMockWorkspaceContext(), count: 3)
-        let listener = WindowManagerListener(bus: mockBus, contextManager: mockContextManager)
-
+        let switcherSpy = ContextSwitchingSpy()
+        let mockBus = PaEventBus()
+        let listener = WindowManagerListener(bus: mockBus,
+                                             contextManager: mockContextManager,
+                                             contextSwitching: switcherSpy)
         let event = PaEvent.switchSpace(PaSwitchSpaceEvent(spaceIndex: 1))
-        mockBus.publish(event)
+
+        listener.handle(event, reply: nil)
+        #expect(switcherSpy.switchedContexts == [mockContextManager.contexts[1]])
+    }
+
+    @Test("switchSpace with invalid index switches that context")
+    func handle_switchSpaceInvalidIndex() {
+        let mockContextManager = FakeContextManager()
+        mockContextManager.contexts = [WorkspaceContext](repeating: createMockWorkspaceContext(), count: 1)
+        let switcherSpy = ContextSwitchingSpy()
+        let mockBus = PaEventBus()
+        let listener = WindowManagerListener(bus: mockBus,
+                                             contextManager: mockContextManager,
+                                             contextSwitching: switcherSpy)
+        let event = PaEvent.switchSpace(PaSwitchSpaceEvent(spaceIndex: 2))
+
+        listener.handle(event, reply: nil)
+        #expect(switcherSpy.switchedContexts == [])
     }
 
     @Test("getAllContexts return the same of ContextManager")
@@ -103,5 +125,13 @@ final class FakeContextManager: ContextProviding {
 
     func getAvailableContexts() -> [WorkspaceContext] {
         return contexts
+    }
+}
+
+final class ContextSwitchingSpy: ContextSwitching {
+    var switchedContexts: [WorkspaceContext] = []
+
+    func switchToContext(to context: WorkspaceContext) {
+        switchedContexts.append(context)
     }
 }
