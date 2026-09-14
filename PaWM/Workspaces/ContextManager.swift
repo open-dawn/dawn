@@ -9,7 +9,7 @@ final class ContextManager: ContextProviding {
         do {
             store = try await SettingsStore(repository: repository)
         } catch {
-            #log("Corrupted SettingsStore", level: .error, category: .settings)
+            #log("Corrupted SettingsStore \(error.localizedDescription)", level: .error, category: .settings)
             #log("Reseting setting store", level: .info, category: .settings)
 
             try await repository.save(.empty)
@@ -23,8 +23,7 @@ final class ContextManager: ContextProviding {
     }
 
     func createContext(context: WorkspaceContext) async throws -> WorkspaceContext {
-        return try await
-            store.createContext(name: context.name, symbol: context.symbol, applications: context.applications)
+        try await store.createContext(name: context.name, symbol: context.symbol, applications: context.applications)
     }
 
     func getContext(uuid: UUID) async -> WorkspaceContext? {
