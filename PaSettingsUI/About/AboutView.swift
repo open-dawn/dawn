@@ -1,44 +1,21 @@
 import SwiftUI
 
 struct AboutView: View {
-    let content: AboutContent
+    private let copyright: String = "PineApple INC 2026"
+    private let license: String = "GNU GENERAL PUBLIC LICENSE"
+    private let appVersion: String = "0.0.0"
+    private let lastCommit: String = "6e5174f (stable)"
+    private let lastCommitURL: String =
+        "https://github.com/PineAppleIncOS/pineapplewm/commit/6e5174fc9a701ecdfa6269ead19ce6a49cc3f92f"
+    private let privacyPolicyURL: String = "https://github.com/PineAppleIncOS/pineapplewm"
+    private let termsOfUseURL: String = "https://github.com/PineAppleIncOS/pineapplewm"
 
     var body: some View {
         VStack(spacing: 24) {
-            HStack(spacing: 0){
-                Text("Copyright: ")
-                Text(verbatim: content.metadata.copyright)
-                    .bold()
-            }
-
-            HStack(spacing: 0) {
-                Text("License: ")
-                Text(verbatim: content.metadata.license)
-                    .bold()
-            }
-
-            HStack(spacing: 0) {
-                Text("Version: ")
-                Text(verbatim: content.appVersion)
-                    .bold()
-                Text(" - ")
-                Link(
-                    content.metadata.commit.displayName,
-                    destination: content.metadata.commit.url
-                )
-            }
-
-            HStack(spacing: 0) {
-                Link(
-                    "Privacy Policy",
-                    destination: content.metadata.privacyPolicyURL
-                )
-                Text(" - ")
-                Link(
-                    "Terms of Use",
-                    destination: content.metadata.termsOfUseURL
-                )
-            }
+            Text(.init("Copyright: **\(self.copyright)**"))
+            Text(.init("License: **\(self.license)**"))
+            Text(.init("Version **\(self.appVersion)** - [\(self.lastCommit)](\(self.lastCommitURL))"))
+            Text(.init("[Privacy of Policy](\(self.privacyPolicyURL)) - [Terms of Use](\(self.termsOfUseURL))"))
         }
     }
 }
