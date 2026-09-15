@@ -147,3 +147,7 @@ xcuserdata
 Info.plist
 
 run.sh
+
+# Log files
+
+*.log
