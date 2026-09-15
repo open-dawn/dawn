@@ -11,8 +11,10 @@ struct WMHideAppAction: WMAppAction {
             throw WMActionError.notRunning
         }
 
-        targetApp.activate()
-        targetApp.hide()
+        targetApp.activate(options: [])
+        if !targetApp.hide() {
+            throw WMActionError.noGUItoShow
+        }
     }
 
     init(_ app: WorkspaceApplication, provider: ApplicationProvider = SystemApplicationProvider()) {
