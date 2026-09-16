@@ -60,11 +60,14 @@ public final class PaEventBus: @unchecked Sendable {
     }
 
     public func hasListeners(for event: PaEvent? = nil) -> Bool {
-        guard let event else {
-            return !(registrations.isEmpty)
+        if let event {
+            return !(matchingListeners(for: event.kind).isEmpty)
         }
 
-        return !(matchingListeners(for: event.kind).isEmpty)
+        return lock.withLock {
+            pruneDeadRegistrationsLocked()
+            return !registrations.isEmpty
+        }
     }
 
     public func ask(

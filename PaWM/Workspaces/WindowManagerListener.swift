@@ -10,15 +10,13 @@ struct DefaultContextSwitching: ContextSwitching {
     func switchToContext(to context: WorkspaceContext) {
         let appsList: [WorkspaceApplication] = context.applications
 
-        do {
-            Task { @MainActor in
-                try await WMActionIdentifier.resetWindows.action.execute()
-            }
-        } catch {
-            print("Error: \(error.localizedDescription)")
-        }
-
         Task { @MainActor in
+            do {
+                try await WMActionIdentifier.resetWindows.action.execute()
+            } catch {
+                print("Error: \(error.localizedDescription)")
+            }
+
             for app in appsList {
                 do {
                     try await WMActionIdentifier.openApp(app).action.execute()
