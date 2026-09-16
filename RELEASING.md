@@ -17,15 +17,21 @@ The first alpha supports:
 
 - macOS 26.0 or later.
 - Apple Silicon Macs.
-- Installation through a signed macOS installer package.
+- Distribution through a signed and notarized macOS disk image.
+- Installation by dragging PineappleWM into `/Applications`.
 
 Release artifacts use the following naming convention:
 
-`PineappleWM-<version>.pkg`
+`PineappleWM-<version>.dmg`
 
 For the first alpha:
 
-`PineappleWM-0.1.0-alpha.1.pkg`
+`PineappleWM-0.1.0-alpha.1.dmg`
+
+The disk image must contain:
+
+- `PineappleWM.app`
+- A symbolic link to `/Applications`
 
 ## Versioning
 
@@ -86,34 +92,38 @@ Every published release tag must point to the exact commit released from `stable
 5. Merge the release branch into `stable`.
 6. Create the release tag on the resulting `stable` commit.
 7. Build the application from that tag.
-8. Sign the application with a Developer ID Application certificate.
-9. Package the application for installation in `/Applications`.
-10. Sign the package with a Developer ID Installer certificate.
-11. Notarize and staple the final installer package.
-12. Generate a SHA-256 checksum.
-13. Create a draft GitHub prerelease and attach the PKG and checksum.
-14. Download and install the attached package on a clean Mac.
-15. Publish the GitHub prerelease.
-16. Publish the same package, or a link to it, on the website.
-17. Merge any release-only fixes back into `main`.
+8. Sign the application and all embedded executable code with a Developer ID Application certificate.
+9.  Create a disk image containing the application and symbolic link to `/Applications`.
+10. Sign the disk image with a Developer ID Application certificate.
+11. Verify the integrity and signatures of the disk image and application.
+12. Submit the disk image to Apple for notarization.
+13. Staple and validate te notarization ticket.
+14. Generate a SHA-256 checksum.
+15. Create a draft GitHub prerelease and attach the DMG and checksum.
+16. Download the attached disk image through a browser.
+17. Mount it, copy PineappleWM into `/Applications`, and test it on a clean Mac.
+18. Publish the GitHub prerelease.
+19. Merge any release-only fixes back into `main`.
 
 ## Release Requirements
 
-A release must not be on published unless:
+A release must not be published unless:
 
 - CI passes on the tagged commit.
 - The application was built from a clean checkout.
 - Version and build metadata match the release.
-- The application and all embedded executable code have valid signatures.
-- The installer package has a valid Developer ID Installer signature.
+- The application and all embedded executable code have valid Developer ID Applcation signatures
+- The disk image has a valid Developer ID Applicaion signature.
+- The disk image passes an integrity check.
 - Apple notarization succeeds.
-- The notarization ticket is stapled to the installer package.
-- Gatekeeper accepts the downloaded installer.
-- The package installs PineappleWM into `/Applications`.
-- The application launches on a clean macOS 26 user account.
-- Login-item behavior has been tested after installation.
+- The notarization ticket is stapled to the disk image.
+- Gatekeeper accepts the downloaded disk image and application.
+- The disk image contains `PineappleWM.app` and a symbolic link to `/Applications`.
+- The application launches from `/Applications` on a clean macOS 26 user account.
+- Launching directly from the mounted disk image has also been tested.
+- Login-item behavior works after copying the applicatoin into `/Applications`.
 - The application contains the intended Apple Silicon architecture.
-- Installation has been tested using a browser-downloaded package.
+- Installation has been tested using a browser-downloaded disk image.
 - The published checksum matches the downloadable artifact.
 - Known limitations and uninstallation instructions are included in the release notes.
 
