@@ -33,8 +33,8 @@ struct WMHideAppActionTests {
         await #expect(throws: Never.self) { try await action.execute() }
     }
 
-    @Test("throws permissionDenied if cant hides an app")
-    func permissionDeniedError() async throws {
+    @Test("throws noGuiToShow if cant hides an app")
+    func noGuiError() async throws {
         let mockApp = WorkspaceApplication(bundleIdentifier: "com.apple.Safari",
                                            displayName: "Safari",
                                            applicationURL: URL(filePath: "Applications/Safari.app"))
