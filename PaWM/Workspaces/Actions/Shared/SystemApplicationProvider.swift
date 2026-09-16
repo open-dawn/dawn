@@ -1,11 +1,11 @@
 import AppKit
 
-public protocol ApplicationProvider {
-    func runningApplications(withBundleIdentifier bundleIdentifier: String) -> [NSRunningApplication]
+protocol ApplicationProvider {
+    func runningApplications(withBundleIdentifier bundleIdentifier: String) -> [any RunningApplicationControlling]
 }
 
-class SystemApplicationProvider: ApplicationProvider {
-    func runningApplications(withBundleIdentifier bundleID: String) -> [NSRunningApplication] {
+final class SystemApplicationProvider: ApplicationProvider {
+    func runningApplications(withBundleIdentifier bundleID: String) -> [any RunningApplicationControlling] {
         return NSRunningApplication.runningApplications(withBundleIdentifier: bundleID)
     }
 }

@@ -12,8 +12,8 @@ struct WMCloseAppAction: WMAppAction {
             throw WMActionError.notRunning
         }
 
-        targetApp.activate()
-        if type(of: provider) == SystemApplicationProvider.self, !targetApp.terminate() {
+        targetApp.activate(options: [])
+        if !targetApp.terminate() {
             throw WMActionError.permissionDenied
         }
     }
