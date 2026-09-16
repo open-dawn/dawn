@@ -140,6 +140,10 @@ jobs:
             xcbeautify --renderer github-actions
 
       - name: Build Release configuration
+        if: >-
+          github.event.name == 'workflow_dispatch' ||
+          github.ref == 'refs/head/stable' ||
+          github.base_ref == 'stable'
         shell: bash
         run: |
           set -euo pipefail
