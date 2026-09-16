@@ -2,7 +2,10 @@ import PaEventKit
 
 @MainActor
 final class WindowManagerListener: Listener {
-    init(bus: PaEventBus) {
+    private let contextManager: ContextProviding
+
+    init(bus: PaEventBus, contextManager: ContextProviding = ContextManager()) {
+        self.contextManager = contextManager
         bus.addListener(self, kinds: [.switchSpace, .getContexts])
     }
 
@@ -23,17 +26,17 @@ final class WindowManagerListener: Listener {
         }
     }
 
-    private func getContextWithIndex(_ index: Int) -> WorkspaceContext? {
+    func getContextWithIndex(_ index: Int) -> WorkspaceContext? {
         let allContexts = getAllContexts()
-        guard index > 0, index < allContexts.count else { return nil }
+        guard index >= 0, index < allContexts.count else { return nil }
         return allContexts[index]
     }
 
-    private func getAllContexts() -> [WorkspaceContext] {
-        ContextManager.getAvailableContexts()
+    func getAllContexts() -> [WorkspaceContext] {
+        contextManager.getAvailableContexts()
     }
 
-    private func switchToContext(to context: WorkspaceContext) {
+    func switchToContext(to context: WorkspaceContext) {
         let appsList: [WorkspaceApplication] = context.applications
 
         do {

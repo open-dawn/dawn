@@ -3,6 +3,7 @@ import PaEventKit
 import PaLogging
 
 final class ContextManager: ContextProviding {
+<<<<<<< HEAD
     private let store: SettingsStore
 
     init(repository: any SettingsRepository = UserDefaultsSettingsRepository()) async throws {
@@ -16,6 +17,8 @@ final class ContextManager: ContextProviding {
             store = try await SettingsStore(repository: repository)
         }
     }
+
+    init() {}
 
     func getAvailableContexts() async -> [WorkspaceContext] {
         let storeSnapshot = await store.snapshot()
