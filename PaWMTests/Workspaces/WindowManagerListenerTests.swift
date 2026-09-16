@@ -15,14 +15,18 @@ struct WindowManagerListenerTests {
         ]
 
         let mockBus = PaEventBus()
+
         for event in events {
             try #require(mockBus.hasListeners(for: event.event) == false)
         }
 
-        let listener = WindowManagerListener(bus: mockBus)
+        let mockContextManager = FakeContextManager()
+        let listener = WindowManagerListener(bus: mockBus, contextManager: mockContextManager)
         for event in events {
             #expect(mockBus.hasListeners(for: event.event) == event.afterResult)
         }
+
+        _ = listener // Fix warning of not used variable
     }
 
     @Test("handle get contexts event")
@@ -39,10 +43,12 @@ struct WindowManagerListenerTests {
             return
         }
         #expect(payload.contexts == mockContextManager.contexts)
+
+        _ = listener // Fix warning of not used variable
     }
 
     @Test("switchSpace with valid index switches that context")
-    func handle_switchSpaceValidIndex() {
+    func handle_switchSpaceValidIndex() async {
         let mockContextManager = FakeContextManager()
         mockContextManager.contexts = [WorkspaceContext](repeating: createMockWorkspaceContext(), count: 3)
         let switcherSpy = ContextSwitchingSpy()
@@ -53,11 +59,13 @@ struct WindowManagerListenerTests {
         let event = PaEvent.switchSpace(PaSwitchSpaceEvent(spaceIndex: 1))
 
         listener.handle(event, reply: nil)
+        await mockContextManager.waitUntilSwitched()
+
         #expect(switcherSpy.switchedContexts == [mockContextManager.contexts[1]])
     }
 
     @Test("switchSpace with invalid index switches that context")
-    func handle_switchSpaceInvalidIndex() {
+    func handle_switchSpaceInvalidIndex() async {
         let mockContextManager = FakeContextManager()
         mockContextManager.contexts = [WorkspaceContext](repeating: createMockWorkspaceContext(), count: 1)
         let switcherSpy = ContextSwitchingSpy()
@@ -68,51 +76,53 @@ struct WindowManagerListenerTests {
         let event = PaEvent.switchSpace(PaSwitchSpaceEvent(spaceIndex: 2))
 
         listener.handle(event, reply: nil)
+        await mockContextManager.waitUntilSwitched()
+
         #expect(switcherSpy.switchedContexts == [])
     }
 
     @Test("getAllContexts return the same of ContextManager")
-    func getAllContextsRespectContextManagerReturns() {
+    func getAllContextsRespectContextManagerReturns() async {
         let mockContextManager = FakeContextManager()
         mockContextManager.contexts = [WorkspaceContext](repeating: createMockWorkspaceContext(), count: 3)
 
         let mockBus = PaEventBus()
         let listener = WindowManagerListener(bus: mockBus, contextManager: mockContextManager)
 
-        #expect(listener.getAllContexts() == mockContextManager.contexts)
+        #expect(await listener.getAllContexts() == mockContextManager.contexts)
     }
 
     @Test("getAllContexts returns the same data as ContextManager")
-    func getAllContexts_returnsContextManagerValues() {
+    func getAllContexts_returnsContextManagerValues() async {
         let mockContextManager = FakeContextManager()
         mockContextManager.contexts = [WorkspaceContext](repeating: createMockWorkspaceContext(), count: 3)
 
         let mockBus = PaEventBus()
         let listener = WindowManagerListener(bus: mockBus, contextManager: mockContextManager)
 
-        #expect(listener.getContextWithIndex(0) == mockContextManager.contexts[0])
+        #expect(await listener.getContextWithIndex(0) == mockContextManager.contexts[0])
     }
 
     @Test("getContext with valid index returns the correct context")
-    func getContextWithIndex_correctContext() {
+    func getContextWithIndex_correctContext() async {
         let mockContextManager = FakeContextManager()
         mockContextManager.contexts = [WorkspaceContext](repeating: createMockWorkspaceContext(), count: 3)
 
         let mockBus = PaEventBus()
         let listener = WindowManagerListener(bus: mockBus, contextManager: mockContextManager)
 
-        #expect(listener.getContextWithIndex(1) == mockContextManager.contexts[1])
+        #expect(await listener.getContextWithIndex(1) == mockContextManager.contexts[1])
     }
 
     @Test("getContext with invalid index returns nil when context does not exist")
-    func getContextWithIndex_nilContext() {
+    func getContextWithIndex_nilContext() async {
         let mockContextManager = FakeContextManager()
         mockContextManager.contexts = []
 
         let mockBus = PaEventBus()
         let listener = WindowManagerListener(bus: mockBus, contextManager: mockContextManager)
 
-        #expect(listener.getContextWithIndex(1) == nil)
+        #expect(await listener.getContextWithIndex(1) == nil)
     }
 
     private func createMockWorkspaceContext() -> WorkspaceContext {
@@ -120,11 +130,21 @@ struct WindowManagerListenerTests {
     }
 }
 
+@MainActor
 final class FakeContextManager: ContextProviding {
     var contexts: [WorkspaceContext] = []
+    private var continuation: CheckedContinuation<Void, Never>?
 
     func getAvailableContexts() -> [WorkspaceContext] {
+        defer {
+            continuation?.resume()
+            continuation = nil
+        }
         return contexts
+    }
+
+    func waitUntilSwitched() async {
+        await withCheckedContinuation { continuation = $0 }
     }
 }
 

@@ -1,6 +1,6 @@
 import Foundation
 
-public class PaEventBus: @unchecked Sendable {
+public final class PaEventBus: @unchecked Sendable {
     private struct Registration {
         weak var listener: Listener?
         var kinds: Set<PaEventKind>?
