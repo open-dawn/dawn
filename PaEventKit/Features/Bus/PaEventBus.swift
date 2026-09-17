@@ -11,8 +11,8 @@ public final class PaEventBus: @unchecked Sendable {
     private var registrations: [Registration]
 
     public init() {
-        self.lock = NSLock()
-        self.registrations = []
+        lock = NSLock()
+        registrations = []
     }
 
     public func addListener(_ listener: Listener, kinds: Set<PaEventKind>? = nil) {
@@ -56,6 +56,17 @@ public final class PaEventBus: @unchecked Sendable {
             for listener in matchingListeners(for: event.kind) {
                 listener.handle(event, reply: nil)
             }
+        }
+    }
+
+    public func hasListeners(for event: PaEvent? = nil) -> Bool {
+        if let event {
+            return !(matchingListeners(for: event.kind).isEmpty)
+        }
+
+        return lock.withLock {
+            pruneDeadRegistrationsLocked()
+            return !registrations.isEmpty
         }
     }
 

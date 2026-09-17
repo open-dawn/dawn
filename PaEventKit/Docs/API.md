@@ -27,6 +27,7 @@ public enum PaEvent: Codable, Sendable, Equatable {
 | `debugPing` | `PaDebugPingEvent()` | Smoke `ask` |
 | `debugPong` | `PaDebugPongEvent(message:)` | Default message `"pong"` |
 | `switchSpace` | `PaSwitchSpaceEvent(spaceIndex:)` | |
+| `initializedEvent` | `PaInitializedEvent()` | |
 
 ### How to Create an Event
 To create an event: 

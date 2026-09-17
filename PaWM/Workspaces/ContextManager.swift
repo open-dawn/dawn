@@ -40,6 +40,7 @@ final class ContextManager: ContextProviding {
     }
 }
 
+@MainActor
 protocol ContextProviding {
     func getAvailableContexts() async -> [WorkspaceContext]
 }
