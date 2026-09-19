@@ -164,4 +164,147 @@ struct XPCRemoteEventTransportTests {
 
         #expect(remoteBus.isConnected)
     }
+
+    @Test("An older reconnect cannot tear down a newer connection")
+    func olderReconnectCantTearDownNewerConnection() async throws {
+        let hostBus = PaEventBus()
+        let responder = PingResponder()
+
+        await MainActor.run {
+            hostBus.addListener(responder)
+        }
+
+        let eventServer = PaEventServer(bus: hostBus)
+        let acceptor = XPCRemoteEventTransportAcceptor(eventServer: eventServer)
+        acceptor.start()
+
+        defer {
+            acceptor.stop()
+            eventServer.stop()
+        }
+
+        guard let endpoint = acceptor.endpoint else {
+            Issue.record("Expected anonymous XPC Listener endpoint")
+            return
+        }
+
+        let transport = XPCRemoteEventTransportClient(endpoint: endpoint)
+        let remoteBus = PaRemoteEventBus(transport: transport)
+        let gate = FirstConnectingGate()
+
+        defer {
+            gate.release()
+            transport.setConnectionStateHandler(nil)
+            remoteBus.disconnect()
+        }
+
+        guard await waitUntilConnected(remoteBus) else {
+            Issue.record("Expected initial XPC handshake to succeed")
+            return
+        }
+
+        transport.setConnectionStateHandler { state in
+            gate.handle(state)
+        }
+
+        let olderReconnect = Task {
+            try? await transport.attemptReconnect()
+        }
+
+        guard await gate.waitUntilPaused() else {
+            Issue.record("Older reconnect did not reach the connecting state")
+            gate.release()
+            _ = await olderReconnect.value
+            return
+        }
+
+        let newerReconnect = Task {
+            try await transport.attemptReconnect()
+        }
+
+        do {
+            try await newerReconnect.value
+        } catch {
+            Issue.record("Newer reconnect unexpectedly failed: \(error)")
+            gate.release()
+            _ = await olderReconnect.value
+            return
+        }
+
+        #expect(transport.connectionState == .connected)
+
+        gate.release()
+        _ = await olderReconnect.value
+
+        do {
+            let reply = try await transport.ask(
+                .debugPing(PaDebugPingEvent())
+            )
+
+            #expect(
+                reply == .debugPong(
+                    PaDebugPongEvent(message: "remote-ok")
+                )
+            )
+        } catch {
+            Issue.record(
+                "The older reconnect tore down the newer connection: \(error)"
+            )
+        }
+    }
+}
+
+private final class FirstConnectingGate: @unchecked Sendable {
+    private let lock = NSLock()
+    private let resumeSemaphore = DispatchSemaphore(value: 0)
+
+    private var didPause = false
+    private var isPaused = false
+    private var wasReleased = false
+
+    func handle(_ state: PaRemoteConnectionState) {
+        guard state == .connecting else { return }
+
+        let shouldPause = lock.withLock {
+            guard !didPause else { return false }
+
+            didPause = true
+            isPaused = true
+            return true
+        }
+
+        guard shouldPause else { return }
+
+        resumeSemaphore.wait()
+    }
+
+    func waitUntilPaused(
+        timeout: Duration = .seconds(2)
+    ) async -> Bool {
+        let deadline = ContinuousClock.now + timeout
+
+        while ContinuousClock.now < deadline {
+            if lock.withLock({ isPaused }) {
+                return true
+            }
+
+            try? await Task.sleep(for: .milliseconds(10))
+        }
+
+        return lock.withLock { isPaused }
+    }
+
+    func release() {
+        let shouldSignal = lock.withLock {
+            guard !wasReleased else { return false }
+
+            wasReleased = true
+
+            return true
+        }
+
+        if shouldSignal {
+            resumeSemaphore.signal()
+        }
+    }
 }

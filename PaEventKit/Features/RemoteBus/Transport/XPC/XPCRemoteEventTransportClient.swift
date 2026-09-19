@@ -1,6 +1,12 @@
 import Foundation
 
 public final class XPCRemoteEventTransportClient: NSObject, RemoteEventTransportClient, @unchecked Sendable {
+    private struct ReconnectStart {
+        let generation: UInt64
+        let connectionToInvalidate: NSXPCConnection?
+        let stateHandler: (@Sendable (PaRemoteConnectionState) -> Void)?
+    }
+
     private enum ConnectionSource: Sendable {
         case mach(name: String, options: NSXPCConnection.Options)
         case endpoint(NSXPCListenerEndpoint)
@@ -53,12 +59,17 @@ public final class XPCRemoteEventTransportClient: NSObject, RemoteEventTransport
     }
 
     public func publish(_ event: PaEvent) {
-        guard let hostProxy, let data = try? PaEventCodec.encode(event) else { return }
+        guard let hostProxy = currentHostProxy(),
+              let data = try? PaEventCodec.encode(event)
+        else {
+            return
+        }
+
         hostProxy.publish(data)
     }
 
     public func subscribe(kinds: Set<PaEventKind>?) {
-        guard let hostProxy else { return }
+        guard let hostProxy = currentHostProxy() else { return }
 
         if let kinds {
             hostProxy.subscribe(kinds.map(\.rawValue), includeAll: false)
@@ -104,48 +115,81 @@ public final class XPCRemoteEventTransportClient: NSObject, RemoteEventTransport
     }
 
     public func attemptReconnect() async throws {
-        let generation = lock.withLock { () -> UInt64 in
-            guard !stopped else { return 0 }
-            connectionGeneration &+= 1
-            return connectionGeneration
-        }
-
-        guard generation != 0 else {
+        guard let reconnect = beginReconnect() else {
             throw PaEventRemoteError.notConnected
         }
 
-        setConnection(.connecting, generation: generation)
-        tearDownConnectionLocked(clearHandlers: false)
+        reconnect.stateHandler?(.connecting)
+
+        invalidateConnection(reconnect.connectionToInvalidate)
 
         let established = lock.withLock {
-            guard connectionGeneration == generation, !stopped else { return false }
-            establishConnectionLocked(generation: generation)
+            guard connectionGeneration == reconnect.generation,
+                  !stopped,
+                  state == .connecting
+            else { return false }
+
+            establishConnectionLocked(generation: reconnect.generation)
             return true
         }
 
         guard established else {
-            setConnection(.disconnected, generation: generation)
+            setConnection(.disconnected, generation: reconnect.generation)
             throw PaEventRemoteError.notConnected
         }
 
-        let connected = await completeHandshake(generation: generation)
-        if connected {
-            return
-        }
+        let connected = await completeHandshake(generation: reconnect.generation)
 
-        setConnection(.disconnected, generation: generation)
-        throw PaEventRemoteError.notConnected
+        guard connected else {
+            setConnection(
+                .disconnected,
+                generation: reconnect.generation
+            )
+            throw PaEventRemoteError.notConnected
+        }
+    }
+
+    private func beginReconnect() -> ReconnectStart? {
+        lock.withLock {
+            guard !stopped else { return nil }
+
+            connectionGeneration &+= 1
+            let generation = connectionGeneration
+
+            let connectionToInvalidate = connection
+            connection = nil
+            hostProxy = nil
+            state = .connecting
+
+            return ReconnectStart(
+                generation: generation,
+                connectionToInvalidate: connectionToInvalidate,
+                stateHandler: connectionStateHandler
+            )
+        }
     }
 
     public func close() {
-        let connection = lock.withLock { () -> NSXPCConnection? in
+        let connectionToInvalidate = lock.withLock { () -> NSXPCConnection? in
+
+            guard !stopped else { return nil }
+
             stopped = true
-            let connection = self.connection
-            tearDownConnectionLocked(clearHandlers: true)
+
+            connectionGeneration &+= 1
+
+            let connectionToInvalidate = connection
+            connection = nil
+            hostProxy = nil
             state = .disconnected
-            return connection
+
+            deliveryHandler = nil
+            connectionStateHandler = nil
+
+            return connectionToInvalidate
         }
-        connection?.invalidate()
+
+        invalidateConnection(connectionToInvalidate)
     }
 
     private func establishConnectionLocked(generation: UInt64) {
@@ -175,17 +219,12 @@ public final class XPCRemoteEventTransportClient: NSObject, RemoteEventTransport
         state = hostProxy == nil ? .disconnected : .connecting
     }
 
-    private func tearDownConnectionLocked(clearHandlers: Bool) {
+    private func invalidateConnection(
+        _ connection: NSXPCConnection?
+    ) {
         connection?.invalidationHandler = nil
         connection?.interruptionHandler = nil
         connection?.invalidate()
-        connection = nil
-        hostProxy = nil
-
-        if clearHandlers {
-            deliveryHandler = nil
-            connectionStateHandler = nil
-        }
     }
 
     func handleInterruption(generation: UInt64) {
