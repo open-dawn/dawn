@@ -249,6 +249,16 @@ public final class XPCRemoteEventTransportClient: NSObject, RemoteEventTransport
         handler?(newState)
     }
 
+    func currentGeneration() -> UInt64 {
+        lock.withLock { connectionGeneration }
+    }
+
+    private func currentHostProxy() -> PaEventHostXPC? {
+        lock.withLock { hostProxy }
+    }
+}
+
+private extension XPCRemoteEventTransportClient {
     private func completeHandshake(generation: UInt64) async -> Bool {
         let snapshot = lock.withLock { () -> (isCurrent: Bool, state: PaRemoteConnectionState) in
             (connectionGeneration == generation && !stopped, state)
@@ -292,14 +302,6 @@ public final class XPCRemoteEventTransportClient: NSObject, RemoteEventTransport
                 session.complete(false)
             }
         }
-    }
-
-    func currentGeneration() -> UInt64 {
-        lock.withLock { connectionGeneration }
-    }
-
-    private func currentHostProxy() -> PaEventHostXPC? {
-        lock.withLock { hostProxy }
     }
 
     private func commitConnected(

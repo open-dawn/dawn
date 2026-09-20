@@ -11,12 +11,12 @@ struct AboutView: View {
                 if eventBusService.connectionState == .connecting {
                     ProgressView()
                 }
-                
+
                 Text(connectionLabel)
                     .foregroundStyle(.secondary)
             }
 
-            HStack(spacing: 0){
+            HStack(spacing: 0) {
                 Text("Copyright: ")
                 Text(verbatim: content.metadata.copyright)
                     .bold()
