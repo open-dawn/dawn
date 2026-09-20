@@ -250,11 +250,15 @@ public final class XPCRemoteEventTransportClient: NSObject, RemoteEventTransport
     }
 
     private func completeHandshake(generation: UInt64) async -> Bool {
-        let snapshot = lock.withLock { () -> (Bool, PaRemoteConnectionState) in
+        let snapshot = lock.withLock { () -> (isCurrent: Bool, state: PaRemoteConnectionState) in
             (connectionGeneration == generation && !stopped, state)
         }
-        guard snapshot.0 else { return false }
-        if snapshot.1 == .disconnected {
+
+        guard snapshot.isCurrent else {
+            return false
+        }
+
+        guard snapshot.state != .disconnected else {
             return false
         }
 
@@ -263,8 +267,7 @@ public final class XPCRemoteEventTransportClient: NSObject, RemoteEventTransport
             return false
         }
 
-        setConnection(.connected, generation: generation)
-        return true
+        return commitConnected(generation: generation)
     }
 
     private func performHandshake(generation: UInt64) async -> Bool {
@@ -297,6 +300,36 @@ public final class XPCRemoteEventTransportClient: NSObject, RemoteEventTransport
 
     private func currentHostProxy() -> PaEventHostXPC? {
         lock.withLock { hostProxy }
+    }
+
+    private func commitConnected(
+        generation: UInt64
+    ) -> Bool {
+        let result = lock.withLock {
+            () -> (
+                committed: Bool,
+                handler: (@Sendable (PaRemoteConnectionState) -> Void)?
+            ) in
+
+            guard connectionGeneration == generation,
+                  !stopped,
+                  state == .connecting,
+                  connection != nil,
+                  hostProxy != nil
+            else {
+                return (false, nil)
+            }
+
+            state = .connected
+
+            return (true, connectionStateHandler)
+        }
+
+        if result.committed {
+            result.handler?(.connected)
+        }
+
+        return result.committed
     }
 }
 

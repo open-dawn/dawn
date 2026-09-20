@@ -252,6 +252,66 @@ struct XPCRemoteEventTransportTests {
             )
         }
     }
+
+    @Test("Interruption during handshake prevents connection")
+    func interruptionDuringHandshakePreventsConnection() async throws {
+        let host = ControllableHandshakeHost()
+        let listenerDelegate = ControllableHandshakeListenerDelegate(
+            host: host
+        )
+
+        let listener = NSXPCListener.anonymous()
+        listener.delegate = listenerDelegate
+        listener.resume()
+
+        defer {
+            listener.invalidate()
+            listenerDelegate.stop()
+        }
+
+        let transport = XPCRemoteEventTransportClient(
+            endpoint: listener.endpoint
+        )
+        let remoteBus = PaRemoteEventBus(transport: transport)
+
+        defer {
+            host.resumeSuspendedHandshake(with: false)
+            remoteBus.disconnect()
+        }
+
+        guard await waitUntilConnected(remoteBus) else {
+            Issue.record("Expected initial handshake to succeed")
+            return
+        }
+
+        host.suspendNextHandshake()
+
+        let reconnect = Task {
+            try await transport.attemptReconnect()
+        }
+
+        guard await host.waitUntilHandshakeIsSuspended() else {
+            Issue.record("Reconnect handshake was not suspended")
+            host.resumeSuspendedHandshake(with: false)
+            _ = await reconnect.result
+            return
+        }
+
+        let generation = transport.currentGeneration()
+
+        transport.handleInterruption(generation: generation)
+
+        #expect(transport.connectionState == .disconnected)
+
+        host.resumeSuspendedHandshake(with: true)
+
+        await #expect(throws: PaEventRemoteError.notConnected) {
+            try await reconnect.value
+        }
+
+        #expect(transport.connectionState == .disconnected)
+        #expect(!transport.isConnected)
+    }
 }
 
 private final class FirstConnectingGate: @unchecked Sendable {
@@ -305,6 +365,122 @@ private final class FirstConnectingGate: @unchecked Sendable {
 
         if shouldSignal {
             resumeSemaphore.signal()
+        }
+    }
+}
+
+private final class ControllableHandshakeHost: NSObject, PaEventHostXPC, @unchecked Sendable {
+    private let lock = NSLock()
+
+    private var shouldSuspendNextHandshake = false
+    private var suspendedReply: ((Bool) -> Void)?
+
+    func suspendNextHandshake() {
+        lock.withLock {
+            shouldSuspendNextHandshake = true
+        }
+    }
+
+    func waitUntilHandshakeIsSuspended(
+        timeout: Duration = .seconds(2)
+    ) async -> Bool {
+        let deadline = ContinuousClock.now + timeout
+
+        while ContinuousClock.now < deadline {
+            if lock.withLock({
+                suspendedReply != nil
+            }) {
+                return true
+            }
+
+            try? await Task.sleep(for: .milliseconds(10))
+        }
+
+        return lock.withLock {
+            suspendedReply != nil
+        }
+    }
+
+    func resumeSuspendedHandshake(with result: Bool) {
+        let reply = lock.withLock {
+            () -> ((Bool) -> Void)? in
+
+            defer {
+                suspendedReply = nil
+            }
+
+            return suspendedReply
+        }
+
+        reply?(result)
+    }
+
+    func handshake(withReply reply: @escaping (Bool) -> Void) {
+        let shouldReplyImmediatly = lock.withLock {
+            if shouldSuspendNextHandshake {
+                shouldSuspendNextHandshake = false
+                suspendedReply = reply
+                return false
+            }
+
+            return true
+        }
+
+        if shouldReplyImmediatly {
+            reply(true)
+        }
+    }
+
+    func publish(_ data: Data) {
+    }
+
+    func subscribe(_ kindNames: [String], includeAll: Bool) {
+    }
+
+    func ask(_ data: Data, withReply reply: @escaping (Data?, (any Error)?) -> Void) {
+        reply(nil, PaEventRemoteError.notConnected)
+    }
+}
+
+private final class ControllableHandshakeListenerDelegate: NSObject, NSXPCListenerDelegate, @unchecked Sendable {
+    private let host: ControllableHandshakeHost
+    private let lock = NSLock()
+    private var connections: [NSXPCConnection] = []
+
+    init(host: ControllableHandshakeHost) {
+        self.host = host
+    }
+
+    func listener(
+        _ listener: NSXPCListener,
+        shouldAcceptNewConnection connection: NSXPCConnection
+    ) -> Bool {
+        connection.exportedInterface = NSXPCInterface(
+            with: PaEventHostXPC.self
+        )
+        connection.exportedObject = host
+
+        connection.remoteObjectInterface = NSXPCInterface(
+            with: PaRemoteEventBusXPC.self
+        )
+
+        lock.withLock {
+            connections.append(connection)
+        }
+
+        connection.resume()
+        return true
+    }
+
+    func stop() {
+        let connections = lock.withLock {
+            let connections = self.connections
+            self.connections = []
+            return connections
+        }
+
+        for connection in connections {
+            connection.invalidate()
         }
     }
 }
