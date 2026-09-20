@@ -67,7 +67,10 @@ final class PaSettingsEventBusService {
     }
 
     private func handleConnectionStateChange(_ state: PaRemoteConnectionState) {
+        guard isRunning else { return }
+
         let droppedWhileConnected = connectionState == .connected && state == .disconnected
+
         let initialHandshakeFailed =
             retryAfterInitialHandshake
             && connectionState == .connecting

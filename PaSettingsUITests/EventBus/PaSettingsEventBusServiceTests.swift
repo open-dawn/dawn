@@ -159,6 +159,29 @@ struct PaSettingsEventBusServiceTests {
 
         #expect(listener.events == [event])
     }
+
+    @Test("Stop ignores and already queued connection callback")
+    func stopIgnoresQueuedConnectionCallback() async throws {
+        let fixture = ServiceFixture()
+        defer { fixture.cleanUp() }
+
+        fixture.service.start()
+
+        #expect(fixture.service.isConnected)
+
+        fixture.transport.emitConnectionState(.connected)
+
+        fixture.service.stop()
+
+        #expect(!fixture.service.isConnected)
+        #expect(fixture.service.connectionState == .disconnected)
+
+        await Task.yield()
+
+        #expect(!fixture.service.isConnected)
+        #expect(fixture.service.connectionState == .disconnected)
+        #expect(!fixture.service.bus.isConnected)
+    }
 }
 
 @MainActor
@@ -207,6 +230,8 @@ private final class ControllableLoopbackTransport: RemoteEventTransportClient, @
     var pauseInConnecting = false
     private(set) var reconnectAttempts = 0
 
+    private var connectionStateHandler: (@Sendable (PaRemoteConnectionState) -> Void)?
+
     init(client: LoopbackRemoteEventTransportClient) {
         self.client = client
     }
@@ -221,6 +246,10 @@ private final class ControllableLoopbackTransport: RemoteEventTransportClient, @
     func setConnectionStateHandler(
         _ handler: (@Sendable (PaRemoteConnectionState) -> Void)?
     ) {
+        lock.withLock {
+            connectionStateHandler = handler
+        }
+
         client.setConnectionStateHandler(handler)
     }
 
@@ -265,6 +294,14 @@ private final class ControllableLoopbackTransport: RemoteEventTransportClient, @
 
     func close() {
         client.close()
+    }
+
+    func emitConnectionState(_ state: PaRemoteConnectionState) {
+        let handler = lock.withLock {
+            connectionStateHandler
+        }
+
+        handler?(state)
     }
 }
 
