@@ -182,6 +182,59 @@ struct PaSettingsEventBusServiceTests {
         #expect(fixture.service.connectionState == .disconnected)
         #expect(!fixture.service.bus.isConnected)
     }
+
+    @Test("Ready ping during a failing reconnect triggers a follow-up attempt")
+    func readyPingDuringReconnectIsNotLost() async throws {
+        let fixture = ServiceFixture()
+        defer { fixture.cleanUp() }
+
+        fixture.service.start()
+
+        #expect(fixture.service.isConnected)
+
+        fixture.transport.pauseThenFailNextReconnect()
+
+        defer {
+            fixture.transport.resumeReconnect()
+        }
+
+        fixture.link.client.simulateDisconnect()
+
+        guard await fixture.transport.waitUntilReconnectIsPaused() else {
+            Issue.record("The first reconnect did not pause")
+            return
+        }
+
+        #expect(fixture.transport.reconnectAttempts == 1)
+
+        DistributedNotificationCenter.default().postNotificationName(
+            fixture.readyNotification,
+            object: nil,
+            userInfo: nil,
+            deliverImmediately: true
+        )
+
+        try await Task.sleep(for: .milliseconds(50))
+
+        #expect(fixture.transport.reconnectAttempts == 1)
+
+        fixture.transport.resumeReconnect()
+
+        let deadline = ContinuousClock.now + .seconds(1)
+
+        while ContinuousClock.now < deadline {
+            if fixture.transport.reconnectAttempts == 2,
+               fixture.service.isConnected {
+                break
+            }
+
+            await Task.yield()
+        }
+
+        #expect(fixture.transport.reconnectAttempts == 2)
+        #expect(fixture.service.isConnected)
+        #expect(fixture.service.bus.isConnected)
+    }
 }
 
 @MainActor
@@ -228,7 +281,15 @@ private final class ControllableLoopbackTransport: RemoteEventTransportClient, @
 
     var allowReconnect = true
     var pauseInConnecting = false
-    private(set) var reconnectAttempts = 0
+    private(set) var storedReconnectAttempts = 0
+
+    var reconnectAttempts: Int {
+        lock.withLock {
+            storedReconnectAttempts
+        }
+    }
+
+    private var shouldPauseThenFailNextReconnect = false
 
     private var connectionStateHandler: (@Sendable (PaRemoteConnectionState) -> Void)?
 
@@ -253,6 +314,12 @@ private final class ControllableLoopbackTransport: RemoteEventTransportClient, @
         client.setConnectionStateHandler(handler)
     }
 
+    func pauseThenFailNextReconnect() {
+        lock.withLock {
+            shouldPauseThenFailNextReconnect = true
+        }
+    }
+
     func publish(_ event: PaEvent) {
         client.publish(event)
     }
@@ -266,19 +333,33 @@ private final class ControllableLoopbackTransport: RemoteEventTransportClient, @
     }
 
     func attemptReconnect() async throws {
-        reconnectAttempts += 1
+        let pauseThenFail = lock.withLock {
+            storedReconnectAttempts += 1
+
+            guard shouldPauseThenFailNextReconnect else {
+                return false
+            }
+
+            shouldPauseThenFailNextReconnect = false
+            return true
+        }
+
         guard allowReconnect else {
+            throw PaEventRemoteError.notConnected
+        }
+
+        if pauseThenFail {
+            emitConnectionState(.connecting)
+
+            await suspendedReconnect()
+
             throw PaEventRemoteError.notConnected
         }
 
         client.simulateConnecting()
 
         if pauseInConnecting {
-            await withCheckedContinuation { continuation in
-                lock.withLock {
-                    reconnectResume = continuation
-                }
-            }
+            await suspendedReconnect()
         }
 
         try await client.attemptReconnect()
@@ -302,6 +383,34 @@ private final class ControllableLoopbackTransport: RemoteEventTransportClient, @
         }
 
         handler?(state)
+    }
+
+    func waitUntilReconnectIsPaused(
+        timeout: Duration = .seconds(
+            2
+        )
+    ) async -> Bool {
+        let deadline = ContinuousClock.now + timeout
+
+        while ContinuousClock.now < deadline {
+            if lock.withLock({ reconnectResume != nil }) {
+                return true
+            }
+
+            try? await Task.sleep(for: .milliseconds(10))
+        }
+
+        return lock.withLock {
+            reconnectResume != nil
+        }
+    }
+
+    private func suspendedReconnect() async {
+        await withCheckedContinuation { continuation in
+            lock.withLock {
+                reconnectResume = continuation
+            }
+        }
     }
 }
 

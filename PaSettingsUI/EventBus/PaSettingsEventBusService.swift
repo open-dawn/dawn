@@ -10,6 +10,7 @@ final class PaSettingsEventBusService {
     private var isRunning = false
     private var reconnectTask: Task<Void, Never>?
     private var retryAfterInitialHandshake = false
+    private var reconnectRequested = false
 
     private(set) var bus: PaRemoteEventBus
     private(set) var isConnected = false
@@ -51,6 +52,7 @@ final class PaSettingsEventBusService {
 
     func stop() {
         isRunning = false
+        reconnectRequested = false
         retryAfterInitialHandshake = false
         reconnectTask?.cancel()
         reconnectTask = nil
@@ -91,7 +93,10 @@ final class PaSettingsEventBusService {
 
     private func reconnectIfNeeded() {
         guard isRunning else { return }
-        guard reconnectTask == nil else { return }
+        guard reconnectTask == nil else {
+            reconnectRequested = true
+            return
+        }
 
         switch bus.connectionState {
         case .connected, .connecting:
@@ -101,7 +106,8 @@ final class PaSettingsEventBusService {
         }
 
         reconnectTask = Task { @MainActor in
-            defer { reconnectTask = nil }
+            defer { reconnectAttemptFinished() }
+
             guard isRunning, bus.connectionState == .disconnected else { return }
 
             do {
@@ -111,5 +117,21 @@ final class PaSettingsEventBusService {
                 isConnected = false
             }
         }
+    }
+
+    private func reconnectAttemptFinished() {
+        reconnectTask = nil
+
+        guard isRunning else {
+            reconnectRequested = false
+            return
+        }
+
+        guard reconnectRequested else {
+            return
+        }
+
+        reconnectRequested = false
+        reconnectIfNeeded()
     }
 }
