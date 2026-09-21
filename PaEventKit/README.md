@@ -35,8 +35,8 @@ flowchart LR
 
 | Process | Access point | Typical setup |
 |---------|----------------|---------------|
-| Host | `PaEventBus` | `PaEventServer` + `XPCRemoteEventTransportAcceptor` |
-| Clients | `PaRemoteEventBus` | `XPCRemoteEventTransportClient(endpoint:)` |
+| Host | `PaEventBus` | `PaEventServer` + `XPCRemoteEventTransportAcceptor(eventServer:machServiceName:)` |
+| Clients | `PaRemoteEventBus` | `XPCRemoteEventTransportClient(machServiceName:)` |
 
 ## `publish` vs `ask`
 

@@ -2,12 +2,14 @@ import Foundation
 
 public final class XPCRemoteEventTransportAcceptor: NSObject, NSXPCListenerDelegate, @unchecked Sendable {
     private let eventServer: PaEventServer
+    private let machServiceName: String?
     private var listener: NSXPCListener?
     private var transports: [XPCRemoteEventTransportServer] = []
     private let lock = NSLock()
 
-    public init(eventServer: PaEventServer) {
+    public init(eventServer: PaEventServer, machServiceName: String? = nil) {
         self.eventServer = eventServer
+        self.machServiceName = machServiceName
         super.init()
     }
 
@@ -19,7 +21,12 @@ public final class XPCRemoteEventTransportAcceptor: NSObject, NSXPCListenerDeleg
         lock.withLock {
             guard listener == nil else { return }
 
-            let listener = NSXPCListener.anonymous()
+            let listener: NSXPCListener
+            if let machServiceName {
+                listener = NSXPCListener(machServiceName: machServiceName)
+            } else {
+                listener = NSXPCListener.anonymous()
+            }
             listener.delegate = self
             listener.resume()
             self.listener = listener

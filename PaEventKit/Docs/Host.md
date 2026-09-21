@@ -68,20 +68,29 @@ eventServer.stop()
 
 You can `attach` / `detach` any `RemoteEventTransportServer` (XPC from the acceptor, or `LoopbackEventLink.server` in tests). You should not construct any `RemoteEventTransportServer` yourself, unless you are implementing a new protocol.
 
-## Exposing the endpoint
+## Exposing the Mach service
 
 > Note: This is specific to XPC and the PaWM implementation
 
-`acceptor.endpoint` is an `NSXPCListenerEndpoint`. Clients need that object to connect.
+PaWM is a login item. Launchd advertises a Mach service named as the helper’s bundle identifier. That name is how clients connect; do not archive `NSXPCListenerEndpoint` (it can only travel through an `NSXPCCoder` on a live XPC connection).
 
-PaWM is a login item, so it cannot advertise a Mach service name. Sharing the endpoint is app glue, not a kit factory:
+```swift
+let eventServer = PaEventServer(bus: bus)
+let acceptor = XPCRemoteEventTransportAcceptor(
+    eventServer: eventServer,
+    machServiceName: "dev.longhi.pineappleinc.PaWM"
+)
+acceptor.start()
+```
 
-1. Archive `acceptor.endpoint` into an app group (UserDefaults suite or a `0o600` file).
-2. Post a `DistributedNotificationCenter` ping with an empty payload. Do not put the endpoint in the notification.
+After `start()`, post an empty `DistributedNotificationCenter` ping so clients reconnect when PaWM comes up or restarts. Do not put the endpoint in the notification.
 
-Write the ticket on every PaWM start and post the ping. Each client reads the ticket, connects, retries on ping, and re-reads on XPC invalidation.
+- Mach service name: `dev.longhi.pineappleinc.PaWM` (the login item bundle ID)
+- Ready ping: `dev.longhi.pineappleinc.PaWM.eventBusReady` (nil object, nil userInfo)
 
-This handshake is not implemented yet.
+`acceptor.endpoint` is still available for in-process tests that use an anonymous listener (`machServiceName: nil`). Production PaWM does not share that endpoint.
+
+Client reconnect (subscribe to the ping, connect with `XPCRemoteEventTransportClient(machServiceName:)`, retry on XPC invalidation) is not part of this host.
 
 ## Tests without a real transport
 

@@ -1,24 +1,19 @@
 import AppKit
 
 @MainActor
-final class PaWMAppDelegate: NSObject, NSApplicationDelegate {
-    private let eventBusService = PaWMEventBusService()
-    private var debugPing: PaWMDebugPingListener?
+final class PaSettingsAppDelegate: NSObject, NSApplicationDelegate {
+    let eventBusService = PaSettingsEventBusService()
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         guard ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"] == nil else {
             return
         }
 
+        PaSettingsLoginItem.registerIfNeeded()
         eventBusService.start()
-        debugPing = PaWMDebugPingListener(bus: eventBusService.bus)
     }
 
     func applicationWillTerminate(_ notification: Notification) {
         eventBusService.stop()
-    }
-
-    func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {
-        false
     }
 }

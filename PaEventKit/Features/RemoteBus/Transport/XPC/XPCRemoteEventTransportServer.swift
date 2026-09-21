@@ -56,6 +56,10 @@ final class XPCRemoteEventTransportServer: NSObject, RemoteEventTransportServer,
         }
     }
 
+    func handshake(withReply reply: @escaping (Bool) -> Void) {
+        reply(true)
+    }
+
     func publish(_ data: Data) {
         guard let event = try? PaEventCodec.decode(data) else { return }
 

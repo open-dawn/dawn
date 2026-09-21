@@ -137,6 +137,7 @@ targets:
       BUNDLE_LOADER: $(TEST_HOST)
     dependencies:
       - target: PaSettingsUI
+      - target: PaEventKit
 
 schemes:
   pineapplewm:

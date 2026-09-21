@@ -1,11 +1,22 @@
 import SwiftUI
 
 struct AboutView: View {
+    @Environment(PaSettingsEventBusService.self) private var eventBusService
+
     let content: AboutContent
 
     var body: some View {
         VStack(spacing: 24) {
-            HStack(spacing: 0){
+            HStack {
+                if eventBusService.connectionState == .connecting {
+                    ProgressView()
+                }
+
+                Text(connectionLabel)
+                    .foregroundStyle(.secondary)
+            }
+
+            HStack(spacing: 0) {
                 Text("Copyright: ")
                 Text(verbatim: content.metadata.copyright)
                     .bold()
@@ -39,6 +50,17 @@ struct AboutView: View {
                     destination: content.metadata.termsOfUseURL
                 )
             }
+        }
+    }
+
+    private var connectionLabel: String {
+        switch eventBusService.connectionState {
+        case .disconnected:
+            "Not Connected"
+        case .connecting:
+            "Connecting..."
+        case .connected:
+            "Connected"
         }
     }
 }
