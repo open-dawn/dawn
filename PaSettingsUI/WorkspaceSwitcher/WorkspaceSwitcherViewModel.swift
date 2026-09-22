@@ -1,10 +1,12 @@
 import Foundation
 
+import PaEventKit
+
 extension WorkspaceSwitcherView {
     @Observable
     class ViewModel: BaseViewModel {
-        private(set) var contexts: [Context]
-        private(set) var contextActive: Context?
+        private(set) var contexts: [WorkspaceContext]
+        private(set) var contextActive: WorkspaceContext?
 
         private(set) var isCreatingOrEditing: Bool
 
@@ -29,17 +31,17 @@ extension WorkspaceSwitcherView {
         }
 
         // MARK: - User Interactions
-        public func runContext(_ context: Context) {
+        public func runContext(_ context: WorkspaceContext) {
             // Pending: run the selected context.
             print("Calling runContext()")
         }
 
-        public func editContext(_ context: Context) {
+        public func editContext(_ context: WorkspaceContext) {
             // Pending: edit the selected context.
             print("Calling editContext()")
         }
 
-        public func deleteContext(_ context: Context) {
+        public func deleteContext(_ context: WorkspaceContext) {
             // Pending: delete the selected context.
             print("Calling deleteContext()")
         }
@@ -55,8 +57,8 @@ extension WorkspaceSwitcherView {
 
         // MARK: - Fetch functions
         func fetchContexts() throws(ViewModelError) {
-            self.contexts = Context.samples()
-            self.contextActive = self.contexts[Int.random(in: 0..<contexts.count)]
+            contexts = []
+            contextActive = nil
             // Pending: load contexts from a repository.
         }
     }

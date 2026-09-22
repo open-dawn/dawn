@@ -7,10 +7,10 @@ struct WorkspaceSwitcherView: View {
         VStack {
             Table(viewModel.contexts) {
                 TableColumn("Context") { context in
-                    Label(context.name, systemImage: context.icon)
+                    Label(context.name, systemImage: context.symbol)
                 }
                 TableColumn("Apps") { context in
-                    Text(context.apps.map { $0.name }.joined(separator: ", "))
+                    Text(context.applications.map { $0.displayName }.joined(separator: ", "))
                 }
 
                 TableColumn("Actions") { context in
