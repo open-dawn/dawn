@@ -144,6 +144,20 @@ private final class EventBusServiceSpy: PaWMEventBusServicing {
 
 @MainActor
 private final class ContextProviderStub: ContextProviding {
+    func createContext(name: String, symbol: String, applications: [WorkspaceApplication]) async throws -> WorkspaceContext {
+        WorkspaceContext(name: name, symbol: symbol, applications: applications)
+    }
+
+    func updateContext(_ context: WorkspaceContext) async throws {
+    }
+
+    func deleteContext(id: UUID) async throws {
+    }
+
+    func getContext(id: UUID) async -> WorkspaceContext? {
+        WorkspaceContext(id: id, name: "Placeholder", symbol: "book")
+    }
+
     private let contexts: [WorkspaceContext]
 
     init(contexts: [WorkspaceContext] = []) {

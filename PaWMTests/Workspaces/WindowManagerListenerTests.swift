@@ -1,4 +1,5 @@
 import PaEventKit
+import Foundation
 @testable import PaWM
 import Testing
 
@@ -145,6 +146,20 @@ final class FakeContextManager: ContextProviding {
             continuation = nil
         }
         return contexts
+    }
+
+    func createContext(name: String, symbol: String, applications: [WorkspaceApplication]) async throws -> WorkspaceContext {
+        WorkspaceContext(name: name, symbol: symbol, applications: applications)
+    }
+
+    func updateContext(_ context: WorkspaceContext) async throws {
+    }
+
+    func deleteContext(id: UUID) async throws {
+    }
+
+    func getContext(id: UUID) async -> WorkspaceContext? {
+        contexts.first { $0.id == id }
     }
 
     func waitUntilSwitched() async {

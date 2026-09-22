@@ -22,25 +22,37 @@ final class ContextManager: ContextProviding {
         return storeSnapshot.contexts
     }
 
-    func createContext(context: WorkspaceContext) async throws -> WorkspaceContext {
-        try await store.createContext(name: context.name, symbol: context.symbol, applications: context.applications)
+    func createContext(name: String, symbol: String, applications: [WorkspaceApplication]) async throws -> WorkspaceContext {
+        try await store.createContext(name: name, symbol: symbol, applications: applications)
     }
 
-    func getContext(uuid: UUID) async -> WorkspaceContext? {
+    func getContext(id: UUID) async -> WorkspaceContext? {
         let contexts = await getAvailableContexts()
-        return contexts.first(where: { $0.id == uuid })
+        return contexts.first(where: { $0.id == id })
     }
 
-    func updateContext(context: WorkspaceContext) async throws {
+    func updateContext(_ context: WorkspaceContext) async throws {
         try await store.updateContext(context)
     }
 
-    func deleteContext(uuid: UUID) async throws {
-        try await store.deleteContext(id: uuid)
+    func deleteContext(id: UUID) async throws {
+        try await store.deleteContext(id: id)
     }
 }
 
 @MainActor
 protocol ContextProviding {
     func getAvailableContexts() async -> [WorkspaceContext]
+
+    func createContext(
+        name: String,
+        symbol: String,
+        applications: [WorkspaceApplication]
+    ) async throws -> WorkspaceContext
+
+    func updateContext(_ context: WorkspaceContext) async throws
+
+    func deleteContext(id: UUID) async throws
+
+    func getContext(id: UUID) async -> WorkspaceContext?
 }

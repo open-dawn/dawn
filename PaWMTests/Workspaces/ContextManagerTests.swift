@@ -57,7 +57,7 @@ struct ContextManagerTests {
 
         let manager = try #require(try? await ContextManager(repository: mockRepository))
         let target = document.contexts[0]
-        #expect(await manager.getContext(uuid: target.id) == target)
+        #expect(await manager.getContext(id: target.id) == target)
     }
 
     @Test("Returns nil when id is missing")
@@ -69,7 +69,7 @@ struct ContextManagerTests {
         )
 
         let manager = try #require(try? await ContextManager(repository: mockRepository))
-        #expect(await manager.getContext(uuid: UUID()) == nil)
+        #expect(await manager.getContext(id: UUID()) == nil)
     }
 
     private func createMockWorkspaceContext(count: Int) -> [WorkspaceContext] {
