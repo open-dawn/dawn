@@ -4,8 +4,14 @@ import PaLogging
 
 final class ContextManager: ContextProviding {
     private let store: SettingsStore
+    private let snapshotPublisher: ContextSnapshotPublishing
 
-    init(repository: any SettingsRepository = UserDefaultsSettingsRepository()) async throws {
+    init(
+        repository: any SettingsRepository = UserDefaultsSettingsRepository(),
+        snapshotPublisher: ContextSnapshotPublishing
+    ) async throws {
+        self.snapshotPublisher = snapshotPublisher
+
         do {
             store = try await SettingsStore(repository: repository)
         } catch {
@@ -22,8 +28,13 @@ final class ContextManager: ContextProviding {
         return storeSnapshot.contexts
     }
 
-    func createContext(name: String, symbol: String, applications: [WorkspaceApplication]) async throws -> WorkspaceContext {
-        try await store.createContext(name: name, symbol: symbol, applications: applications)
+    func createContext(name: String, symbol: String, applications: [WorkspaceApplication]) async throws
+        -> WorkspaceContext
+    {
+        let context = try await store.createContext(name: name, symbol: symbol, applications: applications)
+
+        await publishAvailableContexts()
+        return context
     }
 
     func getContext(id: UUID) async -> WorkspaceContext? {
@@ -33,10 +44,17 @@ final class ContextManager: ContextProviding {
 
     func updateContext(_ context: WorkspaceContext) async throws {
         try await store.updateContext(context)
+        await publishAvailableContexts()
     }
 
     func deleteContext(id: UUID) async throws {
         try await store.deleteContext(id: id)
+        await publishAvailableContexts()
+    }
+
+    private func publishAvailableContexts() async {
+        let snapshot = await store.snapshot()
+        snapshotPublisher.publishAvailableContexts(snapshot.contexts)
     }
 }
 

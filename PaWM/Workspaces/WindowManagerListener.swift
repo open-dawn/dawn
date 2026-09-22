@@ -43,7 +43,9 @@ final class WindowManagerListener: Listener {
     }
 
     convenience init(bus: PaEventBus) async throws {
-        try await self.init(bus: bus, contextManager: ContextManager())
+        let publisher = EventBusContextSnapshotPublisher(bus: bus)
+
+        try await self.init(bus: bus, contextManager: ContextManager(snapshotPublisher: publisher))
     }
 
     func handle(_ event: PaEvent, reply: (@Sendable (PaEvent) -> Void)?) {
