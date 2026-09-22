@@ -63,7 +63,9 @@ struct PaEventTests {
             .contextMutationAcknowledged(PaContextMutationAcknowledgement.success(contextID: UUID())),
             .contextMutationAcknowledged(PaContextMutationAcknowledgement.failure(failure: .emptyContextName)),
             .contextMutationAcknowledged(PaContextMutationAcknowledgement.failure(failure: .contextNotFound(UUID()))),
-            .availableContexts(PaAvailableContextsEvent(contexts: [WorkspaceContext(name: "Placeholder", symbol: "book")]))
+            .availableContexts(
+                PaAvailableContextsEvent(contexts: [WorkspaceContext(name: "Placeholder", symbol: "book")])
+            )
         ]
     )
     func roundTripsThroughJSON(_ event: PaEvent) throws {

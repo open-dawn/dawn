@@ -144,7 +144,11 @@ private final class EventBusServiceSpy: PaWMEventBusServicing {
 
 @MainActor
 private final class ContextProviderStub: ContextProviding {
-    func createContext(name: String, symbol: String, applications: [WorkspaceApplication]) async throws -> WorkspaceContext {
+    func createContext(
+        name: String,
+        symbol: String,
+        applications: [WorkspaceApplication]
+    ) async throws -> WorkspaceContext {
         WorkspaceContext(name: name, symbol: symbol, applications: applications)
     }
 

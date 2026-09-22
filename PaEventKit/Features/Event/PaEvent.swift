@@ -1,6 +1,7 @@
 public enum PaEvent: Codable, Sendable, Equatable {
     case debugPing(PaDebugPingEvent)
     case debugPong(PaDebugPongEvent)
+    @available(*, deprecated, message: "use .switchContext instead.")
     case switchSpace(PaSwitchSpaceEvent)
     case initialized(PaInitializedEvent)
     case getContexts(PaGetContextsEvent)
