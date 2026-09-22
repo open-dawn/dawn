@@ -13,8 +13,8 @@ struct ContextCreatorViewModelTests {
         #expect(viewModel.isLoading == false)
 
         #expect(viewModel.context.name.isEmpty)
-        #expect(viewModel.context.icon.isEmpty)
-        #expect(viewModel.context.apps.isEmpty)
+        #expect(viewModel.context.symbol.isEmpty)
+        #expect(viewModel.context.applications.isEmpty)
     }
 
     @Test("append a new default app")
@@ -22,10 +22,13 @@ struct ContextCreatorViewModelTests {
         let viewModel = ContextCreatorView.ViewModel()
 
         viewModel.addNewDefaultApp()
-        #expect(viewModel.context.apps.count == 1)
+        #expect(viewModel.context.applications.count == 1)
 
-        let newApp = viewModel.context.apps[0]
-        #expect(newApp.name.isEmpty)
+        let newApp = viewModel.context.applications[0]
+        #expect(newApp.displayName.isEmpty)
+        #expect(newApp.bundleIdentifier.isEmpty)
+        #expect(newApp.applicationURL == nil)
+        #expect(newApp.createNewInstance == false)
     }
 
     @Test("ignores an unknown app id")
@@ -33,11 +36,11 @@ struct ContextCreatorViewModelTests {
         let viewModel = ContextCreatorView.ViewModel()
 
         viewModel.removeApp(UUID())
-        #expect(viewModel.context.apps.count == 0)
+        #expect(viewModel.context.applications.count == 0)
 
         viewModel.addNewDefaultApp()
         viewModel.removeApp(UUID())
-        #expect(viewModel.context.apps.count == 1)
+        #expect(viewModel.context.applications.count == 1)
 
         #expect(viewModel.error == ViewModelError.invalidAccess)
     }
@@ -46,8 +49,8 @@ struct ContextCreatorViewModelTests {
     func removeApp() {
         let viewModel = ContextCreatorView.ViewModel()
         viewModel.addNewDefaultApp()
-        viewModel.removeApp(viewModel.context.apps[0].id)
-        #expect(viewModel.context.apps.count == 0)
+        viewModel.removeApp(viewModel.context.applications[0].id)
+        #expect(viewModel.context.applications.count == 0)
     }
 
     @Test("removing an app keeps the other apps")
@@ -56,11 +59,11 @@ struct ContextCreatorViewModelTests {
         viewModel.addNewDefaultApp()
         viewModel.addNewDefaultApp()
 
-        let firstAppId = viewModel.context.apps[0].id
-        let secondAppId = viewModel.context.apps[1].id
+        let firstAppId = viewModel.context.applications[0].id
+        let secondAppId = viewModel.context.applications[1].id
         viewModel.removeApp(firstAppId)
 
-        #expect(viewModel.context.apps.count == 1)
-        #expect(viewModel.context.apps[0].id == secondAppId)
+        #expect(viewModel.context.applications.count == 1)
+        #expect(viewModel.context.applications[0].id == secondAppId)
     }
 }

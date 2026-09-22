@@ -1,4 +1,5 @@
 import SwiftUI
+import PaEventKit
 
 struct ContextCreatorView: View {
     @State private var viewModel: ViewModel = Self.ViewModel()
@@ -9,7 +10,7 @@ struct ContextCreatorView: View {
             Form {
                 Section("Context information") {
                     TextField("Context name", text: $viewModel.context.name)
-                    TextField("Icon", text: $viewModel.context.icon)
+                    TextField("Icon", text: $viewModel.context.symbol)
                 }
 
                 Section("Apps to open") {
@@ -19,8 +20,8 @@ struct ContextCreatorView: View {
                         Button("Add a new context") { viewModel.addNewDefaultApp() }
                     }
 
-                    ForEach($viewModel.context.apps, id: \.id) { $app in
-                        appRow($app)
+                    ForEach($viewModel.context.applications, id: \.id) { $application in
+                        appRow($application)
                     }
                 }
             }
@@ -35,10 +36,10 @@ struct ContextCreatorView: View {
     }
 
     @ViewBuilder
-    private func appRow(_ app: Binding<ContextApp>) -> some View {
+    private func appRow(_ app: Binding<WorkspaceApplication>) -> some View {
         HStack {
-            TextField("App name", text: app.name)
-            Button("Delete \(app.wrappedValue.name)", systemImage: "trash", role: .destructive) {
+            TextField("App name", text: app.displayName)
+            Button("Delete \(app.wrappedValue.displayName)", systemImage: "trash", role: .destructive) {
                 viewModel.removeApp(app.wrappedValue.id)
             }
             .tint(.red)

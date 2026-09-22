@@ -1,4 +1,5 @@
 import Foundation
+import PaEventKit
 
 extension ContextCreatorView {
     @Observable
@@ -6,7 +7,7 @@ extension ContextCreatorView {
         private(set) var error: ViewModelError?
         private(set) var errorMessage: String?
         private(set) var isLoading: Bool
-        var context: Context
+        var context: WorkspaceContext
 
         init() {
             self.error = nil
@@ -14,16 +15,21 @@ extension ContextCreatorView {
             self.isLoading = true
             defer { self.isLoading = false }
 
-            self.context = Context()
+            self.context = WorkspaceContext(name: "", symbol: "")
         }
 
         public func addNewDefaultApp() {
-            self.context.apps.append(ContextApp())
+            context.applications.append(
+                WorkspaceApplication(
+                    bundleIdentifier: "",
+                    displayName: ""
+                )
+            )
         }
 
         public func removeApp(_ id: UUID) {
-            if let index = context.apps.firstIndex(where: { $0.id == id }) {
-                context.apps.remove(at: index)
+            if let index = context.applications.firstIndex(where: { $0.id == id }) {
+                context.applications.remove(at: index)
                 return
             }
 
