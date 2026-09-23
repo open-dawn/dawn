@@ -1,8 +1,8 @@
 import Foundation
 
 enum PaSettingsEventBusRendezvous {
-    static let machServiceName = "dev.longhi.pineappleinc.PaWM"
+    static let machServiceName = "app.opendawn.PaWM"
     static let readyNotification = Notification.Name(
-        "dev.longhi.pineappleinc.PaWM.eventBusReady"
+        "app.opendawn.eventBusReady"
     )
 }

@@ -102,7 +102,7 @@ struct XPCRemoteEventTransportTests {
     @Test("missing mach service stays disconnected")
     func missingMachServiceStaysDisconnected() async throws {
         let transport = XPCRemoteEventTransportClient(
-            machServiceName: "dev.longhi.pineappleinc.missing.\(UUID().uuidString)"
+            machServiceName: "app.opendawn.missing.\(UUID().uuidString)"
         )
         // Snapshot before wrapping so an optimistic connected flash during init is not missed.
         var sawConnected = transport.isConnected || transport.connectionState == .connected

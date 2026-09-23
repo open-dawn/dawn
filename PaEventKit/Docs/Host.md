@@ -78,15 +78,15 @@ PaWM is a login item. Launchd advertises a Mach service named as the helper’s 
 let eventServer = PaEventServer(bus: bus)
 let acceptor = XPCRemoteEventTransportAcceptor(
     eventServer: eventServer,
-    machServiceName: "dev.longhi.pineappleinc.PaWM"
+    machServiceName: "app.opendawn.PaWM"
 )
 acceptor.start()
 ```
 
 After `start()`, post an empty `DistributedNotificationCenter` ping so clients reconnect when PaWM comes up or restarts. Do not put the endpoint in the notification.
 
-- Mach service name: `dev.longhi.pineappleinc.PaWM` (the login item bundle ID)
-- Ready ping: `dev.longhi.pineappleinc.PaWM.eventBusReady` (nil object, nil userInfo)
+- Mach service name: `app.opendawn.PaWM` (the login item bundle ID)
+- Ready ping: `app.opendawn.PaWM.eventBusReady` (nil object, nil userInfo)
 
 `acceptor.endpoint` is still available for in-process tests that use an anonymous listener (`machServiceName: nil`). Production PaWM does not share that endpoint.
 

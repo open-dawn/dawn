@@ -1,6 +1,6 @@
 name: pineapplewm
 options:
-  bundleIdPrefix: dev.longhi.pineappleinc
+  bundleIdPrefix: app.opendawn
 
 settings:
   base:
