@@ -26,6 +26,14 @@ struct MainApp: App {
             }
             .padding(0)
             .environment(appDelegate.eventBusService)
+            .environment(appDelegate.contextStore)
+            .task(id: appDelegate.eventBusService.isConnected) {
+                guard appDelegate.eventBusService.isConnected else {
+                    return
+                }
+
+                await appDelegate.contextStore.refresh()
+            }
         }
         .windowResizability(.contentSize)
     }
