@@ -12,7 +12,7 @@ PaWM advertises a Mach service named as its bundle ID. Connect with that name:
 import PaEventKit
 
 let transport = XPCRemoteEventTransportClient(
-    machServiceName: "dev.longhi.pineappleinc.PaWM"
+    machServiceName: "app.opendawn.PaWM"
 )
 let remote = PaRemoteEventBus(transport: transport)
 
@@ -20,7 +20,7 @@ remote.isConnected  // true only after a transport handshake with the host
 remote.disconnect()
 ```
 
-On launch, subscribe to the host’s empty distributed notification (`dev.longhi.pineappleinc.PaWM.eventBusReady`). Keep one `PaRemoteEventBus` and call `attemptReconnect()` when the ping fires, and once when a live connection drops. Do not retry in a loop after a failed handshake; wait for the next ready ping.
+On launch, subscribe to the host’s empty distributed notification (`app.opendawn.PaWM.eventBusReady`). Keep one `PaRemoteEventBus` and call `attemptReconnect()` when the ping fires, and once when a live connection drops. Do not retry in a loop after a failed handshake; wait for the next ready ping.
 
 `publish` is best-effort. Use `ask` when you need confirmation from a host listener.
 
