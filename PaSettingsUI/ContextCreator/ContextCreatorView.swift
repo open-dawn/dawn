@@ -1,9 +1,26 @@
-import SwiftUI
 import PaEventKit
+import SwiftUI
 
 struct ContextCreatorView: View {
-    @State private var viewModel: ViewModel = Self.ViewModel()
+    @Environment(PaSettingsContextStore.self)
+    private var contextStore
+
+    var body: some View {
+        ContextCreatorContent(contextCreator: contextStore)
+    }
+}
+
+private struct ContextCreatorContent: View {
+    @State private var viewModel: ContextCreatorView.ViewModel
     @Environment(\.dismiss) private var dismiss
+
+    init(contextCreator: any ContextCreating) {
+        _viewModel = State(
+            initialValue: ContextCreatorView.ViewModel(
+                contextCreator: contextCreator
+            )
+        )
+    }
 
     var body: some View {
         VStack {
@@ -17,7 +34,12 @@ struct ContextCreatorView: View {
                     HStack {
                         Text("Insert a new app")
                         Spacer()
-                        Button("Add a new context") { viewModel.addNewDefaultApp() }
+                        Button("Add a new context") {
+                            Task {
+                                await viewModel.addApplication()
+                            }
+                        }
+                        .disabled(viewModel.isLoading)
                     }
 
                     ForEach($viewModel.context.applications, id: \.id) { $application in
@@ -28,18 +50,52 @@ struct ContextCreatorView: View {
             .padding(16)
             .formStyle(.grouped)
 
-            Button("Create the context") {
-                viewModel.saveContext()
-                dismiss()
+            if let error = viewModel.applicationSelectionError {
+                Text(error.localizedDescription)
+                    .foregroundStyle(.red)
             }
+
+            if viewModel.saveError != nil {
+                Text("The context could not be saved. Check its fields and try again")
+                    .foregroundStyle(.red)
+            }
+
+            Button("Create the context") {
+                Task {
+                    if await viewModel.saveContext() {
+                        dismiss()
+                    }
+                }
+            }
+            .disabled(viewModel.isLoading)
+            .padding(.bottom, 35)
         }
     }
 
     @ViewBuilder
     private func appRow(_ app: Binding<WorkspaceApplication>) -> some View {
         HStack {
-            TextField("App name", text: app.displayName)
-            Button("Delete \(app.wrappedValue.displayName)", systemImage: "trash", role: .destructive) {
+            VStack(alignment: .leading) {
+                Text(app.wrappedValue.displayName)
+
+                Text(app.wrappedValue.bundleIdentifier)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+
+            Spacer()
+
+            Toggle(
+                "New instance",
+                isOn: app.createNewInstance
+            )
+            .toggleStyle(.checkbox)
+
+            Button(
+                "Delete \(app.wrappedValue.displayName)",
+                systemImage: "trash",
+                role: .destructive
+            ) {
                 viewModel.removeApp(app.wrappedValue.id)
             }
             .tint(.red)

@@ -1,31 +1,54 @@
 import Foundation
-
 import PaEventKit
 
 extension ContextCreatorView {
     @Observable
-    final class ViewModel: BaseViewModel {
+    @MainActor
+    final class ViewModel {
+        private let contextCreator: any ContextCreating
+        private let applicationSelector: any ApplicationSelecting
+
         private(set) var error: ViewModelError?
         private(set) var errorMessage: String?
-        private(set) var isLoading: Bool
+        private(set) var saveError: PaSettingsContextStoreError?
+        private(set) var applicationSelectionError: ApplicationSelectionError?
+        private(set) var isLoading = false
+
         var context: WorkspaceContext
 
-        init() {
-            self.error = nil
-            self.errorMessage = nil
-            self.isLoading = true
-            defer { self.isLoading = false }
-
+        init(
+            contextCreator: any ContextCreating,
+            applicationSelector: any ApplicationSelecting = SystemApplicationSelector()
+        ) {
+            self.contextCreator = contextCreator
+            self.applicationSelector = applicationSelector
             self.context = WorkspaceContext(name: "", symbol: "")
         }
 
-        public func addNewDefaultApp() {
-            context.applications.append(
-                WorkspaceApplication(
-                    bundleIdentifier: "",
-                    displayName: ""
-                )
-            )
+        func addApplication() async {
+            guard !isLoading else {
+                return
+            }
+
+            isLoading = true
+            applicationSelectionError = nil
+            defer { isLoading = false }
+
+            do {
+                guard let application = try await applicationSelector.selectApplication() else {
+                    return
+                }
+
+                context.applications.append(application)
+            } catch let error as ApplicationSelectionError {
+                applicationSelectionError = error
+            } catch {
+                applicationSelectionError = .unknown
+            }
+        }
+
+        func dismissApplicationSelectionError() {
+            applicationSelectionError = nil
         }
 
         public func removeApp(_ id: UUID) {
@@ -39,8 +62,35 @@ extension ContextCreatorView {
             self.errorMessage = invalidAppAttempError.errorDescription
         }
 
-        public func saveContext() {
-            // Pending: persist the created context.
+        @discardableResult
+        public func saveContext() async -> Bool {
+            guard !isLoading else {
+                return false
+            }
+
+            isLoading = true
+            defer { isLoading = false }
+
+            do {
+                try await contextCreator.createContext(
+                    name: context.name,
+                    symbol: context.symbol,
+                    applications: context.applications
+                )
+
+                saveError = nil
+                return true
+            } catch let error as PaSettingsContextStoreError {
+                saveError = error
+                return false
+            } catch {
+                saveError = .unknown
+                return false
+            }
+        }
+
+        func dismissSaveError() {
+            saveError = nil
         }
     }
 }

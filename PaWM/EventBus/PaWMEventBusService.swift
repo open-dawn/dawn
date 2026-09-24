@@ -1,5 +1,6 @@
 import Foundation
 import PaEventKit
+import PaLogging
 
 @MainActor
 protocol PaWMEventBusServicing: AnyObject {
@@ -25,8 +26,27 @@ final class PaWMEventBusService: PaWMEventBusServicing {
     }
 
     func start() {
+        #log(
+            "Starting PaWM XPC runtime",
+            level: .info,
+            category: .eventBus
+        )
+
         _ = runtime.start()
+
+        #log(
+            "PaWM XPC runtime start requested",
+            level: .info,
+            category: .eventBus
+        )
+
         readyNotifier.postReady()
+
+        #log(
+            "Posted PaWM ready notification",
+            level: .info,
+            category: .eventBus
+        )
     }
 
     func stop() {

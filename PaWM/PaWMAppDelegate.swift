@@ -1,6 +1,6 @@
 import AppKit
-import PaLogging
 import PaEventKit
+import PaLogging
 
 typealias WindowManagerListenerFactory = @MainActor (PaEventBus) async throws -> WindowManagerListener
 
@@ -28,6 +28,12 @@ final class PaWMAppDelegate: NSObject, NSApplicationDelegate {
         guard ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"] == nil else {
             return
         }
+
+        #log(
+            "PaWM application finished launching",
+            level: .info,
+            category: .appLifecycle
+        )
 
         startupTask = Task { @MainActor [weak self] in
             guard let self else { return }
@@ -62,18 +68,42 @@ final class PaWMAppDelegate: NSObject, NSApplicationDelegate {
         isStartingOrStarted = true
 
         do {
+            #log(
+                "Creating WindowManager listener",
+                level: .info,
+                category: .appLifecycle
+            )
+
             let windowManagerListener = try await makeWindowManagerListener(
                 eventBusService.bus
             )
 
             try Task.checkCancellation()
 
+            #log(
+                "WindowManager listener created",
+                level: .info,
+                category: .appLifecycle
+            )
+
             self.windowManagerListener = windowManagerListener
             self.debugPingListener = PaWMDebugPingListener(
                 bus: eventBusService.bus
             )
 
+            #log(
+                "Starting PaWM event bus",
+                level: .info,
+                category: .eventBus
+            )
+
             eventBusService.start()
+
+            #log(
+                "PaWM startup completed",
+                level: .info,
+                category: .appLifecycle
+            )
         } catch {
             isStartingOrStarted = false
             throw error
