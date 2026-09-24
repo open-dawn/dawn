@@ -41,11 +41,12 @@ private struct WorkspaceSwitcherContent: View {
                         }
                         .tint(.green)
 
-                        Button("Edit", systemImage: "pencil") {}
-                            .labelStyle(.iconOnly)
-                            .tint(.yellow)
-                            .disabled(true)
-                            .help("Context editing is not available yet")
+                        Button("Edit", systemImage: "pencil") {
+                            viewModel.presentContextEditor(context)
+                        }
+                        .labelStyle(.iconOnly)
+                        .tint(.yellow)
+                        .help("Edit context")
 
                         Button("Delete", systemImage: "trash", role: .destructive) {
                             Task {
@@ -79,7 +80,7 @@ private struct WorkspaceSwitcherContent: View {
                     }
                 )
             ) {
-                ContextCreatorView()
+                ContextCreatorView(context: viewModel.contextBeingEdited)
             }
         }
     }

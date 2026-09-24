@@ -10,6 +10,7 @@ extension WorkspaceSwitcherView {
         private(set) var operationInProgress: UUID?
         private(set) var error: PaSettingsContextStoreError?
 
+        private(set) var contextBeingEdited: WorkspaceContext?
         var isCreatingOrEditing = false
 
         init(contextManager: any WorkspaceContextManaging) {
@@ -18,11 +19,18 @@ extension WorkspaceSwitcherView {
 
         // MARK: - User Interactions
         func presentContextCreator() {
+            contextBeingEdited = nil
+            isCreatingOrEditing = true
+        }
+
+        func presentContextEditor(_ context: WorkspaceContext) {
+            contextBeingEdited = context
             isCreatingOrEditing = true
         }
 
         func dismissContextCreator() {
             isCreatingOrEditing = false
+            contextBeingEdited = nil
         }
 
         func dismissError() {

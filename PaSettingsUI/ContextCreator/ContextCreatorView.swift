@@ -5,8 +5,17 @@ struct ContextCreatorView: View {
     @Environment(PaSettingsContextStore.self)
     private var contextStore
 
+    private let context: WorkspaceContext?
+
+    init(context: WorkspaceContext? = nil) {
+        self.context = context
+    }
+
     var body: some View {
-        ContextCreatorContent(contextCreator: contextStore)
+        ContextCreatorContent(
+            contextSaver: contextStore,
+            context: context
+        )
     }
 }
 
@@ -14,10 +23,11 @@ private struct ContextCreatorContent: View {
     @State private var viewModel: ContextCreatorView.ViewModel
     @Environment(\.dismiss) private var dismiss
 
-    init(contextCreator: any ContextCreating) {
+    init(contextSaver: any ContextSaving, context: WorkspaceContext?) {
         _viewModel = State(
             initialValue: ContextCreatorView.ViewModel(
-                contextCreator: contextCreator
+                contextSaver: contextSaver,
+                context: context
             )
         )
     }
@@ -34,10 +44,12 @@ private struct ContextCreatorContent: View {
                     HStack {
                         Text("Insert a new app")
                         Spacer()
-                        Button("Add a new context") {
+                        Button {
                             Task {
                                 await viewModel.addApplication()
                             }
+                        } label: {
+                            Image(systemName: "plus")
                         }
                         .disabled(viewModel.isLoading)
                     }
@@ -60,7 +72,7 @@ private struct ContextCreatorContent: View {
                     .foregroundStyle(.red)
             }
 
-            Button("Create the context") {
+            Button(viewModel.isEditing ? "Save changes" : "Create the context") {
                 Task {
                     if await viewModel.saveContext() {
                         dismiss()

@@ -21,10 +21,9 @@ final class PaSettingsAppDelegate: NSObject, NSApplicationDelegate {
             return
         }
 
-        PaSettingsLoginItem.registerIfNeeded()
-
         contextStore.start()
         eventBusService.start()
+        PaSettingsLoginItem.registerIfNeeded()
     }
 
     func applicationWillTerminate(_ notification: Notification) {

@@ -1,11 +1,16 @@
 import Foundation
 import PaEventKit
 
+private enum ContextCreatorMode: Equatable{
+    case create
+    case edit
+}
+
 extension ContextCreatorView {
     @Observable
     @MainActor
     final class ViewModel {
-        private let contextCreator: any ContextCreating
+        private let contextSaver: any ContextSaving
         private let applicationSelector: any ApplicationSelecting
 
         private(set) var error: ViewModelError?
@@ -14,15 +19,29 @@ extension ContextCreatorView {
         private(set) var applicationSelectionError: ApplicationSelectionError?
         private(set) var isLoading = false
 
+        private let mode: ContextCreatorMode
+
+        var isEditing: Bool {
+            mode == .edit
+        }
+
         var context: WorkspaceContext
 
         init(
-            contextCreator: any ContextCreating,
+            contextSaver: any ContextSaving,
+            context: WorkspaceContext? = nil,
             applicationSelector: any ApplicationSelecting = SystemApplicationSelector()
         ) {
-            self.contextCreator = contextCreator
+            self.contextSaver = contextSaver
             self.applicationSelector = applicationSelector
-            self.context = WorkspaceContext(name: "", symbol: "")
+
+            if let context {
+                self.context = context
+                self.mode = .edit
+            } else {
+                self.context = WorkspaceContext(name: "", symbol: "")
+                self.mode = .create
+            }
         }
 
         func addApplication() async {
@@ -72,11 +91,16 @@ extension ContextCreatorView {
             defer { isLoading = false }
 
             do {
-                try await contextCreator.createContext(
-                    name: context.name,
-                    symbol: context.symbol,
-                    applications: context.applications
-                )
+                switch mode {
+                case .create:
+                    try await contextSaver.createContext(
+                        name: context.name,
+                        symbol: context.symbol,
+                        applications: context.applications
+                    )
+                case .edit:
+                    try await contextSaver.updateContext(context)
+                }
 
                 saveError = nil
                 return true

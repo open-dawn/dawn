@@ -35,8 +35,10 @@ final class PaSettingsEventBusService {
         isRunning = true
         retryAfterInitialHandshake = true
 
+        let state = String(describing: bus.connectionState)
+
         #log(
-            "Starting SettingUI event bus; initial state: \(String(describing: self.bus.connectionState), privacy: .public)",
+            "Starting SettingUI event bus; initial state: \(state, privacy: .public)",
             level: .info,
             category: .eventBus
         )

@@ -19,6 +19,7 @@ struct WorkspaceSwitcherViewModelTests {
         #expect(viewModel.operationInProgress == nil)
         #expect(viewModel.error == nil)
         #expect(!viewModel.isCreatingOrEditing)
+        #expect(viewModel.contextBeingEdited == nil)
     }
 
     @Test("Presents and dismisses the context creator")
@@ -147,6 +148,45 @@ struct WorkspaceSwitcherViewModelTests {
         #expect(viewModel.error == .unknown)
         #expect(viewModel.operationInProgress == nil)
     }
+
+    @Test("Presents the editor with the selected context")
+    func contextEditorPresentation() {
+        let context = WorkspaceContext(
+            name: "Personal",
+            symbol: "person"
+        )
+        let viewModel = WorkspaceSwitcherView.ViewModel(
+            contextManager: WorkspaceContextManagerSpy()
+        )
+
+        viewModel.presentContextEditor(context)
+
+        #expect(viewModel.isCreatingOrEditing)
+        #expect(viewModel.contextBeingEdited == context)
+
+        viewModel.dismissContextCreator()
+
+        #expect(!viewModel.isCreatingOrEditing)
+        #expect(viewModel.contextBeingEdited == nil)
+    }
+
+    @Test("Presenting the creator clears the editing context")
+    func creatorClearsEditingContext() {
+        let context = WorkspaceContext(
+            name: "Work",
+            symbol: "briefcase"
+        )
+        let viewModel = WorkspaceSwitcherView.ViewModel(
+            contextManager: WorkspaceContextManagerSpy()
+        )
+
+        viewModel.presentContextEditor(context)
+        viewModel.presentContextCreator()
+
+        #expect(viewModel.isCreatingOrEditing)
+        #expect(viewModel.contextBeingEdited == nil)
+    }
+
 }
 @MainActor
 private final class WorkspaceContextManagerSpy: WorkspaceContextManaging {

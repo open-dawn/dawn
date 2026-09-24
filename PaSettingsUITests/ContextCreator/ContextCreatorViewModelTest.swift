@@ -12,7 +12,7 @@ struct ContextCreatorViewModelTests {
     @Test("starts a view model with an empty context")
     func initialState() {
         let contextCreator = ContextCreatorSpy()
-        let viewModel = ContextCreatorView.ViewModel(contextCreator: contextCreator)
+        let viewModel = ContextCreatorView.ViewModel(contextSaver: contextCreator)
 
         #expect(viewModel.error == nil)
         #expect(viewModel.errorMessage == nil)
@@ -21,6 +21,8 @@ struct ContextCreatorViewModelTests {
         #expect(viewModel.context.name.isEmpty)
         #expect(viewModel.context.symbol.isEmpty)
         #expect(viewModel.context.applications.isEmpty)
+
+        #expect(!viewModel.isEditing)
     }
 
     @Test("Adds the selected application")
@@ -33,7 +35,7 @@ struct ContextCreatorViewModelTests {
 
         let selector = ApplicationSelectorSpy(result: application)
         let viewModel = ContextCreatorView.ViewModel(
-            contextCreator: ContextCreatorSpy(),
+            contextSaver: ContextCreatorSpy(),
             applicationSelector: selector
         )
 
@@ -49,7 +51,7 @@ struct ContextCreatorViewModelTests {
     func cancelApplicationSelection() async {
         let selector = ApplicationSelectorSpy(result: nil)
         let viewModel = ContextCreatorView.ViewModel(
-            contextCreator: ContextCreatorSpy(),
+            contextSaver: ContextCreatorSpy(),
             applicationSelector: selector
         )
 
@@ -67,7 +69,7 @@ struct ContextCreatorViewModelTests {
             error: ApplicationSelectionError.missingBundleIdentifier
         )
         let viewModel = ContextCreatorView.ViewModel(
-            contextCreator: ContextCreatorSpy(),
+            contextSaver: ContextCreatorSpy(),
             applicationSelector: selector
         )
 
@@ -85,7 +87,7 @@ struct ContextCreatorViewModelTests {
     func unknownApplicationSelectionError() async {
         let selector = ApplicationSelectorSpy(error: TestError.expected)
         let viewModel = ContextCreatorView.ViewModel(
-            contextCreator: ContextCreatorSpy(),
+            contextSaver: ContextCreatorSpy(),
             applicationSelector: selector
         )
 
@@ -100,7 +102,7 @@ struct ContextCreatorViewModelTests {
     func applicationSelectionLoadingState() async {
         let selector = ApplicationSelectorSpy()
         let viewModel = ContextCreatorView.ViewModel(
-            contextCreator: ContextCreatorSpy(),
+            contextSaver: ContextCreatorSpy(),
             applicationSelector: selector
         )
 
@@ -121,7 +123,7 @@ struct ContextCreatorViewModelTests {
             error: ApplicationSelectionError.invalidApplication
         )
         let viewModel = ContextCreatorView.ViewModel(
-            contextCreator: ContextCreatorSpy(),
+            contextSaver: ContextCreatorSpy(),
             applicationSelector: selector
         )
 
@@ -141,7 +143,7 @@ struct ContextCreatorViewModelTests {
         )
 
         let viewModel = ContextCreatorView.ViewModel(
-            contextCreator: ContextCreatorSpy()
+            contextSaver: ContextCreatorSpy()
         )
         viewModel.context.applications = [application]
 
@@ -159,7 +161,7 @@ struct ContextCreatorViewModelTests {
         )
 
         let viewModel = ContextCreatorView.ViewModel(
-            contextCreator: ContextCreatorSpy()
+            contextSaver: ContextCreatorSpy()
         )
         viewModel.context.applications = [application]
 
@@ -180,7 +182,7 @@ struct ContextCreatorViewModelTests {
         )
 
         let viewModel = ContextCreatorView.ViewModel(
-            contextCreator: ContextCreatorSpy()
+            contextSaver: ContextCreatorSpy()
         )
         viewModel.context.applications = [safari, mail]
 
@@ -198,7 +200,7 @@ struct ContextCreatorViewModelTests {
 
         let contextCreator = ContextCreatorSpy()
         let viewModel = ContextCreatorView.ViewModel(
-            contextCreator: contextCreator
+            contextSaver: contextCreator
         )
 
         viewModel.context.name = "Work"
@@ -225,7 +227,7 @@ struct ContextCreatorViewModelTests {
     func saveContextLoadingState() async {
         let contextCreator = ContextCreatorSpy()
         let viewModel = ContextCreatorView.ViewModel(
-            contextCreator: contextCreator
+            contextSaver: contextCreator
         )
 
         var observedLoadingState = false
@@ -249,7 +251,7 @@ struct ContextCreatorViewModelTests {
         )
 
         let viewModel = ContextCreatorView.ViewModel(
-            contextCreator: contextCreator
+            contextSaver: contextCreator
         )
 
         let succeeded = await viewModel.saveContext()
@@ -268,7 +270,7 @@ struct ContextCreatorViewModelTests {
         contextCreator.error = TestError.expected
 
         let viewModel = ContextCreatorView.ViewModel(
-            contextCreator: contextCreator
+            contextSaver: contextCreator
         )
 
         let succeeded = await viewModel.saveContext()
@@ -284,7 +286,7 @@ struct ContextCreatorViewModelTests {
         contextCreator.error = PaSettingsContextStoreError.timeout
 
         let viewModel = ContextCreatorView.ViewModel(
-            contextCreator: contextCreator
+            contextSaver: contextCreator
         )
 
         #expect(await viewModel.saveContext() == false)
@@ -302,7 +304,7 @@ struct ContextCreatorViewModelTests {
         contextCreator.error = PaSettingsContextStoreError.notConnected
 
         let viewModel = ContextCreatorView.ViewModel(
-            contextCreator: contextCreator
+            contextSaver: contextCreator
         )
 
         _ = await viewModel.saveContext()
@@ -312,9 +314,86 @@ struct ContextCreatorViewModelTests {
 
         #expect(viewModel.saveError == nil)
     }
+
+    @Test("Starts edit mode with the existing context")
+    func editInitialState() {
+        let context = WorkspaceContext(
+            name: "Work",
+            symbol: "briefcase",
+            applications: [
+                WorkspaceApplication(
+                    bundleIdentifier: "com.apple.Safari",
+                    displayName: "Safari"
+                )
+            ]
+        )
+
+        let viewModel = ContextCreatorView.ViewModel(
+            contextSaver: ContextCreatorSpy(),
+            context: context
+        )
+
+        #expect(viewModel.isEditing)
+        #expect(viewModel.context == context)
+    }
+
+    @Test("Saving an edited context delegates the complete context")
+    func saveEditedContext() async {
+        let original = WorkspaceContext(
+            name: "Work",
+            symbol: "briefcase"
+        )
+
+        let contextSaver = ContextCreatorSpy()
+        let viewModel = ContextCreatorView.ViewModel(
+            contextSaver: contextSaver,
+            context: original
+        )
+
+        viewModel.context.name = "Updated Work"
+        viewModel.context.symbol = "desktopcomputer"
+
+        let expectedContext = viewModel.context
+        let succeeded = await viewModel.saveContext()
+
+        #expect(succeeded)
+        #expect(contextSaver.requests.isEmpty)
+        #expect(contextSaver.updatedContexts == [expectedContext])
+        #expect(expectedContext.id == original.id)
+        #expect(viewModel.saveError == nil)
+        #expect(!viewModel.isLoading)
+    }
+
+    @Test("An update failure is exposed")
+    func updateContextFailure() async {
+        let context = WorkspaceContext(
+            name: "Work",
+            symbol: "briefcase"
+        )
+        let expectedError = PaSettingsContextStoreError.mutationRejected(
+            .contextNotFound(context.id)
+        )
+
+        let contextSaver = ContextCreatorSpy()
+        contextSaver.error = expectedError
+
+        let viewModel = ContextCreatorView.ViewModel(
+            contextSaver: contextSaver,
+            context: context
+        )
+
+        let succeeded = await viewModel.saveContext()
+
+        #expect(!succeeded)
+        #expect(contextSaver.requests.isEmpty)
+        #expect(contextSaver.updatedContexts == [context])
+        #expect(viewModel.saveError == expectedError)
+        #expect(!viewModel.isLoading)
+    }
 }
 @MainActor
-private final class ContextCreatorSpy: ContextCreating {
+private final class ContextCreatorSpy: ContextSaving {
+
     struct Request: Equatable {
         let name: String
         let symbol: String
@@ -322,10 +401,12 @@ private final class ContextCreatorSpy: ContextCreating {
     }
 
     private(set) var requests: [Request] = []
+    private(set) var updatedContexts: [WorkspaceContext] = []
 
     var returnedID = UUID()
     var error: Error?
     var onCreate: (() -> Void)?
+    var onUpdate: (() -> Void)?
 
     func createContext(
         name: String,
@@ -347,6 +428,15 @@ private final class ContextCreatorSpy: ContextCreating {
         }
 
         return returnedID
+    }
+
+    func updateContext(_ context: PaEventKit.WorkspaceContext) async throws {
+        updatedContexts.append(context)
+        onUpdate?()
+
+        if let error {
+            throw error
+        }
     }
 }
 @MainActor
