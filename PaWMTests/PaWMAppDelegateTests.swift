@@ -117,6 +117,93 @@ struct PaWMAppDelegateTests {
         #expect(!service.bus.hasListeners(for: .getContexts(PaGetContextsEvent())))
         #expect(!service.bus.hasListeners(for: .debugPing(PaDebugPingEvent())))
     }
+
+    @Test("Repeated starts initialize only once")
+    func repeatedStartsInitializeOnlyOnce() async throws {
+        let service = EventBusServiceSpy()
+        let provider = ContextProviderStub()
+        var factoryCallCount = 0
+
+        let delegate = PaWMAppDelegate(eventBusService: service) { bus in
+            factoryCallCount += 1
+
+            return WindowManagerListener(
+                bus: bus,
+                contextManager: provider
+            )
+        }
+
+        try await delegate.start()
+        try await delegate.start()
+
+        #expect(factoryCallCount == 1)
+        #expect(service.startCallCount == 1)
+    }
+
+    @Test("Overlapping starts initialize only once")
+    func overlappingStartsInitializeOnlyOnce() async throws {
+        let service = EventBusServiceSpy()
+        let provider = ContextProviderStub()
+        let factory = PausingListenerFactory(provider: provider)
+
+        let delegate = PaWMAppDelegate(
+            eventBusService: service
+        ) { bus in
+            await factory.makeListener(bus: bus)
+        }
+
+        let firstStart = Task { @MainActor in
+            try await delegate.start()
+        }
+
+        await factory.waitUntilCalled()
+
+        let secondStart = Task { @MainActor in
+            try await delegate.start()
+        }
+
+        try await secondStart.value
+
+        #expect(factory.callCount == 1)
+        #expect(service.startCallCount == 0)
+
+        factory.resume()
+        try await firstStart.value
+
+        #expect(factory.callCount == 1)
+        #expect(service.startCallCount == 1)
+    }
+
+    @Test("Startup can be retried after failure")
+    func startupCanBeRetriedAfterFailure() async throws {
+        let service = EventBusServiceSpy()
+        let provider = ContextProviderStub()
+        var attemptCount = 0
+
+        let delegate = PaWMAppDelegate(
+            eventBusService: service
+        ) { bus in
+            attemptCount += 1
+
+            if attemptCount == 1 {
+                throw StartupError.expected
+            }
+
+            return WindowManagerListener(
+                bus: bus,
+                contextManager: provider
+            )
+        }
+
+        await #expect(throws: StartupError.expected) {
+            try await delegate.start()
+        }
+
+        try await delegate.start()
+
+        #expect(attemptCount == 2)
+        #expect(service.startCallCount == 1)
+    }
 }
 
 @MainActor
@@ -170,6 +257,48 @@ private final class ContextProviderStub: ContextProviding {
 
     func getAvailableContexts() async -> [WorkspaceContext] {
         contexts
+    }
+}
+
+@MainActor
+private final class PausingListenerFactory {
+    private let provider: ContextProviderStub
+    private var callWaiter: CheckedContinuation<Void, Never>?
+    private var factoryContinuation: CheckedContinuation<Void, Never>?
+
+    private(set) var callCount = 0
+
+    init(provider: ContextProviderStub) {
+        self.provider = provider
+    }
+
+    func makeListener(bus: PaEventBus) async -> WindowManagerListener {
+        callCount += 1
+
+        callWaiter?.resume()
+        callWaiter = nil
+
+        await withCheckedContinuation { continuation in
+            factoryContinuation = continuation
+        }
+
+        return WindowManagerListener(
+            bus: bus,
+            contextManager: provider
+        )
+    }
+
+    func waitUntilCalled() async {
+        guard callCount == 0 else { return }
+
+        await withCheckedContinuation { continuation in
+            callWaiter = continuation
+        }
+    }
+
+    func resume() {
+        factoryContinuation?.resume()
+        factoryContinuation = nil
     }
 }
 

@@ -227,6 +227,44 @@ struct ContextManagerTests {
 
         #expect(publisher.publishedSnapshots.isEmpty)
     }
+
+    @Test("Concurrent mutations publish monotonically newer snapshots")
+    func concurrentMutationsPublishMonotonicSnapshots() async throws {
+        let mutationCount = 100
+        let repository = MockSettingsRepository()
+        let publisher = SnapshotPublisherSpy()
+
+        let manager = try await ContextManager(
+            repository: repository,
+            snapshotPublisher: publisher
+        )
+
+        try await withThrowingTaskGroup(of: Void.self) { group in
+            for index in 0..<mutationCount {
+                group.addTask {
+                    _ = try await manager.createContext(
+                        name: "Context \(index)",
+                        symbol: "circle",
+                        applications: []
+                    )
+                }
+            }
+
+            try await group.waitForAll()
+        }
+
+        let snapshotSizes = publisher.publishedSnapshots.map(\.count)
+        let publicationsAreMonotonic = zip(
+            snapshotSizes,
+            snapshotSizes.dropFirst()
+        ).allSatisfy { pair in
+            pair.0 <= pair.1
+        }
+
+        #expect(publisher.publishedSnapshots.count == mutationCount)
+        #expect(publicationsAreMonotonic)
+        #expect(snapshotSizes.last == mutationCount)
+    }
 }
 
 actor MockSettingsRepository: SettingsRepository {

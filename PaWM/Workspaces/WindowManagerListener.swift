@@ -77,16 +77,16 @@ final class WindowManagerListener: Listener {
         case .initialized:
             print("PaWM initialized")
 
-        case .createContext(let payload):
+        case let .createContext(payload):
             handleCreateContext(payload, reply: reply)
 
-        case .updateContext(let payload):
+        case let .updateContext(payload):
             handleUpdateContext(payload, reply: reply)
 
-        case .deleteContext(let payload):
+        case let .deleteContext(payload):
             handleDeleteContext(payload, reply: reply)
 
-        case .switchContext(let payload):
+        case let .switchContext(payload):
             handleSwitchContext(payload, reply: reply)
 
         default:
@@ -216,23 +216,22 @@ final class WindowManagerListener: Listener {
         from error: Error
     ) -> PaContextMutationAcknowledgement.Failure {
         if let error = error as? SettingsStoreError {
-            switch error {
-            case .emptyContextName:
-                return .emptyContextName
-            case .emptyContextSymbol:
-                return .emptyContextSymbol
-            case .emptyApplicationBundleIdentifier:
-                return .emptyApplicationBundleIdentifier
-            case .emptyApplicationDisplayName:
-                return .emptyApplicationDisplayName
-            case .duplicateApplication(let bundleIdentifier):
-                return .duplicateApplication(bundleIdentifier: bundleIdentifier)
-            case .duplicateContextIdentifier(let id):
-                return .duplicateContextIdentifier(id)
-            case .duplicateApplicationIdentifier(let id):
-                return .duplicateApplicationIdentifier(id)
-            case .contextNotFound(let id):
-                return .contextNotFound(id)
+            return switch error {
+            case .emptyContextName: .emptyContextName
+
+            case .emptyContextSymbol: .emptyContextSymbol
+
+            case .emptyApplicationBundleIdentifier: .emptyApplicationBundleIdentifier
+
+            case .emptyApplicationDisplayName: .emptyApplicationDisplayName
+
+            case .duplicateApplication(let bundleIdentifier): .duplicateApplication(bundleIdentifier: bundleIdentifier)
+
+            case .duplicateContextIdentifier(let id): .duplicateContextIdentifier(id)
+
+            case .duplicateApplicationIdentifier(let id): .duplicateApplicationIdentifier(id)
+
+            case .contextNotFound(let id): .contextNotFound(id)
             }
         }
 

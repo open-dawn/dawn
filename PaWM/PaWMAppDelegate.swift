@@ -7,10 +7,11 @@ typealias WindowManagerListenerFactory = @MainActor (PaEventBus) async throws ->
 @MainActor
 final class PaWMAppDelegate: NSObject, NSApplicationDelegate {
     private let eventBusService: any PaWMEventBusServicing
-    private var debugPingListener: PaWMDebugPingListener?
-    private var startupTask: Task<Void, Never>?
     private let makeWindowManagerListener: WindowManagerListenerFactory
     private var windowManagerListener: WindowManagerListener?
+    private var debugPingListener: PaWMDebugPingListener?
+    private var startupTask: Task<Void, Never>?
+    private var isStartingOrStarted = false
 
     init(
         eventBusService: any PaWMEventBusServicing = PaWMEventBusService(),
@@ -57,17 +58,25 @@ final class PaWMAppDelegate: NSObject, NSApplicationDelegate {
     }
 
     func start() async throws {
-        let windowManagerListener = try await makeWindowManagerListener(
-            eventBusService.bus
-        )
+        guard !isStartingOrStarted else { return }
+        isStartingOrStarted = true
 
-        try Task.checkCancellation()
+        do {
+            let windowManagerListener = try await makeWindowManagerListener(
+                eventBusService.bus
+            )
 
-        self.windowManagerListener = windowManagerListener
-        self.debugPingListener = PaWMDebugPingListener(
-            bus: eventBusService.bus
-        )
+            try Task.checkCancellation()
 
-        eventBusService.start()
+            self.windowManagerListener = windowManagerListener
+            self.debugPingListener = PaWMDebugPingListener(
+                bus: eventBusService.bus
+            )
+
+            eventBusService.start()
+        } catch {
+            isStartingOrStarted = false
+            throw error
+        }
     }
 }
