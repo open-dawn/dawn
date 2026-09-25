@@ -2,7 +2,15 @@ import Foundation
 import PaEventKit
 
 @MainActor
-final class PaWMEventBusService {
+protocol PaWMEventBusServicing: AnyObject {
+    var bus: PaEventBus { get }
+
+    func start()
+    func stop()
+}
+
+@MainActor
+final class PaWMEventBusService: PaWMEventBusServicing {
     private let runtime: PaWMEventBusRuntime
     private let readyNotifier: PaWMEventBusReadyNotifier
 
