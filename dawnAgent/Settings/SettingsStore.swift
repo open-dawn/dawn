@@ -1,6 +1,6 @@
 //
 //  SettingsStore.swift
-//  pineapplewm
+//  dawn
 //
 //  Created by Rafael Venetikides on 20/08/26.
 //

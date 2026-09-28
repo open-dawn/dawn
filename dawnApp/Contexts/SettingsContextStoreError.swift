@@ -1,6 +1,6 @@
 //
 //  SettingsContextStoreError.swift
-//  pineapplewm
+//  dawn
 //
 //  Created by Rafael Venetikides on 22/09/26.
 //

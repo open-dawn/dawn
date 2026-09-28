@@ -1,6 +1,6 @@
 //
 //  AboutMetadata.swift
-//  pineapplewm
+//  dawn
 //
 //  Created by Rafael Venetikides on 09/09/26.
 //

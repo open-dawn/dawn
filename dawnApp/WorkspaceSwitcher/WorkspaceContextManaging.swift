@@ -1,6 +1,6 @@
 //
 //  WorkspaceContextManaging.swift
-//  pineapplewm
+//  dawn
 //
 //  Created by Rafael Venetikides on 23/09/26.
 //

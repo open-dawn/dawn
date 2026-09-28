@@ -1,6 +1,6 @@
 //
 //  Workspace.swift
-//  pineapplewm
+//  dawn
 //
 //  Created by Rafael Venetikides on 19/08/26.
 //

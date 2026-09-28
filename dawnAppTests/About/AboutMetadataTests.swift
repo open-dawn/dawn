@@ -1,32 +1,32 @@
 //
 //  AboutMetadataTests.swift
-//  pineapplewm
+//  dawn
 //
 //  Created by Rafael Venetikides on 09/09/26.
 //
 
+@testable import dawnApp
 import Foundation
 import Testing
-@testable import dawnApp
 
 @Suite("About metadata")
 struct AboutMetadataTests {
     @Test("decodes valid metadata")
-    func decodesValidMetadata() async throws {
+    func decodesValidMetadata() throws {
         let json = """
-            {
-              "copyright": "PineApple INC 2026",
-              "license": "GNU GENERAL PUBLIC LICENSE",
-              "commit": {
-                "sha": "2b94d72b4578ddad0892af886f37739d1f1a396f",
-                "reference": "stable",
-                "url":
-                "https://github.com/PineAppleIncOS/pineapplewm/commit/2b94d72b4578ddad0892af886f37739d1f1a396f"
-              },
-              "privacyPolicyURL": "https://example.com/privacy",
-              "termsOfUseURL": "https://example.com/terms"
-            }
-            """
+        {
+          "copyright": "PineApple INC 2026",
+          "license": "GNU GENERAL PUBLIC LICENSE",
+          "commit": {
+            "sha": "2b94d72b4578ddad0892af886f37739d1f1a396f",
+            "reference": "stable",
+            "url":
+            "https://github.com/open-dawn/dawn/commit/2b94d72b4578ddad0892af886f37739d1f1a396f"
+          },
+          "privacyPolicyURL": "https://example.com/privacy",
+          "termsOfUseURL": "https://example.com/terms"
+        }
+        """
 
         let data = try #require(json.data(using: .utf8))
         let metadata = try JSONDecoder().decode(
@@ -40,7 +40,7 @@ struct AboutMetadataTests {
     }
 
     @Test("loads bundled metadata and application version")
-    func loadsBundleMetadata() async throws {
+    func loadsBundleMetadata() throws {
         let content = try AboutMetadataLoader.load()
 
         #expect(!content.appVersion.isEmpty)
@@ -50,7 +50,7 @@ struct AboutMetadataTests {
     }
 
     @Test("accepts valid metadata")
-    func acceptsValidMetadata() async throws {
+    func acceptsValidMetadata() throws {
         let metadata = try makeMetadata()
 
         #expect(throws: Never.self) {
@@ -59,7 +59,7 @@ struct AboutMetadataTests {
     }
 
     @Test("rejects an empty license")
-    func rejectsEmptyLicence() async throws {
+    func rejectsEmptyLicence() throws {
         let metadata = try makeMetadata(license: " \n ")
 
         #expect(throws: AboutMetadataValidationError.emptyValue(field: "license")) {
@@ -68,7 +68,7 @@ struct AboutMetadataTests {
     }
 
     @Test("rejects invalid commit SHA")
-    func rejectsInvalidCommitSHA() async throws {
+    func rejectsInvalidCommitSHA() throws {
         let metadata = try makeMetadata(sha: "11--fd")
 
         #expect(throws: AboutMetadataValidationError.invalidCommitSHA) {
@@ -77,7 +77,7 @@ struct AboutMetadataTests {
     }
 
     @Test("rejects a non-HTTPS URL")
-    func rejectsNonHTTPSURL() async throws {
+    func rejectsNonHTTPSURL() throws {
         let metadata = try makeMetadata(
             privacyPolicyURL: "http://example.com/privacy"
         )
@@ -92,7 +92,7 @@ struct AboutMetadataTests {
         license: String = "GNU GENERAL PUBLIC LICENSE",
         sha: String = "2b94d72b4578ddad0892af886f37739d1f1a396f",
         reference: String = "stable",
-        commitURL: String = "https://github.com/PineAppleIncOS/pineapplewm",
+        commitURL: String = "https://github.com/open-dawn/dawn",
         privacyPolicyURL: String = "https://example.com/privacy",
         termsOfUseURL: String = "https://example.com/terms"
     ) throws -> AboutMetadata {

@@ -19,7 +19,7 @@ def main() -> None:
     args = parse_arguments()
 
     repository_url = args.repository_url.rstrip("/")
-    copyright_value = f"PineApple INC {datetime.now(UTC).year}"
+    copyright_value = f"DAWN {datetime.now(UTC).year}"
 
     metadata = {
         "copyright": copyright_value,
