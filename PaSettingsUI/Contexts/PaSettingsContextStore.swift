@@ -41,6 +41,10 @@ final class PaSettingsContextStore: Listener {
         bus.removeListener(self)
     }
 
+    func dismissError() {
+        error = nil
+    }
+
     func handle(_ event: PaEvent, reply: (@Sendable (PaEvent) -> Void)?) {
         guard case .availableContexts(let payload) = event else {
             return

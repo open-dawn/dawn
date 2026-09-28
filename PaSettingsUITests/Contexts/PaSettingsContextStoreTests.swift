@@ -301,6 +301,22 @@ struct PaSettingsContextStoreTests {
 
         #expect(store.error == .notConnected)
     }
+
+    @Test("Dismiss error clears the current error")
+    func dismissErrorClearsCurrentError() async {
+        let bus = ContextEventBusSpy()
+        bus.askError = PaEventRemoteError.notConnected
+
+        let store = PaSettingsContextStore(bus: bus)
+
+        await store.refresh()
+
+        #expect(store.error == .notConnected)
+
+        store.dismissError()
+
+        #expect(store.error == nil)
+    }
 }
 
 @MainActor

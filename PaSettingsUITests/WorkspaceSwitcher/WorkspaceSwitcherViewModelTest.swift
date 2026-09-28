@@ -187,7 +187,30 @@ struct WorkspaceSwitcherViewModelTests {
         #expect(viewModel.contextBeingEdited == nil)
     }
 
+    @Test("Dismiss error clears the operation error")
+    func dismissErrorClearsOperationError() async {
+        let context = WorkspaceContext(
+            name: "Work",
+            symbol: "briefcase"
+        )
+
+        let contextManager = WorkspaceContextManagerSpy()
+        contextManager.error = PaSettingsContextStoreError.notConnected
+
+        let viewModel = WorkspaceSwitcherView.ViewModel(
+            contextManager: contextManager
+        )
+
+        await viewModel.runContext(context)
+
+        #expect(viewModel.error == .notConnected)
+
+        viewModel.dismissError()
+
+        #expect(viewModel.error == nil)
+    }
 }
+
 @MainActor
 private final class WorkspaceContextManagerSpy: WorkspaceContextManaging {
     private(set) var switchedContextIDs: [UUID] = []

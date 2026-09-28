@@ -8,7 +8,7 @@
 import PaEventKit
 import Foundation
 
-enum PaSettingsContextStoreError: Error, Equatable {
+enum PaSettingsContextStoreError: Error, Equatable, LocalizedError {
     case notConnected
     case noHandler
     case timeout
@@ -49,5 +49,24 @@ enum PaSettingsContextStoreError: Error, Equatable {
         }
 
         self = .unknown
+    }
+
+    var errorDescription: String? {
+        switch self {
+        case .notConnected:
+            "Workspace manager is not connected."
+        case .noHandler:
+            "Workspace manager cannot handle this request."
+        case .timeout:
+            "Workspace manager did not respond in time."
+        case .invalidPayload, .unexpectedResponse:
+            "Workspace manager returned an invalid response."
+        case .mutationRejected(let failure):
+            failure.errorDescription
+        case .unknown:
+            "An unexpected error occurred."
+        case .contextIdentifierMismatch:
+            "Workspace manager returned the wrong context."
+        }
     }
 }
