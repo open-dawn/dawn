@@ -76,10 +76,7 @@ struct ContextCreatorViewModelTests {
         await viewModel.addApplication()
 
         #expect(viewModel.context.applications.isEmpty)
-        #expect(
-            viewModel.applicationSelectionError
-                == .missingBundleIdentifier
-        )
+        #expect(viewModel.applicationSelectionError == .missingBundleIdentifier)
         #expect(!viewModel.isLoading)
     }
 

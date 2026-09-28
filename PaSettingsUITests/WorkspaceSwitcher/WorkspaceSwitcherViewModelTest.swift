@@ -1,7 +1,5 @@
 import Foundation
-
 import PaEventKit
-
 import Testing
 
 @testable import PaSettingsUI
@@ -23,7 +21,7 @@ struct WorkspaceSwitcherViewModelTests {
     }
 
     @Test("Presents and dismisses the context creator")
-    func contextCreatorPresentation() {
+    func contextCreatorPresentation() async throws {
         let contextManager = WorkspaceContextManagerSpy()
         let viewModel = WorkspaceSwitcherView.ViewModel(
             contextManager: contextManager
@@ -31,11 +29,11 @@ struct WorkspaceSwitcherViewModelTests {
 
         viewModel.presentContextCreator()
 
-        #expect(viewModel.isCreatingOrEditing)
+        try #require(viewModel.isCreatingOrEditing)
 
         viewModel.dismissContextCreator()
 
-        #expect(!viewModel.isCreatingOrEditing)
+        #expect(viewModel.isCreatingOrEditing == false)
     }
 
     @Test("Run delegates the selected context identifier")
