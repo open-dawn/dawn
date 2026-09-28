@@ -45,7 +45,7 @@ jobs:
         run: |
           set -euo pipefail
 
-          TOOLS_DIR="$RUNNER_TEMP/pineapplewm-tools"
+          TOOLS_DIR="$RUNNER_TEMP/dawn-tools"
           mkdir -p \
             "$TOOLS_DIR/swiftlint" \
             "$TOOLS_DIR/xcbeautify"
@@ -121,8 +121,8 @@ jobs:
           set -euo pipefail
 
           xcodebuild \
-            -project pineapplewm.xcodeproj \
-            -scheme pineapplewm \
+            -project dawn.xcodeproj \
+            -scheme dawn \
             -list
 
       - name: Run tests
@@ -131,8 +131,8 @@ jobs:
           set -euo pipefail
 
           xcodebuild \
-            -project pineapplewm.xcodeproj \
-            -scheme pineapplewm \
+            -project dawn.xcodeproj \
+            -scheme dawn \
             -configuration Debug \
             -destination "platform=macOS,arch=arm64" \
             -derivedDataPath "$RUNNER_TEMP/DerivedData-Debug" \
@@ -149,8 +149,8 @@ jobs:
           set -euo pipefail
 
           xcodebuild \
-            -project pineapplewm.xcodeproj \
-            -scheme pineapplewm \
+            -project dawn.xcodeproj \
+            -scheme dawn \
             -configuration Release \
             -destination "platform=macOS,arch=arm64" \
             -derivedDataPath "$RUNNER_TEMP/DerivedData-Release" \
