@@ -4,7 +4,6 @@ import SwiftSyntaxBuilder
 import SwiftSyntaxMacros
 
 public struct LogMacro: ExpressionMacro {
-
     private static let supportedLevels = [
         "trace",
         "debug",
@@ -26,7 +25,7 @@ public struct LogMacro: ExpressionMacro {
 
     public static func expansion(
         of node: some FreestandingMacroExpansionSyntax,
-        in context: some MacroExpansionContext
+        in _: some MacroExpansionContext
     ) throws -> ExprSyntax {
         let message = try messageLiteral(from: node)
 
@@ -77,8 +76,8 @@ public struct LogMacro: ExpressionMacro {
         }
 
         return """
-            Loggers.\(raw: category).\(raw: level)(\(messageWithCallSite))
-            """
+        Loggers.\(raw: category).\(raw: level)(\(messageWithCallSite))
+        """
     }
 
     private static func messageLiteral(
@@ -86,7 +85,7 @@ public struct LogMacro: ExpressionMacro {
     ) throws -> StringLiteralExprSyntax {
         guard
             let message = node.arguments.first?
-                .expression.as(StringLiteralExprSyntax.self)
+            .expression.as(StringLiteralExprSyntax.self)
         else {
             throw MacroExpansionErrorMessage(
                 "#log requires a string literal."
@@ -167,7 +166,7 @@ public struct LogMacro: ExpressionMacro {
 }
 
 @main
-struct dawnLoggingPlugin: CompilerPlugin {
+struct DawnLoggingPlugin: CompilerPlugin {
     let providingMacros: [Macro.Type] = [
         LogMacro.self
     ]

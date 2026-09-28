@@ -5,15 +5,15 @@ import SwiftSyntaxMacrosTestSupport
 import XCTest
 
 #if canImport(dawnLoggingMacros)
-import dawnLoggingMacros
+    import dawnLoggingMacros
 
-let testMacros: [String: Macro.Type] = [
-    "log": LogMacro.self
-]
+    let testMacros: [String: Macro.Type] = [
+        "log": LogMacro.self
+    ]
 #endif
 
-final class dawnLoggingTests: XCTestCase {
-    func testBasicLog() throws {
+final class DawnLoggingTests: XCTestCase {
+    func testBasicLog() {
         assertMacroExpansion(
             """
             #log("Hello")
@@ -26,7 +26,7 @@ final class dawnLoggingTests: XCTestCase {
         )
     }
 
-    func testLogWithLevelAndCategory() throws {
+    func testLogWithLevelAndCategory() {
         assertMacroExpansion(
             """
             #log("Connection established", level: .info, category: .transport)
@@ -39,7 +39,7 @@ final class dawnLoggingTests: XCTestCase {
         )
     }
 
-    func testPreservesPrivacyInterpolation() throws {
+    func testPreservesPrivacyInterpolation() {
         assertMacroExpansion(
             #"""
             #log("ID: \(id, privacy: .private)", level: .info, category: .settings)
@@ -52,16 +52,16 @@ final class dawnLoggingTests: XCTestCase {
         )
     }
 
-    func testRawStringInterpolation() throws {
+    func testRawStringInterpolation() {
         assertMacroExpansion(
-          ##"""
-          #log(#"ID: \#(id, privacy: .private)"#, category: .settings)
-          """##,
-          expandedSource: ##"""
-          Loggers.settings.debug(#"[\#(#fileID, privacy: .public):\#(#line, privacy: .public) \##
-          \#(#function, privacy: .public)] ID: \#(id, privacy: .private)"#)
-          """##,
-          macros: testMacros
+            ##"""
+            #log(#"ID: \#(id, privacy: .private)"#, category: .settings)
+            """##,
+            expandedSource: ##"""
+            Loggers.settings.debug(#"[\#(#fileID, privacy: .public):\#(#line, privacy: .public) \##
+            \#(#function, privacy: .public)] ID: \#(id, privacy: .private)"#)
+            """##,
+            macros: testMacros
         )
     }
 }
