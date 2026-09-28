@@ -1,8 +1,8 @@
 import Foundation
-import PaEventKit
+import libdawn
 import Testing
 
-@testable import PaWM
+@testable import dawnAgent
 
 @MainActor
 @Suite("ContextManager")
@@ -315,7 +315,7 @@ actor MockSettingsRepository: SettingsRepository {
 final class SnapshotPublisherSpy: ContextSnapshotPublishing {
     private(set) var publishedSnapshots: [[WorkspaceContext]] = []
 
-    func publishAvailableContexts(_ contexts: [PaEventKit.WorkspaceContext]) {
+    func publishAvailableContexts(_ contexts: [libdawn.WorkspaceContext]) {
         publishedSnapshots.append(contexts)
     }
 }

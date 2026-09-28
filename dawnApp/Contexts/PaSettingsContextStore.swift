@@ -7,7 +7,7 @@
 
 import Foundation
 import Observation
-import PaEventKit
+import libdawn
 
 @Observable
 @MainActor

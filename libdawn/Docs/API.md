@@ -1,6 +1,6 @@
 # API
 
-Public surface of PaEventKit. Import `PaEventKit`. Currently macOS 26+.
+Public surface of libdawn. Import `libdawn`. Currently macOS 26+.
 
 Internal types (`ExternalListener`, `AskSession`, `PaEventCodec`, XPC `@objc` protocols, `XPCRemoteEventTransportServer`) are not part of this API.
 
@@ -138,7 +138,7 @@ public protocol RemoteEventTransportClient: AnyObject, Sendable {
 `PaRemoteEventBus` is the usual caller. Incoming host fan-out arrives through `setDeliveryHandler`. `subscribe(kinds: nil)` means all; empty set means none.
 
 #### Currently available transports
-* **XPC:** `XPCRemoteEventTransportClient(machServiceName:)` for PaWM; `XPCRemoteEventTransportClient(endpoint:)` for anonymous in-process tests.
+* **XPC:** `XPCRemoteEventTransportClient(machServiceName:)` for dawnAgent; `XPCRemoteEventTransportClient(endpoint:)` for anonymous in-process tests.
 * **Loopback:** (used for testing) `LoopbackEventLink().client`.
 
 ### Server
@@ -162,7 +162,7 @@ public protocol RemoteEventTransportServer: EventDelivering {
 
 `deliver` is host → client. Incoming client verbs are the handlers. `PaEventServer.attach` installs those handlers.
 
-**XPC:** `XPCRemoteEventTransportAcceptor(eventServer:)` accepts anonymous connections for tests. Pass `machServiceName:` for a login-item Mach service (PaWM). DO NOT instantiate the Server.
+**XPC:** `XPCRemoteEventTransportAcceptor(eventServer:)` accepts anonymous connections for tests. Pass `machServiceName:` for a login-item Mach service (dawnAgent). DO NOT instantiate the Server.
 
 ```swift
 public final class XPCRemoteEventTransportAcceptor: NSObject, NSXPCListenerDelegate, @unchecked Sendable {

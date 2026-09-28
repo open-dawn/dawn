@@ -1,7 +1,7 @@
 import Foundation
 import Observation
-import PaEventKit
-import PaLogging
+import libdawn
+import dawnLogging
 
 @Observable
 @MainActor
@@ -75,7 +75,7 @@ final class PaSettingsEventBusService {
 
     private func handleReadyPing() {
         #log(
-            "Received PaWM ready notification",
+            "Received dawnAgent ready notification",
             level: .info,
             category: .eventBus
         )

@@ -1,7 +1,7 @@
 import Foundation
 import Testing
 
-@testable import PaSettingsUI
+@testable import dawnApp
 
 @Suite("PaSettingsEventBusReadyObserver")
 struct PaSettingsEventBusReadyObserverTests {

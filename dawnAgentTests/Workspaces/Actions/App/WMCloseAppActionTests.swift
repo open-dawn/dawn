@@ -1,7 +1,7 @@
 import AppKit
 import Foundation
-import PaEventKit
-@testable import PaWM
+import libdawn
+@testable import dawnAgent
 import Testing
 
 @Suite("WMCloseAppAction Testing")

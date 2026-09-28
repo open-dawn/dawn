@@ -1,8 +1,8 @@
 import Foundation
 
-enum PaWMEventBusRendezvous {
-    static let machServiceName = "app.opendawn.PaWM"
+enum dawnAgentEventBusRendezvous {
+    static let machServiceName = "app.opendawn.dawnAgent"
     static let readyNotification = Notification.Name(
-        "app.opendawn.PaWM.eventBusReady"
+        "app.opendawn.dawnAgent.eventBusReady"
     )
 }

@@ -1,5 +1,5 @@
 import AppKit
-@testable import PaWM
+@testable import dawnAgent
 
 final class FakeAppProvider: ApplicationProvider {
     var apps: [any RunningApplicationControlling] = [NSRunningApplication()]

@@ -1,6 +1,6 @@
 import Foundation
 import Testing
-@testable import PaEventKit
+@testable import libdawn
 
 @MainActor
 private final class TestListener: Listener {

@@ -6,13 +6,13 @@ Clients never talk to `PaEventBus` directly. They use `PaRemoteEventBus` with a 
 
 > Note: This is the XPC connection procedure. Protocols differ.
 
-PaWM advertises a Mach service named as its bundle ID. Connect with that name:
+dawnAgent advertises a Mach service named as its bundle ID. Connect with that name:
 
 ```swift
-import PaEventKit
+import libdawn
 
 let transport = XPCRemoteEventTransportClient(
-    machServiceName: "app.opendawn.PaWM"
+    machServiceName: "app.opendawn.dawnAgent"
 )
 let remote = PaRemoteEventBus(transport: transport)
 
@@ -20,7 +20,7 @@ remote.isConnected  // true only after a transport handshake with the host
 remote.disconnect()
 ```
 
-On launch, subscribe to the host’s empty distributed notification (`app.opendawn.PaWM.eventBusReady`). Keep one `PaRemoteEventBus` and call `attemptReconnect()` when the ping fires, and once when a live connection drops. Do not retry in a loop after a failed handshake; wait for the next ready ping.
+On launch, subscribe to the host’s empty distributed notification (`app.opendawn.dawnAgent.eventBusReady`). Keep one `PaRemoteEventBus` and call `attemptReconnect()` when the ping fires, and once when a live connection drops. Do not retry in a loop after a failed handshake; wait for the next ready ping.
 
 `publish` is best-effort. Use `ask` when you need confirmation from a host listener.
 

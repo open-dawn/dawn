@@ -6,6 +6,6 @@ public macro log(
     level: PaLogLevel = .debug,
     category: PaLogCategory = .general
 ) = #externalMacro(
-    module: "PaLoggingMacros",
+    module: "dawnLoggingMacros",
     type: "LogMacro"
 )

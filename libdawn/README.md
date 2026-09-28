@@ -1,10 +1,10 @@
-# PaEventKit
+# libdawn
 
 Typed pub/sub and request/reply between PineappleWM processes. Apps implement `Listener` and call `publish` / `ask`. XPC is one transport, not the API.
 
-**Host** is PaWM: it owns `PaEventBus` and accepts remote connections. **Clients** (Settings, CLIs, or other app that wants to interact with the host) use `PaRemoteEventBus` over a transport you inject.
+**Host** is dawnAgent: it owns `PaEventBus` and accepts remote connections. **Clients** (Settings, CLIs, or other app that wants to interact with the host) use `PaRemoteEventBus` over a transport you inject.
 
-> This framework has been made with the assumption that this can change in the future or be used in a different context. PaWM is indeed the host implementation, but it isn't the only possibility this framework allows.
+> This framework has been made with the assumption that this can change in the future or be used in a different context. dawnAgent is indeed the host implementation, but it isn't the only possibility this framework allows.
 
 ## Guides
 
@@ -16,14 +16,14 @@ Typed pub/sub and request/reply between PineappleWM processes. Apps implement `L
 
 ```mermaid
 flowchart LR
-  subgraph pawm [PaWM]
+  subgraph pawm [dawnAgent]
     Bus[PaEventBus]
     Local[Local listeners]
     Server[PaEventServer]
     Local --> Bus
     Server --> Bus
   end
-  subgraph settings [PaSettingsUI]
+  subgraph settings [dawnApp]
     Remote[PaRemoteEventBus]
     UI[Listeners]
     UI --> Remote

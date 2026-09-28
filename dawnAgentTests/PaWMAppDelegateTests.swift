@@ -1,25 +1,25 @@
 //
-//  PaWMAppDelegateTests.swift
+//  dawnAgentAppDelegateTests.swift
 //  pineapplewm
 //
 //  Created by Rafael Venetikides on 21/09/26.
 //
 
 import AppKit
-import PaEventKit
+import libdawn
 import Testing
 
-@testable import PaWM
+@testable import dawnAgent
 
 @MainActor
-@Suite("PaWMAppDelegate")
-struct PaWMAppDelegateTests {
+@Suite("dawnAgentAppDelegate")
+struct dawnAgentAppDelegateTests {
     @Test("Start registers and retains listeners before starting service")
     func startRegistersListenersBeforeService() async throws {
         let service = EventBusServiceSpy()
         let provider = ContextProviderStub()
 
-        let delegate = PaWMAppDelegate(
+        let delegate = dawnAgentAppDelegate(
             eventBusService: service
         ) { bus in
             WindowManagerListener(
@@ -49,7 +49,7 @@ struct PaWMAppDelegateTests {
         let service = EventBusServiceSpy()
         let provider = ContextProviderStub(contexts: expectedContext)
 
-        let delegate = PaWMAppDelegate(
+        let delegate = dawnAgentAppDelegate(
             eventBusService: service
         ) { bus in
             WindowManagerListener(
@@ -77,7 +77,7 @@ struct PaWMAppDelegateTests {
     func startupFailureDoesNotStartService() async {
         let service = EventBusServiceSpy()
 
-        let delegate = PaWMAppDelegate(
+        let delegate = dawnAgentAppDelegate(
             eventBusService: service
         ) { _ in
             throw StartupError.expected
@@ -96,7 +96,7 @@ struct PaWMAppDelegateTests {
         let service = EventBusServiceSpy()
         let provider = ContextProviderStub()
 
-        let delegate = PaWMAppDelegate(
+        let delegate = dawnAgentAppDelegate(
             eventBusService: service
         ) { bus in
             WindowManagerListener(
@@ -124,7 +124,7 @@ struct PaWMAppDelegateTests {
         let provider = ContextProviderStub()
         var factoryCallCount = 0
 
-        let delegate = PaWMAppDelegate(eventBusService: service) { bus in
+        let delegate = dawnAgentAppDelegate(eventBusService: service) { bus in
             factoryCallCount += 1
 
             return WindowManagerListener(
@@ -146,7 +146,7 @@ struct PaWMAppDelegateTests {
         let provider = ContextProviderStub()
         let factory = PausingListenerFactory(provider: provider)
 
-        let delegate = PaWMAppDelegate(
+        let delegate = dawnAgentAppDelegate(
             eventBusService: service
         ) { bus in
             await factory.makeListener(bus: bus)
@@ -180,7 +180,7 @@ struct PaWMAppDelegateTests {
         let provider = ContextProviderStub()
         var attemptCount = 0
 
-        let delegate = PaWMAppDelegate(
+        let delegate = dawnAgentAppDelegate(
             eventBusService: service
         ) { bus in
             attemptCount += 1
@@ -207,7 +207,7 @@ struct PaWMAppDelegateTests {
 }
 
 @MainActor
-private final class EventBusServiceSpy: PaWMEventBusServicing {
+private final class EventBusServiceSpy: dawnAgentEventBusServicing {
     let bus = PaEventBus()
 
     private(set) var startCallCount = 0

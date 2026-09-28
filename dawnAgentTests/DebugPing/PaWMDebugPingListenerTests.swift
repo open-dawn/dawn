@@ -1,15 +1,15 @@
-import PaEventKit
+import libdawn
 import Testing
 
-@testable import PaWM
+@testable import dawnAgent
 
 @MainActor
-@Suite("PaWMDebugPingListener")
-struct PaWMDebugPingListenerTests {
+@Suite("dawnAgentDebugPingListener")
+struct dawnAgentDebugPingListenerTests {
     @Test("Ask debugPing replies with pong")
     func askDebugPingRepliesWithPong() async throws {
         let bus = PaEventBus()
-        let ping = PaWMDebugPingListener(bus: bus)
+        let ping = dawnAgentDebugPingListener(bus: bus)
 
         let reply = try await bus.ask(
             .debugPing(PaDebugPingEvent()),

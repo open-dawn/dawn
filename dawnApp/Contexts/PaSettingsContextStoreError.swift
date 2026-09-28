@@ -5,7 +5,7 @@
 //  Created by Rafael Venetikides on 22/09/26.
 //
 
-import PaEventKit
+import libdawn
 import Foundation
 
 enum PaSettingsContextStoreError: Error, Equatable, LocalizedError {

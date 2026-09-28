@@ -1,8 +1,8 @@
 import Foundation
 import Testing
 
-@testable import PaEventKit
-@testable import PaSettingsUI
+@testable import libdawn
+@testable import dawnApp
 
 @MainActor
 @Suite("PaSettingsEventBusService")

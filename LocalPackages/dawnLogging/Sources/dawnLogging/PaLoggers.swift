@@ -1,6 +1,6 @@
 //
 //  PaLoggers.swift
-//  PaLogging
+//  dawnLogging
 //
 //  Created by Rafael Venetikides on 04/09/26.
 //

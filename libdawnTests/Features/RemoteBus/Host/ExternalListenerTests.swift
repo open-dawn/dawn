@@ -1,6 +1,6 @@
 import Foundation
 import Testing
-@testable import PaEventKit
+@testable import libdawn
 
 private final class MockEventDelivering: EventDelivering, @unchecked Sendable {
     private let lock = NSLock()

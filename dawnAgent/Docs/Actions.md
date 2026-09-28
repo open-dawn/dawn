@@ -1,10 +1,10 @@
 # Actions
 
-Workspace actions in PaWM. They perform concrete AppKit side effects (open, hide, close apps; reset windows) for workspace switching and related flows.
+Workspace actions in dawnAgent. They perform concrete AppKit side effects (open, hide, close apps; reset windows) for workspace switching and related flows.
 
-Shared models such as `WorkspaceApplication` live in **PaEventKit**. Actions themselves live only in PaWM under `Workspaces/Actions/`.
+Shared models such as `WorkspaceApplication` live in **libdawn**. Actions themselves live only in dawnAgent under `Workspaces/Actions/`.
 
-Import `@testable import PaWM` in tests; production code uses the action types through `WMActionIdentifier`.
+Import `@testable import dawnAgent` in tests; production code uses the action types through `WMActionIdentifier`.
 
 ## Core Protocols
 
@@ -90,15 +90,15 @@ enum WMActionError: LocalizedError, Equatable {
 
 ## How to Add an Action
 
-Mirror the PaEventKit event workflow: one concrete type, register it in the catalog, keep payloads/models in the right module.
+Mirror the libdawn event workflow: one concrete type, register it in the catalog, keep payloads/models in the right module.
 
-1. **Pick a folder** under `PaWM/Workspaces/Actions/`:
+1. **Pick a folder** under `dawnAgent/Workspaces/Actions/`:
    - App-scoped → `App/` and conform to `WMAppAction`
    - Window / layout / other → `Window/` (or a new domain folder) and conform to `WMAction`
 2. **Implement** `execute() async throws(WMActionError)`. Inject protocols (`ApplicationProvider`, `WorkspaceOpener`, or a new seam) instead of calling AppKit globals when the action needs to be unit-tested.
 3. **Add a case** to `WMActionIdentifier` and map it in `var action`.
-4. **Reuse** `WorkspaceApplication` (and other models) from PaEventKit. Do not redefine shared workspace models in PaWM.
-5. **Add tests** under `PaWMTests/Workspaces/Actions/<Domain>/` (see below).
+4. **Reuse** `WorkspaceApplication` (and other models) from libdawn. Do not redefine shared workspace models in dawnAgent.
+5. **Add tests** under `dawnAgentTests/Workspaces/Actions/<Domain>/` (see below).
 
 Example skeleton:
 
@@ -133,7 +133,7 @@ var action: WMAction {
 
 ## Testing Actions
 
-Tests live in `PaWMTests/Workspaces/Actions/`. Use Swift Testing (`@Suite`, `@Test`, `#expect`). Import `@testable import PaWM` and `PaEventKit` for `WorkspaceApplication`.
+Tests live in `dawnAgentTests/Workspaces/Actions/`. Use Swift Testing (`@Suite`, `@Test`, `#expect`). Import `@testable import dawnAgent` and `libdawn` for `WorkspaceApplication`.
 
 ### Principles
 

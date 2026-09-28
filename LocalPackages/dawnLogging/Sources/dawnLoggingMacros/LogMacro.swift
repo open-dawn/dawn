@@ -167,7 +167,7 @@ public struct LogMacro: ExpressionMacro {
 }
 
 @main
-struct PaLoggingPlugin: CompilerPlugin {
+struct dawnLoggingPlugin: CompilerPlugin {
     let providingMacros: [Macro.Type] = [
         LogMacro.self
     ]

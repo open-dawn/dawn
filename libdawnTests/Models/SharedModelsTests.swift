@@ -7,7 +7,7 @@
 
 import Foundation
 import Testing
-import PaEventKit
+import libdawn
 
 @Suite("Shared Models Tests")
 struct SharedModelsTests {

@@ -4,15 +4,15 @@ import SwiftSyntaxMacros
 import SwiftSyntaxMacrosTestSupport
 import XCTest
 
-#if canImport(PaLoggingMacros)
-import PaLoggingMacros
+#if canImport(dawnLoggingMacros)
+import dawnLoggingMacros
 
 let testMacros: [String: Macro.Type] = [
     "log": LogMacro.self
 ]
 #endif
 
-final class PaLoggingTests: XCTestCase {
+final class dawnLoggingTests: XCTestCase {
     func testBasicLog() throws {
         assertMacroExpansion(
             """

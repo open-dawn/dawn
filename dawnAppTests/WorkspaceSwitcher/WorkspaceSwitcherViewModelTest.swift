@@ -1,8 +1,8 @@
 import Foundation
-import PaEventKit
+import libdawn
 import Testing
 
-@testable import PaSettingsUI
+@testable import dawnApp
 
 @MainActor
 @Suite("WorkspaceSwitcher ViewModel")

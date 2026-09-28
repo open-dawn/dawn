@@ -1,9 +1,9 @@
 import Foundation
-import PaEventKit
-import PaLogging
+import libdawn
+import dawnLogging
 
 @MainActor
-protocol PaWMEventBusServicing: AnyObject {
+protocol dawnAgentEventBusServicing: AnyObject {
     var bus: PaEventBus { get }
 
     func start()
@@ -11,15 +11,15 @@ protocol PaWMEventBusServicing: AnyObject {
 }
 
 @MainActor
-final class PaWMEventBusService: PaWMEventBusServicing {
-    private let runtime: PaWMEventBusRuntime
-    private let readyNotifier: PaWMEventBusReadyNotifier
+final class dawnAgentEventBusService: dawnAgentEventBusServicing {
+    private let runtime: dawnAgentEventBusRuntime
+    private let readyNotifier: dawnAgentEventBusReadyNotifier
 
     var bus: PaEventBus { runtime.bus }
 
     init(
-        runtime: PaWMEventBusRuntime = PaWMEventBusRuntime(),
-        readyNotifier: PaWMEventBusReadyNotifier = PaWMEventBusReadyNotifier()
+        runtime: dawnAgentEventBusRuntime = dawnAgentEventBusRuntime(),
+        readyNotifier: dawnAgentEventBusReadyNotifier = dawnAgentEventBusReadyNotifier()
     ) {
         self.runtime = runtime
         self.readyNotifier = readyNotifier
@@ -27,7 +27,7 @@ final class PaWMEventBusService: PaWMEventBusServicing {
 
     func start() {
         #log(
-            "Starting PaWM XPC runtime",
+            "Starting dawnAgent XPC runtime",
             level: .info,
             category: .eventBus
         )
@@ -35,7 +35,7 @@ final class PaWMEventBusService: PaWMEventBusServicing {
         _ = runtime.start()
 
         #log(
-            "PaWM XPC runtime start requested",
+            "dawnAgent XPC runtime start requested",
             level: .info,
             category: .eventBus
         )
@@ -43,7 +43,7 @@ final class PaWMEventBusService: PaWMEventBusServicing {
         readyNotifier.postReady()
 
         #log(
-            "Posted PaWM ready notification",
+            "Posted dawnAgent ready notification",
             level: .info,
             category: .eventBus
         )

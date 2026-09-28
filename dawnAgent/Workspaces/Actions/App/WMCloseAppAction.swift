@@ -1,6 +1,6 @@
 import AppKit
 import Foundation
-import PaEventKit
+import libdawn
 
 struct WMCloseAppAction: WMAppAction {
     private(set) var app: WorkspaceApplication

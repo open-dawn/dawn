@@ -1,5 +1,5 @@
 import AppKit
-@testable import PaWM
+@testable import dawnAgent
 
 final class FakeRunningApp: RunningApplicationControlling {
     var activateResult = true

@@ -1,15 +1,15 @@
 import Foundation
-import PaEventKit
+import libdawn
 
 @MainActor
-final class PaWMEventBusRuntime {
+final class dawnAgentEventBusRuntime {
     let bus: PaEventBus
     private let eventServer: PaEventServer
     private let acceptor: XPCRemoteEventTransportAcceptor
 
     init(
         bus: PaEventBus = PaEventBus(),
-        machServiceName: String? = PaWMEventBusRendezvous.machServiceName
+        machServiceName: String? = dawnAgentEventBusRendezvous.machServiceName
     ) {
         self.bus = bus
         let eventServer = PaEventServer(bus: bus)

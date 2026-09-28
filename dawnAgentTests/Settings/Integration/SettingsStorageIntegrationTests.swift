@@ -6,10 +6,10 @@
 //
 
 import Foundation
-import PaEventKit
+import libdawn
 import Testing
 
-@testable import PaWM
+@testable import dawnAgent
 
 @MainActor
 @Suite("Settings Storage Integration Tests")

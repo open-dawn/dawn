@@ -6,7 +6,7 @@
 //
 
 import Foundation
-import PaEventKit
+import libdawn
 
 actor SettingsStore {
     private let repository: any SettingsRepository

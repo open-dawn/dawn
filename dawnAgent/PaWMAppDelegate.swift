@@ -1,20 +1,20 @@
 import AppKit
-import PaEventKit
-import PaLogging
+import libdawn
+import dawnLogging
 
 typealias WindowManagerListenerFactory = @MainActor (PaEventBus) async throws -> WindowManagerListener
 
 @MainActor
-final class PaWMAppDelegate: NSObject, NSApplicationDelegate {
-    private let eventBusService: any PaWMEventBusServicing
+final class dawnAgentAppDelegate: NSObject, NSApplicationDelegate {
+    private let eventBusService: any dawnAgentEventBusServicing
     private let makeWindowManagerListener: WindowManagerListenerFactory
     private var windowManagerListener: WindowManagerListener?
-    private var debugPingListener: PaWMDebugPingListener?
+    private var debugPingListener: dawnAgentDebugPingListener?
     private var startupTask: Task<Void, Never>?
     private var isStartingOrStarted = false
 
     init(
-        eventBusService: any PaWMEventBusServicing = PaWMEventBusService(),
+        eventBusService: any dawnAgentEventBusServicing = dawnAgentEventBusService(),
         makeWindowManagerListener: @escaping WindowManagerListenerFactory = { bus in
             try await WindowManagerListener(bus: bus)
         }
@@ -30,7 +30,7 @@ final class PaWMAppDelegate: NSObject, NSApplicationDelegate {
         }
 
         #log(
-            "PaWM application finished launching",
+            "dawnAgent application finished launching",
             level: .info,
             category: .appLifecycle
         )
@@ -41,9 +41,9 @@ final class PaWMAppDelegate: NSObject, NSApplicationDelegate {
             do {
                 try await start()
             } catch is CancellationError {
-                // Expected when PaWM terminates during startup
+                // Expected when dawnAgent terminates during startup
             } catch {
-                #log("Failed to start PaWM: \(error)", level: .critical, category: .appLifecycle)
+                #log("Failed to start dawnAgent: \(error)", level: .critical, category: .appLifecycle)
                 NSApplication.shared.terminate(nil)
             }
         }
@@ -87,12 +87,12 @@ final class PaWMAppDelegate: NSObject, NSApplicationDelegate {
             )
 
             self.windowManagerListener = windowManagerListener
-            self.debugPingListener = PaWMDebugPingListener(
+            self.debugPingListener = dawnAgentDebugPingListener(
                 bus: eventBusService.bus
             )
 
             #log(
-                "Starting PaWM event bus",
+                "Starting dawnAgent event bus",
                 level: .info,
                 category: .eventBus
             )
@@ -100,7 +100,7 @@ final class PaWMAppDelegate: NSObject, NSApplicationDelegate {
             eventBusService.start()
 
             #log(
-                "PaWM startup completed",
+                "dawnAgent startup completed",
                 level: .info,
                 category: .appLifecycle
             )

@@ -1,13 +1,13 @@
 import Foundation
 import Testing
 
-@testable import PaWM
+@testable import dawnAgent
 
-@Suite("PaWMEventBusReadyNotifier")
-struct PaWMEventBusReadyNotifierTests {
+@Suite("dawnAgentEventBusReadyNotifier")
+struct dawnAgentEventBusReadyNotifierTests {
     @Test("Post ready publishes an empty distributed notification")
     func postReadyPublishesEmptyNotification() async throws {
-        let notificationName = Notification.Name("PaWMEventBusReadyNotifierTests.\(UUID().uuidString)")
+        let notificationName = Notification.Name("dawnAgentEventBusReadyNotifierTests.\(UUID().uuidString)")
         let received = ReadyNotificationCapture()
 
         let observer = DistributedNotificationCenter.default().addObserver(
@@ -25,7 +25,7 @@ struct PaWMEventBusReadyNotifierTests {
         }
 
         await MainActor.run {
-            let sut = PaWMEventBusReadyNotifier(notificationName: notificationName)
+            let sut = dawnAgentEventBusReadyNotifier(notificationName: notificationName)
             sut.postReady()
         }
 

@@ -1,6 +1,6 @@
 import AppKit
 import Foundation
-import PaEventKit
+import libdawn
 
 struct WMHideAppAction: WMAppAction {
     private(set) var app: WorkspaceApplication

@@ -1,6 +1,6 @@
 import Foundation
-import PaEventKit
-import PaLogging
+import libdawn
+import dawnLogging
 
 final class ContextManager: ContextProviding {
     private let store: SettingsStore

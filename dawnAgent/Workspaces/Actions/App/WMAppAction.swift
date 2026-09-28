@@ -1,4 +1,4 @@
-import PaEventKit
+import libdawn
 
 protocol WMAppAction: WMAction {
     var app: WorkspaceApplication { get }

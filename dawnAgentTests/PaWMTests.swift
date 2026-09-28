@@ -1,9 +1,9 @@
 import AppKit
 import Testing
-@testable import PaWM
+@testable import dawnAgent
 
 @MainActor
 @Test func appDelegateDoesNotTerminateWhenLastWindowCloses() {
-    let delegate = PaWMAppDelegate()
+    let delegate = dawnAgentAppDelegate()
     #expect(delegate.applicationShouldTerminateAfterLastWindowClosed(.shared) == false)
 }

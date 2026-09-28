@@ -8,7 +8,7 @@
 import Foundation
 import Testing
 
-@testable import PaSettingsUI
+@testable import dawnApp
 
 @Suite("About metadata")
 struct AboutMetadataTests {

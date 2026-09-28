@@ -1,12 +1,12 @@
 import Foundation
-import PaEventKit
+import libdawn
 import Testing
 
-@testable import PaWM
+@testable import dawnAgent
 
 @MainActor
-@Suite("PaWMEventBusService")
-struct PaWMEventBusServiceTests {
+@Suite("dawnAgentEventBusService")
+struct dawnAgentEventBusServiceTests {
     @Test("Start posts the ready notification")
     func startPostsReady() async throws {
         let fixture = ServiceFixture()
@@ -27,7 +27,7 @@ struct PaWMEventBusServiceTests {
 
     @Test("Bus matches the runtime bus instance")
     func busMatchesRuntimeBus() async throws {
-        let runtime = PaWMEventBusRuntime(machServiceName: nil)
+        let runtime = dawnAgentEventBusRuntime(machServiceName: nil)
         let fixture = ServiceFixture(runtime: runtime)
         defer { fixture.cleanUp() }
 
@@ -55,19 +55,19 @@ struct PaWMEventBusServiceTests {
 @MainActor
 private struct ServiceFixture {
     let readyCapture: ServiceReadyCapture
-    let service: PaWMEventBusService
+    let service: dawnAgentEventBusService
     private var observer: NSObjectProtocol?
 
-    init(runtime: PaWMEventBusRuntime = PaWMEventBusRuntime(machServiceName: nil)) {
+    init(runtime: dawnAgentEventBusRuntime = dawnAgentEventBusRuntime(machServiceName: nil)) {
         let notificationName = Notification.Name(
-            "PaWMEventBusServiceTests.\(UUID().uuidString).ready"
+            "dawnAgentEventBusServiceTests.\(UUID().uuidString).ready"
         )
         let readyCapture = ServiceReadyCapture()
 
         self.readyCapture = readyCapture
-        self.service = PaWMEventBusService(
+        self.service = dawnAgentEventBusService(
             runtime: runtime,
-            readyNotifier: PaWMEventBusReadyNotifier(notificationName: notificationName)
+            readyNotifier: dawnAgentEventBusReadyNotifier(notificationName: notificationName)
         )
 
         observer = DistributedNotificationCenter.default().addObserver(

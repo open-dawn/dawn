@@ -1,5 +1,5 @@
 import Foundation
-@testable import PaEventKit
+@testable import libdawn
 
 @MainActor
 final class PingResponder: Listener {

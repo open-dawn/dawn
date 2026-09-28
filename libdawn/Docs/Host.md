@@ -1,13 +1,13 @@
 # Host
 
-PaWM is the production host. It owns one `PaEventBus`, registers local listeners, and accepts remote clients through `PaEventServer`.
+dawnAgent is the production host. It owns one `PaEventBus`, registers local listeners, and accepts remote clients through `PaEventServer`.
 
 The bus is not a singleton. Tests create their own.
 
 ## Local bus
 
 ```swift
-import PaEventKit
+import libdawn
 
 @MainActor
 final class LayoutEngine: Listener {
@@ -70,25 +70,25 @@ You can `attach` / `detach` any `RemoteEventTransportServer` (XPC from the accep
 
 ## Exposing the Mach service
 
-> Note: This is specific to XPC and the PaWM implementation
+> Note: This is specific to XPC and the dawnAgent implementation
 
-PaWM is a login item. Launchd advertises a Mach service named as the helper’s bundle identifier. That name is how clients connect; do not archive `NSXPCListenerEndpoint` (it can only travel through an `NSXPCCoder` on a live XPC connection).
+dawnAgent is a login item. Launchd advertises a Mach service named as the helper’s bundle identifier. That name is how clients connect; do not archive `NSXPCListenerEndpoint` (it can only travel through an `NSXPCCoder` on a live XPC connection).
 
 ```swift
 let eventServer = PaEventServer(bus: bus)
 let acceptor = XPCRemoteEventTransportAcceptor(
     eventServer: eventServer,
-    machServiceName: "app.opendawn.PaWM"
+    machServiceName: "app.opendawn.dawnAgent"
 )
 acceptor.start()
 ```
 
-After `start()`, post an empty `DistributedNotificationCenter` ping so clients reconnect when PaWM comes up or restarts. Do not put the endpoint in the notification.
+After `start()`, post an empty `DistributedNotificationCenter` ping so clients reconnect when dawnAgent comes up or restarts. Do not put the endpoint in the notification.
 
-- Mach service name: `app.opendawn.PaWM` (the login item bundle ID)
-- Ready ping: `app.opendawn.PaWM.eventBusReady` (nil object, nil userInfo)
+- Mach service name: `app.opendawn.dawnAgent` (the login item bundle ID)
+- Ready ping: `app.opendawn.dawnAgent.eventBusReady` (nil object, nil userInfo)
 
-`acceptor.endpoint` is still available for in-process tests that use an anonymous listener (`machServiceName: nil`). Production PaWM does not share that endpoint.
+`acceptor.endpoint` is still available for in-process tests that use an anonymous listener (`machServiceName: nil`). Production dawnAgent does not share that endpoint.
 
 Client reconnect (subscribe to the ping, connect with `XPCRemoteEventTransportClient(machServiceName:)`, retry on XPC invalidation) is not part of this host.
 

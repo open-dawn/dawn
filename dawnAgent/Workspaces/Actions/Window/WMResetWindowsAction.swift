@@ -1,6 +1,6 @@
 import AppKit
 import Foundation
-import PaEventKit
+import libdawn
 
 struct WMResetWindowsAction: WMAction {
     let workspace: GlobalWorkspaceProvider

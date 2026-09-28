@@ -6,7 +6,7 @@
 //
 
 import AppKit
-import PaEventKit
+import libdawn
 import UniformTypeIdentifiers
 
 enum ApplicationSelectionError: Error, LocalizedError, Equatable {

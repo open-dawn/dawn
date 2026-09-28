@@ -1,6 +1,6 @@
 import Foundation
 import Testing
-@testable import PaEventKit
+@testable import libdawn
 
 @Suite("Loopback reconnect")
 struct LoopbackReconnectTests {

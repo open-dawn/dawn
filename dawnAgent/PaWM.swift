@@ -1,11 +1,11 @@
 import AppKit
 
 @main
-enum PaWM {
+enum dawnAgent {
     @MainActor
     static func main() {
         let app = NSApplication.shared
-        let delegate = PaWMAppDelegate()
+        let delegate = dawnAgentAppDelegate()
         app.delegate = delegate
         app.run()
     }

@@ -5,7 +5,7 @@
 //  Created by Rafael Venetikides on 22/09/26.
 //
 
-import PaEventKit
+import libdawn
 
 @MainActor
 protocol PaSettingsContextEventBus: AnyObject {

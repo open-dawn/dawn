@@ -1,7 +1,7 @@
-import PaEventKit
+import libdawn
 
 @MainActor
-final class PaWMDebugPingListener: Listener {
+final class dawnAgentDebugPingListener: Listener {
     init(bus: PaEventBus) {
         bus.addListener(self, kinds: [.debugPing])
     }

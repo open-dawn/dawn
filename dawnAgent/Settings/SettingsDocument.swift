@@ -6,7 +6,7 @@
 //
 
 import Foundation
-import PaEventKit
+import libdawn
 
 struct SettingsDocument: Codable, Equatable, Sendable {
 

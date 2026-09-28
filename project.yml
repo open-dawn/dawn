@@ -140,7 +140,7 @@ targets:
       - target: libdawn
 
 schemes:
-  pineapplewm:
+  dawn:
     build:
       targets:
         libdawn: all

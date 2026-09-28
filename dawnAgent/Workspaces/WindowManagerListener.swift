@@ -1,5 +1,5 @@
-import PaEventKit
-import PaLogging
+import libdawn
+import dawnLogging
 
 @MainActor
 protocol ContextSwitching {
@@ -85,7 +85,7 @@ final class WindowManagerListener: Listener {
 
         case .initialized:
             #log(
-                "PaWM initialized",
+                "dawnAgent initialized",
                 level: .info,
                 category: .appLifecycle
             )

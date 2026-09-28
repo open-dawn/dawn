@@ -1,11 +1,11 @@
 import Foundation
 
-struct PaWMEventBusReadyNotifier {
+struct dawnAgentEventBusReadyNotifier {
     private let notificationName: Notification.Name
     private let notificationCenter: DistributedNotificationCenter
 
     init(
-        notificationName: Notification.Name = PaWMEventBusRendezvous.readyNotification,
+        notificationName: Notification.Name = dawnAgentEventBusRendezvous.readyNotification,
         notificationCenter: DistributedNotificationCenter = .default()
     ) {
         self.notificationName = notificationName

@@ -1,4 +1,4 @@
-@testable import PaSettingsUI
+@testable import dawnApp
 import Testing
 
 @Suite("GeneralSettings ViewModel")

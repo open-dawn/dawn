@@ -1,10 +1,10 @@
 import Foundation
 
-import PaEventKit
+import libdawn
 
 import Testing
 
-@testable import PaSettingsUI
+@testable import dawnApp
 
 @MainActor
 @Suite("ContextCreator ViewModel")
@@ -427,7 +427,7 @@ private final class ContextCreatorSpy: ContextSaving {
         return returnedID
     }
 
-    func updateContext(_ context: PaEventKit.WorkspaceContext) async throws {
+    func updateContext(_ context: libdawn.WorkspaceContext) async throws {
         updatedContexts.append(context)
         onUpdate?()
 

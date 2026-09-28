@@ -1,15 +1,15 @@
 import Foundation
-import PaEventKit
+import libdawn
 import Testing
 
-@testable import PaWM
+@testable import dawnAgent
 
 @MainActor
-@Suite("PaWMEventBusRuntime")
-struct PaWMEventBusRuntimeTests {
+@Suite("dawnAgentEventBusRuntime")
+struct dawnAgentEventBusRuntimeTests {
     @Test("Start yields an endpoint a remote bus can use")
     func startYieldsUsableEndpoint() async throws {
-        let runtime = PaWMEventBusRuntime(machServiceName: nil)
+        let runtime = dawnAgentEventBusRuntime(machServiceName: nil)
         defer { runtime.stop() }
 
         guard let endpoint = runtime.start() else {
@@ -39,14 +39,14 @@ struct PaWMEventBusRuntimeTests {
             #expect(error == .noHandler)
         } catch {
             let nsError = error as NSError
-            #expect(nsError.domain == "PaEventKit.PaEventAskError")
+            #expect(nsError.domain == "libdawn.PaEventAskError")
             #expect(nsError.code == 0)
         }
     }
 
     @Test("Host publish is received by a remote listener")
     func hostPublishReachesRemoteListener() async throws {
-        let runtime = PaWMEventBusRuntime(machServiceName: nil)
+        let runtime = dawnAgentEventBusRuntime(machServiceName: nil)
         defer { runtime.stop() }
 
         guard let endpoint = runtime.start() else {
@@ -73,7 +73,7 @@ struct PaWMEventBusRuntimeTests {
 
     @Test("Stop invalidates clients on the old endpoint")
     func stopInvalidatesOldEndpoint() async throws {
-        let runtime = PaWMEventBusRuntime(machServiceName: nil)
+        let runtime = dawnAgentEventBusRuntime(machServiceName: nil)
 
         guard let endpoint = runtime.start() else {
             Issue.record("Expected anonymous XPC listener endpoint")
@@ -119,7 +119,7 @@ struct PaWMEventBusRuntimeTests {
 
     @Test("Stop can be called safely more than once")
     func stopCanBeCalledMultipleTimes() {
-        let runtime = PaWMEventBusRuntime(machServiceName: nil)
+        let runtime = dawnAgentEventBusRuntime(machServiceName: nil)
         _ = runtime.start()
 
         runtime.stop()
