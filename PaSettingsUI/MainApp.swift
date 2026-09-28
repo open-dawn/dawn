@@ -6,7 +6,7 @@ struct MainApp: App {
 
     private let screens: [ConfigurationPane] = [
         ConfigurationPane("Profiles") { WorkspaceSwitcherView() },
-        ConfigurationPane("General Settings") { GeneralSettingsView() },
+//        ConfigurationPane("General Settings") { GeneralSettingsView() },
         ConfigurationPane("About") {
             AboutView(
                 content: AboutMetadataLoader.loadRequired()
@@ -26,6 +26,14 @@ struct MainApp: App {
             }
             .padding(0)
             .environment(appDelegate.eventBusService)
+            .environment(appDelegate.contextStore)
+            .task(id: appDelegate.eventBusService.isConnected) {
+                guard appDelegate.eventBusService.isConnected else {
+                    return
+                }
+
+                await appDelegate.contextStore.refresh()
+            }
         }
         .windowResizability(.contentSize)
     }

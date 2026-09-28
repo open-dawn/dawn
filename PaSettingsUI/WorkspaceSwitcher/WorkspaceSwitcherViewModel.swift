@@ -1,63 +1,72 @@
 import Foundation
+import PaEventKit
 
 extension WorkspaceSwitcherView {
     @Observable
-    class ViewModel: BaseViewModel {
-        private(set) var contexts: [Context]
-        private(set) var contextActive: Context?
+    @MainActor
+    class ViewModel {
+        private let contextManager: any WorkspaceContextManaging
 
-        private(set) var isCreatingOrEditing: Bool
+        private(set) var operationInProgress: UUID?
+        private(set) var error: PaSettingsContextStoreError?
 
-        private(set) var error: ViewModelError?
-        private(set) var errorMessage: String?
-        private(set) var isLoading: Bool
+        private(set) var contextBeingEdited: WorkspaceContext?
+        var isCreatingOrEditing = false
 
-        init() {
-            self.contexts = []
-            self.error = nil
-            self.isLoading = true
-            defer { self.isLoading = false }
-
-            self.isCreatingOrEditing = false
-
-            do {
-                try self.fetchContexts()
-            } catch {
-                self.error = error
-                self.errorMessage = error.errorDescription
-            }
+        init(contextManager: any WorkspaceContextManaging) {
+            self.contextManager = contextManager
         }
 
         // MARK: - User Interactions
-        public func runContext(_ context: Context) {
-            // Pending: run the selected context.
-            print("Calling runContext()")
+        func presentContextCreator() {
+            contextBeingEdited = nil
+            isCreatingOrEditing = true
         }
 
-        public func editContext(_ context: Context) {
-            // Pending: edit the selected context.
-            print("Calling editContext()")
+        func presentContextEditor(_ context: WorkspaceContext) {
+            contextBeingEdited = context
+            isCreatingOrEditing = true
         }
 
-        public func deleteContext(_ context: Context) {
-            // Pending: delete the selected context.
-            print("Calling deleteContext()")
+        func dismissContextCreator() {
+            isCreatingOrEditing = false
+            contextBeingEdited = nil
         }
 
-        public func createContext() {
-            // Pending: create a new context.
-            self.isCreatingOrEditing = true
+        func dismissError() {
+            error = nil
         }
 
-        public func cancelCreateContext() {
-            self.isCreatingOrEditing = false
+        public func runContext(_ context: WorkspaceContext) async {
+            guard operationInProgress == nil else { return }
+
+            operationInProgress = context.id
+            defer { operationInProgress = nil }
+
+            do {
+                try await contextManager.switchContext(id: context.id)
+                error = nil
+            } catch let error as PaSettingsContextStoreError {
+                self.error = error
+            } catch {
+                self.error = .unknown
+            }
         }
 
-        // MARK: - Fetch functions
-        func fetchContexts() throws(ViewModelError) {
-            self.contexts = Context.samples()
-            self.contextActive = self.contexts[Int.random(in: 0..<contexts.count)]
-            // Pending: load contexts from a repository.
+        public func deleteContext(_ context: WorkspaceContext) async {
+            guard operationInProgress == nil else { return }
+
+            operationInProgress = context.id
+            defer { operationInProgress = nil }
+
+            do {
+                try await contextManager.deleteContext(id: context.id)
+                error = nil
+            } catch let error as PaSettingsContextStoreError {
+                self.error = error
+            } catch {
+                self.error = .unknown
+            }
         }
     }
 }

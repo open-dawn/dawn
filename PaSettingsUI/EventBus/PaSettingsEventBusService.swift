@@ -1,6 +1,7 @@
 import Foundation
 import Observation
 import PaEventKit
+import PaLogging
 
 @Observable
 @MainActor
@@ -34,6 +35,14 @@ final class PaSettingsEventBusService {
         isRunning = true
         retryAfterInitialHandshake = true
 
+        let state = String(describing: bus.connectionState)
+
+        #log(
+            "Starting SettingUI event bus; initial state: \(state, privacy: .public)",
+            level: .info,
+            category: .eventBus
+        )
+
         bus.setConnectionStateHandler { [weak self] state in
             Task { @MainActor in
                 self?.handleConnectionStateChange(state)
@@ -65,6 +74,12 @@ final class PaSettingsEventBusService {
     }
 
     private func handleReadyPing() {
+        #log(
+            "Received PaWM ready notification",
+            level: .info,
+            category: .eventBus
+        )
+
         reconnectIfNeeded()
     }
 

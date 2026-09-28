@@ -1,4 +1,5 @@
 import PaEventKit
+import PaLogging
 
 @MainActor
 protocol ContextSwitching {
@@ -14,14 +15,22 @@ struct DefaultContextSwitching: ContextSwitching {
             do {
                 try await WMActionIdentifier.resetWindows.action.execute()
             } catch {
-                print("Error: \(error.localizedDescription)")
+                #log(
+                    "Error reseting windows: \(error.localizedDescription)",
+                    level: .error,
+                    category: .general
+                )
             }
 
             for app in appsList {
                 do {
                     try await WMActionIdentifier.openApp(app).action.execute()
                 } catch {
-                    print("Error: \(error.localizedDescription)")
+                    #log(
+                        "Error opening app \(app.bundleIdentifier) (\(error))",
+                        level: .error,
+                        category: .general
+                    )
                 }
             }
         }
@@ -75,7 +84,11 @@ final class WindowManagerListener: Listener {
             }
 
         case .initialized:
-            print("PaWM initialized")
+            #log(
+                "PaWM initialized",
+                level: .info,
+                category: .appLifecycle
+            )
 
         case let .createContext(payload):
             handleCreateContext(payload, reply: reply)

@@ -150,6 +150,7 @@ schemes:
         PaWMTests: [test]
         PaSettingsUITests: [test]
     test:
+      gatherCoverageData: true
       targets:
         - PaEventKitTests
         - PaWMTests
