@@ -43,7 +43,7 @@ final class WindowManagerListener: Listener {
     private let contextSwitching: ContextSwitching
 
     init(
-        bus: PaEventBus,
+        bus: EventBus,
         contextManager: ContextProviding,
         contextSwitching: ContextSwitching = DefaultContextSwitching()
     ) {
@@ -63,13 +63,13 @@ final class WindowManagerListener: Listener {
         )
     }
 
-    convenience init(bus: PaEventBus) async throws {
+    convenience init(bus: EventBus) async throws {
         let publisher = EventBusContextSnapshotPublisher(bus: bus)
 
         try await self.init(bus: bus, contextManager: ContextManager(snapshotPublisher: publisher))
     }
 
-    func handle(_ event: PaEvent, reply: (@Sendable (PaEvent) -> Void)?) {
+    func handle(_ event: Event, reply: (@Sendable (Event) -> Void)?) {
         switch event {
         case .switchSpace(let payload):
             Task { @MainActor in
@@ -80,7 +80,7 @@ final class WindowManagerListener: Listener {
         case .getContexts:
             Task { @MainActor in
                 let contexts = await getAllContexts()
-                reply?(.contextsFetched(PaContextsFetchedEvent(contexts: contexts)))
+                reply?(.contextsFetched(ContextsFetchedEvent(contexts: contexts)))
             }
 
         case .initialized:
@@ -117,7 +117,7 @@ final class WindowManagerListener: Listener {
         await contextManager.getAvailableContexts()
     }
 
-    private func handleCreateContext(_ payload: PaCreateContextEvent, reply: (@Sendable (PaEvent) -> Void)?) {
+    private func handleCreateContext(_ payload: CreateContextEvent, reply: (@Sendable (Event) -> Void)?) {
         guard let reply else { return }
 
         Task { @MainActor in
@@ -145,7 +145,7 @@ final class WindowManagerListener: Listener {
         }
     }
 
-    private func handleUpdateContext(_ payload: PaUpdateContextEvent, reply: (@Sendable (PaEvent) -> Void)?) {
+    private func handleUpdateContext(_ payload: UpdateContextEvent, reply: (@Sendable (Event) -> Void)?) {
         guard let reply else { return }
 
         Task { @MainActor in
@@ -171,7 +171,7 @@ final class WindowManagerListener: Listener {
         }
     }
 
-    private func handleDeleteContext(_ payload: PaDeleteContextEvent, reply: (@Sendable (PaEvent) -> Void)?) {
+    private func handleDeleteContext(_ payload: DeleteContextEvent, reply: (@Sendable (Event) -> Void)?) {
         guard let reply else { return }
 
         Task { @MainActor in
@@ -195,7 +195,7 @@ final class WindowManagerListener: Listener {
         }
     }
 
-    private func handleSwitchContext(_ payload: PaSwitchContextEvent, reply: (@Sendable (PaEvent) -> Void)?) {
+    private func handleSwitchContext(_ payload: SwitchContextEvent, reply: (@Sendable (Event) -> Void)?) {
         guard let reply else { return }
 
         Task { @MainActor in
@@ -227,7 +227,7 @@ final class WindowManagerListener: Listener {
 
     private func mutationFailure(
         from error: Error
-    ) -> PaContextMutationAcknowledgement.Failure {
+    ) -> ContextMutationAcknowledgement.Failure {
         if let error = error as? SettingsStoreError {
             return switch error {
             case .emptyContextName: .emptyContextName

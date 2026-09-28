@@ -3,9 +3,9 @@ import libdawn
 
 @MainActor
 final class RecordingListener: Listener {
-    private(set) var events: [PaEvent] = []
+    private(set) var events: [Event] = []
 
-    func handle(_ event: PaEvent, reply: (@Sendable (PaEvent) -> Void)?) {
+    func handle(_ event: Event, reply: (@Sendable (Event) -> Void)?) {
         events.append(event)
     }
 }

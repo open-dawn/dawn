@@ -3,8 +3,8 @@ import OSLog
 @freestanding(expression)
 public macro log(
     _ message: OSLogMessage,
-    level: PaLogLevel = .debug,
-    category: PaLogCategory = .general
+    level: LogLevel = .debug,
+    category: LogCategory = .general
 ) = #externalMacro(
     module: "dawnLoggingMacros",
     type: "LogMacro"

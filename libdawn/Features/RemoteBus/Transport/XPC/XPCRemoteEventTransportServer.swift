@@ -1,12 +1,12 @@
 import Foundation
 
-final class XPCRemoteEventTransportServer: NSObject, RemoteEventTransportServer, PaEventHostXPC, @unchecked Sendable {
+final class XPCRemoteEventTransportServer: NSObject, RemoteEventTransportServer, EventHostXPC, @unchecked Sendable {
     private let connection: NSXPCConnection
     private let lock = NSLock()
     private var closed = false
-    private var publishHandler: (@Sendable (PaEvent) -> Void)?
-    private var subscribeHandler: (@Sendable (Set<PaEventKind>?) -> Void)?
-    private var askHandler: (@Sendable (PaEvent) async throws -> PaEvent)?
+    private var publishHandler: (@Sendable (Event) -> Void)?
+    private var subscribeHandler: (@Sendable (Set<EventKind>?) -> Void)?
+    private var askHandler: (@Sendable (Event) async throws -> Event)?
     private var closeHandler: (@Sendable () -> Void)?
 
     init(connection: NSXPCConnection) {
@@ -14,9 +14,9 @@ final class XPCRemoteEventTransportServer: NSObject, RemoteEventTransportServer,
         super.init()
     }
 
-    func deliver(_ event: PaEvent) {
-        guard let data = try? PaEventCodec.encode(event) else { return }
-        let proxy = connection.remoteObjectProxy as? PaRemoteEventBusXPC
+    func deliver(_ event: Event) {
+        guard let data = try? EventCodec.encode(event) else { return }
+        let proxy = connection.remoteObjectProxy as? RemoteEventBusXPC
         proxy?.deliver(data)
     }
 
@@ -32,19 +32,19 @@ final class XPCRemoteEventTransportServer: NSObject, RemoteEventTransportServer,
         connection.invalidate()
     }
 
-    func setPublishHandler(_ handler: (@Sendable (PaEvent) -> Void)?) {
+    func setPublishHandler(_ handler: (@Sendable (Event) -> Void)?) {
         lock.withLock {
             publishHandler = handler
         }
     }
 
-    func setSubscribeHandler(_ handler: (@Sendable (Set<PaEventKind>?) -> Void)?) {
+    func setSubscribeHandler(_ handler: (@Sendable (Set<EventKind>?) -> Void)?) {
         lock.withLock {
             subscribeHandler = handler
         }
     }
 
-    func setAskHandler(_ handler: (@Sendable (PaEvent) async throws -> PaEvent)?) {
+    func setAskHandler(_ handler: (@Sendable (Event) async throws -> Event)?) {
         lock.withLock {
             askHandler = handler
         }
@@ -61,7 +61,7 @@ final class XPCRemoteEventTransportServer: NSObject, RemoteEventTransportServer,
     }
 
     func publish(_ data: Data) {
-        guard let event = try? PaEventCodec.decode(data) else { return }
+        guard let event = try? EventCodec.decode(data) else { return }
 
         let handler = lock.withLock { publishHandler }
 
@@ -76,7 +76,7 @@ final class XPCRemoteEventTransportServer: NSObject, RemoteEventTransportServer,
             return
         }
 
-        handler?(Set(kindNames.compactMap { PaEventKind(rawValue: $0) }))
+        handler?(Set(kindNames.compactMap { EventKind(rawValue: $0) }))
     }
 
     func ask(_ data: Data, withReply reply: @escaping (Data?, Error?) -> Void) {
@@ -85,13 +85,13 @@ final class XPCRemoteEventTransportServer: NSObject, RemoteEventTransportServer,
         nonisolated(unsafe) let reply = reply
         Task {
             do {
-                let event = try PaEventCodec.decode(data)
+                let event = try EventCodec.decode(data)
                 guard let handler else {
-                    reply(nil, PaEventRemoteError.notConnected)
+                    reply(nil, EventRemoteError.notConnected)
                     return
                 }
                 let response = try await handler(event)
-                reply(try PaEventCodec.encode(response), nil)
+                reply(try EventCodec.encode(response), nil)
             } catch {
                 reply(nil, error)
             }

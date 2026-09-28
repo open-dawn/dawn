@@ -3,16 +3,16 @@ import Synchronization
 public final class LoopbackRemoteEventTransportServer: RemoteEventTransportServer, @unchecked Sendable {
     private struct State: Sendable {
         var closed = false
-        var publishHandler: (@Sendable (PaEvent) -> Void)?
-        var subscribeHandler: (@Sendable (Set<PaEventKind>?) -> Void)?
-        var askHandler: (@Sendable (PaEvent) async throws -> PaEvent)?
+        var publishHandler: (@Sendable (Event) -> Void)?
+        var subscribeHandler: (@Sendable (Set<EventKind>?) -> Void)?
+        var askHandler: (@Sendable (Event) async throws -> Event)?
         var closeHandler: (@Sendable () -> Void)?
     }
 
     weak var client: LoopbackRemoteEventTransportClient?
     private let state = Mutex(State())
 
-    public func deliver(_ event: PaEvent) {
+    public func deliver(_ event: Event) {
         client?.receiveDeliver(event)
     }
 
@@ -26,15 +26,15 @@ public final class LoopbackRemoteEventTransportServer: RemoteEventTransportServe
         client?.close()
     }
 
-    public func setPublishHandler(_ handler: (@Sendable (PaEvent) -> Void)?) {
+    public func setPublishHandler(_ handler: (@Sendable (Event) -> Void)?) {
         state.withLock { $0.publishHandler = handler }
     }
 
-    public func setSubscribeHandler(_ handler: (@Sendable (Set<PaEventKind>?) -> Void)?) {
+    public func setSubscribeHandler(_ handler: (@Sendable (Set<EventKind>?) -> Void)?) {
         state.withLock { $0.subscribeHandler = handler }
     }
 
-    public func setAskHandler(_ handler: (@Sendable (PaEvent) async throws -> PaEvent)?) {
+    public func setAskHandler(_ handler: (@Sendable (Event) async throws -> Event)?) {
         state.withLock { $0.askHandler = handler }
     }
 
@@ -42,20 +42,20 @@ public final class LoopbackRemoteEventTransportServer: RemoteEventTransportServe
         state.withLock { $0.closeHandler = handler }
     }
 
-    func handlePublish(_ event: PaEvent) {
+    func handlePublish(_ event: Event) {
         let handler = state.withLock { $0.publishHandler }
         handler?(event)
     }
 
-    func handleSubscribe(_ kinds: Set<PaEventKind>?) {
+    func handleSubscribe(_ kinds: Set<EventKind>?) {
         let handler = state.withLock { $0.subscribeHandler }
         handler?(kinds)
     }
 
-    func handleAsk(_ event: PaEvent) async throws -> PaEvent {
+    func handleAsk(_ event: Event) async throws -> Event {
         let handler = state.withLock { $0.askHandler }
         guard let handler else {
-            throw PaEventRemoteError.notConnected
+            throw EventRemoteError.notConnected
         }
         return try await handler(event)
     }

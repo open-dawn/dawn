@@ -8,7 +8,7 @@ extension WorkspaceSwitcherView {
         private let contextManager: any WorkspaceContextManaging
 
         private(set) var operationInProgress: UUID?
-        private(set) var error: PaSettingsContextStoreError?
+        private(set) var error: SettingsContextStoreError?
 
         private(set) var contextBeingEdited: WorkspaceContext?
         var isCreatingOrEditing = false
@@ -46,7 +46,7 @@ extension WorkspaceSwitcherView {
             do {
                 try await contextManager.switchContext(id: context.id)
                 error = nil
-            } catch let error as PaSettingsContextStoreError {
+            } catch let error as SettingsContextStoreError {
                 self.error = error
             } catch {
                 self.error = .unknown
@@ -62,7 +62,7 @@ extension WorkspaceSwitcherView {
             do {
                 try await contextManager.deleteContext(id: context.id)
                 error = nil
-            } catch let error as PaSettingsContextStoreError {
+            } catch let error as SettingsContextStoreError {
                 self.error = error
             } catch {
                 self.error = .unknown

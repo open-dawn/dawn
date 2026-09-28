@@ -243,7 +243,7 @@ struct ContextCreatorViewModelTests {
     @Test("Save exposes a context-store error")
     func saveContextStoreError() async {
         let contextCreator = ContextCreatorSpy()
-        contextCreator.error = PaSettingsContextStoreError.mutationRejected(
+        contextCreator.error = SettingsContextStoreError.mutationRejected(
             .emptyContextName
         )
 
@@ -280,7 +280,7 @@ struct ContextCreatorViewModelTests {
     @Test("A successful save clears the previous error")
     func successfulSaveClearsError() async {
         let contextCreator = ContextCreatorSpy()
-        contextCreator.error = PaSettingsContextStoreError.timeout
+        contextCreator.error = SettingsContextStoreError.timeout
 
         let viewModel = ContextCreatorView.ViewModel(
             contextSaver: contextCreator
@@ -298,7 +298,7 @@ struct ContextCreatorViewModelTests {
     @Test("Dismiss save error clears the current error")
     func dismissSaveError() async {
         let contextCreator = ContextCreatorSpy()
-        contextCreator.error = PaSettingsContextStoreError.notConnected
+        contextCreator.error = SettingsContextStoreError.notConnected
 
         let viewModel = ContextCreatorView.ViewModel(
             contextSaver: contextCreator
@@ -367,7 +367,7 @@ struct ContextCreatorViewModelTests {
             name: "Work",
             symbol: "briefcase"
         )
-        let expectedError = PaSettingsContextStoreError.mutationRejected(
+        let expectedError = SettingsContextStoreError.mutationRejected(
             .contextNotFound(context.id)
         )
 

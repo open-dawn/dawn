@@ -1,7 +1,7 @@
 import SwiftUI
 
 struct AboutView: View {
-    @Environment(PaSettingsEventBusService.self) private var eventBusService
+    @Environment(SettingsEventBusService.self) private var eventBusService
 
     let content: AboutContent
 

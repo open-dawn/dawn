@@ -15,7 +15,7 @@ extension ContextCreatorView {
 
         private(set) var error: ViewModelError?
         private(set) var errorMessage: String?
-        private(set) var saveError: PaSettingsContextStoreError?
+        private(set) var saveError: SettingsContextStoreError?
         private(set) var applicationSelectionError: ApplicationSelectionError?
         private(set) var isLoading = false
 
@@ -104,7 +104,7 @@ extension ContextCreatorView {
 
                 saveError = nil
                 return true
-            } catch let error as PaSettingsContextStoreError {
+            } catch let error as SettingsContextStoreError {
                 saveError = error
                 return false
             } catch {

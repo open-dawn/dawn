@@ -3,13 +3,13 @@ import Foundation
 final class AskSession: @unchecked Sendable {
     private let lock = NSLock()
     private var fulfilled = false
-    private let continuation: CheckedContinuation<PaEvent, Error>
+    private let continuation: CheckedContinuation<Event, Error>
 
-    init(continuation: CheckedContinuation<PaEvent, Error>) {
+    init(continuation: CheckedContinuation<Event, Error>) {
         self.continuation = continuation
     }
 
-    func complete(with event: PaEvent) {
+    func complete(with event: Event) {
         lock.withLock {
             guard !fulfilled else { return }
             fulfilled = true

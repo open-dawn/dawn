@@ -20,4 +20,4 @@ protocol ContextSaving: AnyObject {
     func updateContext(_ context: WorkspaceContext) async throws
 }
 
-extension PaSettingsContextStore: ContextSaving {}
+extension SettingsContextStore: ContextSaving {}

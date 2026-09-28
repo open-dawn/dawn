@@ -9,26 +9,26 @@ import Testing
 struct WindowManagerListenerTests {
     @Test("bus uses WindowManagerListener as EventHandler")
     func busUseListernerAsHandler() throws {
-        let events: [(event: PaEvent, afterResult: Bool)] = [
-            (event: PaEvent.debugPing(PaDebugPingEvent()), afterResult: false),
-            (event: PaEvent.initialized(PaInitializedEvent()), afterResult: true),
-            (event: PaEvent.getContexts(PaGetContextsEvent()), afterResult: true),
-            (event: PaEvent.switchSpace(PaSwitchSpaceEvent(spaceIndex: 1)), afterResult: true),
+        let events: [(event: Event, afterResult: Bool)] = [
+            (event: Event.debugPing(DebugPingEvent()), afterResult: false),
+            (event: Event.initialized(InitializedEvent()), afterResult: true),
+            (event: Event.getContexts(GetContextsEvent()), afterResult: true),
+            (event: Event.switchSpace(SwitchSpaceEvent(spaceIndex: 1)), afterResult: true),
             (
-                event: PaEvent.createContext(
-                    PaCreateContextEvent(name: "Placeholder", symbol: "book", applications: [])
+                event: Event.createContext(
+                    CreateContextEvent(name: "Placeholder", symbol: "book", applications: [])
                 ), afterResult: true
             ),
             (
-                event: PaEvent.updateContext(
-                    PaUpdateContextEvent(context: WorkspaceContext(name: "Placeholder", symbol: "book"))
+                event: Event.updateContext(
+                    UpdateContextEvent(context: WorkspaceContext(name: "Placeholder", symbol: "book"))
                 ), afterResult: true
             ),
-            (event: PaEvent.deleteContext(PaDeleteContextEvent(contextID: UUID())), afterResult: true),
-            (event: PaEvent.switchContext(PaSwitchContextEvent(contextID: UUID())), afterResult: true),
+            (event: Event.deleteContext(DeleteContextEvent(contextID: UUID())), afterResult: true),
+            (event: Event.switchContext(SwitchContextEvent(contextID: UUID())), afterResult: true),
         ]
 
-        let mockBus = PaEventBus()
+        let mockBus = EventBus()
 
         for event in events {
             try #require(mockBus.hasListeners(for: event.event) == false)
@@ -45,11 +45,11 @@ struct WindowManagerListenerTests {
 
     @Test("handle get contexts event")
     func handle_GetContextsEvent() async throws {
-        let mockBus = PaEventBus()
+        let mockBus = EventBus()
         let mockContextManager = FakeContextManager()
         let listener = WindowManagerListener(bus: mockBus, contextManager: mockContextManager)
 
-        let event = PaEvent.getContexts(PaGetContextsEvent())
+        let event = Event.getContexts(GetContextsEvent())
         let eventResponse = try await mockBus.ask(event)
 
         guard case .contextsFetched(let payload) = eventResponse else {
@@ -66,13 +66,13 @@ struct WindowManagerListenerTests {
         let mockContextManager = FakeContextManager()
         mockContextManager.contexts = createMockWorkspaceContext(3)
         let switcherSpy = ContextSwitchingSpy()
-        let mockBus = PaEventBus()
+        let mockBus = EventBus()
         let listener = WindowManagerListener(
             bus: mockBus,
             contextManager: mockContextManager,
             contextSwitching: switcherSpy
         )
-        let event = PaEvent.switchSpace(PaSwitchSpaceEvent(spaceIndex: 1))
+        let event = Event.switchSpace(SwitchSpaceEvent(spaceIndex: 1))
 
         listener.handle(event, reply: nil)
         await mockContextManager.waitUntilSwitched()
@@ -85,13 +85,13 @@ struct WindowManagerListenerTests {
         let mockContextManager = FakeContextManager()
         mockContextManager.contexts = createMockWorkspaceContext(1)
         let switcherSpy = ContextSwitchingSpy()
-        let mockBus = PaEventBus()
+        let mockBus = EventBus()
         let listener = WindowManagerListener(
             bus: mockBus,
             contextManager: mockContextManager,
             contextSwitching: switcherSpy
         )
-        let event = PaEvent.switchSpace(PaSwitchSpaceEvent(spaceIndex: 2))
+        let event = Event.switchSpace(SwitchSpaceEvent(spaceIndex: 2))
 
         listener.handle(event, reply: nil)
         await mockContextManager.waitUntilSwitched()
@@ -104,7 +104,7 @@ struct WindowManagerListenerTests {
         let mockContextManager = FakeContextManager()
         mockContextManager.contexts = createMockWorkspaceContext(3)
 
-        let mockBus = PaEventBus()
+        let mockBus = EventBus()
         let listener = WindowManagerListener(bus: mockBus, contextManager: mockContextManager)
 
         #expect(await listener.getAllContexts() == mockContextManager.contexts)
@@ -115,7 +115,7 @@ struct WindowManagerListenerTests {
         let mockContextManager = FakeContextManager()
         mockContextManager.contexts = createMockWorkspaceContext(3)
 
-        let mockBus = PaEventBus()
+        let mockBus = EventBus()
         let listener = WindowManagerListener(bus: mockBus, contextManager: mockContextManager)
 
         #expect(await listener.getContextWithIndex(0) == mockContextManager.contexts[0])
@@ -126,7 +126,7 @@ struct WindowManagerListenerTests {
         let mockContextManager = FakeContextManager()
         mockContextManager.contexts = createMockWorkspaceContext(3)
 
-        let mockBus = PaEventBus()
+        let mockBus = EventBus()
         let listener = WindowManagerListener(bus: mockBus, contextManager: mockContextManager)
 
         #expect(await listener.getContextWithIndex(1) == mockContextManager.contexts[1])
@@ -137,7 +137,7 @@ struct WindowManagerListenerTests {
         let mockContextManager = FakeContextManager()
         mockContextManager.contexts = []
 
-        let mockBus = PaEventBus()
+        let mockBus = EventBus()
         let listener = WindowManagerListener(bus: mockBus, contextManager: mockContextManager)
 
         #expect(await listener.getContextWithIndex(1) == nil)
@@ -150,7 +150,7 @@ struct WindowManagerListenerTests {
             displayName: "Safari"
         )
 
-        let payload = PaCreateContextEvent(
+        let payload = CreateContextEvent(
             name: "Work",
             symbol: "briefcase",
             applications: [application]
@@ -165,7 +165,7 @@ struct WindowManagerListenerTests {
         let contextManager = FakeContextManager()
         contextManager.createResult = createdContext
 
-        let bus = PaEventBus()
+        let bus = EventBus()
         let listener = WindowManagerListener(
             bus: bus,
             contextManager: contextManager
@@ -186,7 +186,7 @@ struct WindowManagerListenerTests {
 
     @Test("Create replies with validation failure")
     func createRepliesWithValidationFailure() async throws {
-        let payload = PaCreateContextEvent(
+        let payload = CreateContextEvent(
             name: "",
             symbol: "briefcase",
             applications: []
@@ -195,7 +195,7 @@ struct WindowManagerListenerTests {
         let contextManager = FakeContextManager()
         contextManager.createError = SettingsStoreError.emptyContextName
 
-        let bus = PaEventBus()
+        let bus = EventBus()
         let listener = WindowManagerListener(
             bus: bus,
             contextManager: contextManager
@@ -217,14 +217,14 @@ struct WindowManagerListenerTests {
 
     @Test("Published create command does not mutate contexts")
     func publishedCreateDoesNotMutateContexts() {
-        let payload = PaCreateContextEvent(
+        let payload = CreateContextEvent(
             name: "Work",
             symbol: "briefcase",
             applications: []
         )
 
         let contextManager = FakeContextManager()
-        let bus = PaEventBus()
+        let bus = EventBus()
         let listener = WindowManagerListener(
             bus: bus,
             contextManager: contextManager
@@ -249,8 +249,8 @@ struct WindowManagerListenerTests {
 
         context.name = "Updated Work"
 
-        let payload = PaUpdateContextEvent(context: context)
-        let bus = PaEventBus()
+        let payload = UpdateContextEvent(context: context)
+        let bus = EventBus()
         let listener = WindowManagerListener(
             bus: bus,
             contextManager: contextManager
@@ -283,7 +283,7 @@ struct WindowManagerListenerTests {
             context.id
         )
 
-        let bus = PaEventBus()
+        let bus = EventBus()
         let listener = WindowManagerListener(
             bus: bus,
             contextManager: contextManager
@@ -291,7 +291,7 @@ struct WindowManagerListenerTests {
 
         let response = try await bus.ask(
             .updateContext(
-                PaUpdateContextEvent(context: context)
+                UpdateContextEvent(context: context)
             )
         )
 
@@ -317,7 +317,7 @@ struct WindowManagerListenerTests {
             missingID
         )
 
-        let bus = PaEventBus()
+        let bus = EventBus()
         let listener = WindowManagerListener(
             bus: bus,
             contextManager: contextManager
@@ -325,7 +325,7 @@ struct WindowManagerListenerTests {
 
         let response = try await bus.ask(
             .deleteContext(
-                PaDeleteContextEvent(contextID: missingID)
+                DeleteContextEvent(contextID: missingID)
             )
         )
 
@@ -353,8 +353,8 @@ struct WindowManagerListenerTests {
         let contextManager = FakeContextManager()
         contextManager.contexts = [context]
 
-        let payload = PaDeleteContextEvent(contextID: context.id)
-        let bus = PaEventBus()
+        let payload = DeleteContextEvent(contextID: context.id)
+        let bus = EventBus()
         let listener = WindowManagerListener(
             bus: bus,
             contextManager: contextManager
@@ -386,7 +386,7 @@ struct WindowManagerListenerTests {
         contextManager.contexts = [context]
 
         let switcher = ContextSwitchingSpy()
-        let bus = PaEventBus()
+        let bus = EventBus()
         let listener = WindowManagerListener(
             bus: bus,
             contextManager: contextManager,
@@ -395,7 +395,7 @@ struct WindowManagerListenerTests {
 
         let response = try await bus.ask(
             .switchContext(
-                PaSwitchContextEvent(contextID: context.id)
+                SwitchContextEvent(contextID: context.id)
             )
         )
 
@@ -416,7 +416,7 @@ struct WindowManagerListenerTests {
 
         let contextManager = FakeContextManager()
         let switcher = ContextSwitchingSpy()
-        let bus = PaEventBus()
+        let bus = EventBus()
         let listener = WindowManagerListener(
             bus: bus,
             contextManager: contextManager,
@@ -425,7 +425,7 @@ struct WindowManagerListenerTests {
 
         let response = try await bus.ask(
             .switchContext(
-                PaSwitchContextEvent(contextID: missingID)
+                SwitchContextEvent(contextID: missingID)
             )
         )
 
@@ -457,7 +457,7 @@ final class FakeContextManager: ContextProviding {
 
     private var continuation: CheckedContinuation<Void, Never>?
 
-    private(set) var createPayloads: [PaCreateContextEvent] = []
+    private(set) var createPayloads: [CreateContextEvent] = []
     var createResult: WorkspaceContext?
     var createError: Error?
 
@@ -479,7 +479,7 @@ final class FakeContextManager: ContextProviding {
         -> WorkspaceContext
     {
         createPayloads.append(
-            PaCreateContextEvent(
+            CreateContextEvent(
                 name: name,
                 symbol: symbol,
                 applications: applications

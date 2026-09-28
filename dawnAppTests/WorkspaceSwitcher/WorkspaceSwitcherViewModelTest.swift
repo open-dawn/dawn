@@ -88,7 +88,7 @@ struct WorkspaceSwitcherViewModelTests {
         )
 
         let contextManager = WorkspaceContextManagerSpy()
-        contextManager.error = PaSettingsContextStoreError.notConnected
+        contextManager.error = SettingsContextStoreError.notConnected
 
         let viewModel = WorkspaceSwitcherView.ViewModel(
             contextManager: contextManager
@@ -109,7 +109,7 @@ struct WorkspaceSwitcherViewModelTests {
         )
 
         let contextManager = WorkspaceContextManagerSpy()
-        contextManager.error = PaSettingsContextStoreError.timeout
+        contextManager.error = SettingsContextStoreError.timeout
 
         let viewModel = WorkspaceSwitcherView.ViewModel(
             contextManager: contextManager
@@ -193,7 +193,7 @@ struct WorkspaceSwitcherViewModelTests {
         )
 
         let contextManager = WorkspaceContextManagerSpy()
-        contextManager.error = PaSettingsContextStoreError.notConnected
+        contextManager.error = SettingsContextStoreError.notConnected
 
         let viewModel = WorkspaceSwitcherView.ViewModel(
             contextManager: contextManager

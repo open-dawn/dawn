@@ -4,15 +4,15 @@ import Testing
 
 private final class MockEventDelivering: EventDelivering, @unchecked Sendable {
     private let lock = NSLock()
-    private var events: [PaEvent] = []
+    private var events: [Event] = []
 
-    func deliver(_ event: PaEvent) {
+    func deliver(_ event: Event) {
         lock.withLock {
             events.append(event)
         }
     }
 
-    func deliveredEvents() -> [PaEvent] {
+    func deliveredEvents() -> [Event] {
         lock.withLock { events }
     }
 }
@@ -25,9 +25,9 @@ struct ExternalListenerTests {
         let destination = MockEventDelivering()
         let listener = ExternalListener(destination: destination, kinds: [.switchSpace])
 
-        listener.handle(.switchSpace(PaSwitchSpaceEvent(spaceIndex: 1)), reply: nil)
+        listener.handle(.switchSpace(SwitchSpaceEvent(spaceIndex: 1)), reply: nil)
 
-        #expect(destination.deliveredEvents() == [.switchSpace(PaSwitchSpaceEvent(spaceIndex: 1))])
+        #expect(destination.deliveredEvents() == [.switchSpace(SwitchSpaceEvent(spaceIndex: 1))])
     }
 
     @Test("ignores unsubscribed kinds")
@@ -35,7 +35,7 @@ struct ExternalListenerTests {
         let destination = MockEventDelivering()
         let listener = ExternalListener(destination: destination, kinds: [.debugPing])
 
-        listener.handle(.switchSpace(PaSwitchSpaceEvent(spaceIndex: 1)), reply: nil)
+        listener.handle(.switchSpace(SwitchSpaceEvent(spaceIndex: 1)), reply: nil)
 
         #expect(destination.deliveredEvents().isEmpty)
     }
@@ -45,12 +45,12 @@ struct ExternalListenerTests {
         let destination = MockEventDelivering()
         let listener = ExternalListener(destination: destination)
 
-        listener.handle(.switchSpace(PaSwitchSpaceEvent(spaceIndex: 1)), reply: nil)
-        listener.handle(.debugPing(PaDebugPingEvent()), reply: nil)
+        listener.handle(.switchSpace(SwitchSpaceEvent(spaceIndex: 1)), reply: nil)
+        listener.handle(.debugPing(DebugPingEvent()), reply: nil)
 
         #expect(destination.deliveredEvents() == [
-            .switchSpace(PaSwitchSpaceEvent(spaceIndex: 1)),
-            .debugPing(PaDebugPingEvent())
+            .switchSpace(SwitchSpaceEvent(spaceIndex: 1)),
+            .debugPing(DebugPingEvent())
         ])
     }
 
@@ -59,7 +59,7 @@ struct ExternalListenerTests {
         let destination = MockEventDelivering()
         let listener = ExternalListener(destination: destination)
 
-        listener.handle(.debugPing(PaDebugPingEvent()), reply: { _ in })
+        listener.handle(.debugPing(DebugPingEvent()), reply: { _ in })
 
         #expect(destination.deliveredEvents().isEmpty)
     }

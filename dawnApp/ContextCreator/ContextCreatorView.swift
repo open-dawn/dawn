@@ -2,7 +2,7 @@ import libdawn
 import SwiftUI
 
 struct ContextCreatorView: View {
-    @Environment(PaSettingsContextStore.self)
+    @Environment(SettingsContextStore.self)
     private var contextStore
 
     private let context: WorkspaceContext?

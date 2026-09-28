@@ -1,13 +1,13 @@
 import Foundation
 
 public final class XPCRemoteEventTransportAcceptor: NSObject, NSXPCListenerDelegate, @unchecked Sendable {
-    private let eventServer: PaEventServer
+    private let eventServer: EventServer
     private let machServiceName: String?
     private var listener: NSXPCListener?
     private var transports: [XPCRemoteEventTransportServer] = []
     private let lock = NSLock()
 
-    public init(eventServer: PaEventServer, machServiceName: String? = nil) {
+    public init(eventServer: EventServer, machServiceName: String? = nil) {
         self.eventServer = eventServer
         self.machServiceName = machServiceName
         super.init()
@@ -54,8 +54,8 @@ public final class XPCRemoteEventTransportAcceptor: NSObject, NSXPCListenerDeleg
     ) -> Bool {
         let transport = XPCRemoteEventTransportServer(connection: connection)
 
-        connection.exportedInterface = NSXPCInterface(with: PaEventHostXPC.self)
-        connection.remoteObjectInterface = NSXPCInterface(with: PaRemoteEventBusXPC.self)
+        connection.exportedInterface = NSXPCInterface(with: EventHostXPC.self)
+        connection.remoteObjectInterface = NSXPCInterface(with: RemoteEventBusXPC.self)
         connection.exportedObject = transport
         connection.invalidationHandler = { [weak self, weak transport] in
             transport?.handleInvalidation()

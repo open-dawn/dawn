@@ -3,23 +3,23 @@ import Foundation
 
 @MainActor
 final class PingResponder: Listener {
-    func handle(_ event: PaEvent, reply: (@Sendable (PaEvent) -> Void)?) {
+    func handle(_ event: Event, reply: (@Sendable (Event) -> Void)?) {
         guard case .debugPing = event else { return }
-        reply?(.debugPong(PaDebugPongEvent(message: "remote-ok")))
+        reply?(.debugPong(DebugPongEvent(message: "remote-ok")))
     }
 }
 
 @MainActor
 final class RecordingListener: Listener {
-    private(set) var events: [PaEvent] = []
+    private(set) var events: [Event] = []
 
-    func handle(_ event: PaEvent, reply: (@Sendable (PaEvent) -> Void)?) {
+    func handle(_ event: Event, reply: (@Sendable (Event) -> Void)?) {
         events.append(event)
     }
 }
 
 func waitUntilConnected(
-    _ bus: PaRemoteEventBus,
+    _ bus: RemoteEventBus,
     timeout: Duration = .seconds(2)
 ) async -> Bool {
     let deadline = ContinuousClock.now + timeout
@@ -33,7 +33,7 @@ func waitUntilConnected(
 }
 
 func waitUntilDisconnected(
-    _ bus: PaRemoteEventBus,
+    _ bus: RemoteEventBus,
     timeout: Duration = .seconds(2)
 ) async -> Bool {
     let deadline = ContinuousClock.now + timeout

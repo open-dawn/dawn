@@ -1,7 +1,7 @@
 import SwiftUI
 
 struct WorkspaceSwitcherView: View {
-    @Environment(PaSettingsContextStore.self)
+    @Environment(SettingsContextStore.self)
     private var contextStore
 
     var body: some View {
@@ -10,17 +10,17 @@ struct WorkspaceSwitcherView: View {
 }
 
 private struct WorkspaceSwitcherContent: View {
-    let store: PaSettingsContextStore
+    let store: SettingsContextStore
     @State private var viewModel: WorkspaceSwitcherView.ViewModel
 
-    @Environment(PaSettingsEventBusService.self)
+    @Environment(SettingsEventBusService.self)
     private var eventBusService
 
     private var interactionsDisabled: Bool {
         !eventBusService.isConnected || store.isLoading || viewModel.operationInProgress != nil
     }
 
-    init(store: PaSettingsContextStore) {
+    init(store: SettingsContextStore) {
         self.store = store
         _viewModel = State(
             initialValue: WorkspaceSwitcherView.ViewModel(

@@ -14,16 +14,16 @@ protocol ContextSnapshotPublishing: AnyObject {
 
 @MainActor
 final class EventBusContextSnapshotPublisher: ContextSnapshotPublishing {
-    private let bus: PaEventBus
+    private let bus: EventBus
 
-    init(bus: PaEventBus) {
+    init(bus: EventBus) {
         self.bus = bus
     }
 
     func publishAvailableContexts(_ contexts: [WorkspaceContext]) {
         bus.publish(
             .availableContexts(
-                PaAvailableContextsEvent(contexts: contexts)
+                AvailableContextsEvent(contexts: contexts)
             )
         )
     }

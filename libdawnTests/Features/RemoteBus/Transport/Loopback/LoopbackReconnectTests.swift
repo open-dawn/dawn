@@ -7,12 +7,12 @@ struct LoopbackReconnectTests {
     @Test("attemptReconnect restores delivery and subscriptions")
     @MainActor
     func reconnectRestoresDelivery() async throws {
-        let hostBus = PaEventBus()
-        let eventServer = PaEventServer(bus: hostBus)
+        let hostBus = EventBus()
+        let eventServer = EventServer(bus: hostBus)
         let link = LoopbackEventLink()
         eventServer.attach(link.server)
 
-        let remoteBus = PaRemoteEventBus(transport: link.client)
+        let remoteBus = RemoteEventBus(transport: link.client)
         let listener = RecordingListener()
         remoteBus.addListener(listener, kinds: [.switchSpace])
 
@@ -22,7 +22,7 @@ struct LoopbackReconnectTests {
         try await remoteBus.attemptReconnect()
         #expect(remoteBus.isConnected)
 
-        let event = PaEvent.switchSpace(PaSwitchSpaceEvent(spaceIndex: 2))
+        let event = Event.switchSpace(SwitchSpaceEvent(spaceIndex: 2))
         hostBus.publish(event)
         try await Task.sleep(for: .milliseconds(200))
 
@@ -35,7 +35,7 @@ struct LoopbackReconnectTests {
     @Test("connection state handler reports disconnect and reconnect")
     func connectionStateHandlerReportsTransitions() async throws {
         let link = LoopbackEventLink()
-        let remoteBus = PaRemoteEventBus(transport: link.client)
+        let remoteBus = RemoteEventBus(transport: link.client)
 
         let states = ConnectionStateCapture()
         remoteBus.setConnectionStateHandler { state in
@@ -59,20 +59,20 @@ struct LoopbackReconnectTests {
         let link = LoopbackEventLink()
         link.client.close()
 
-        await #expect(throws: PaEventRemoteError.notConnected) {
+        await #expect(throws: EventRemoteError.notConnected) {
             try await link.client.attemptReconnect()
         }
     }
 }
 
 private actor ConnectionStateCapture {
-    private var states: [PaRemoteConnectionState] = []
+    private var states: [RemoteConnectionState] = []
 
-    func record(_ state: PaRemoteConnectionState) {
+    func record(_ state: RemoteConnectionState) {
         states.append(state)
     }
 
-    func snapshot() -> [PaRemoteConnectionState] {
+    func snapshot() -> [RemoteConnectionState] {
         states
     }
 }

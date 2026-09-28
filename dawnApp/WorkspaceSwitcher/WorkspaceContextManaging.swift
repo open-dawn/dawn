@@ -13,4 +13,4 @@ protocol WorkspaceContextManaging: AnyObject {
     func deleteContext(id: UUID) async throws
 }
 
-extension PaSettingsContextStore: WorkspaceContextManaging {}
+extension SettingsContextStore: WorkspaceContextManaging {}

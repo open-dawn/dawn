@@ -77,7 +77,7 @@ public struct LogMacro: ExpressionMacro {
         }
 
         return """
-            PaLoggers.\(raw: category).\(raw: level)(\(messageWithCallSite))
+            Loggers.\(raw: category).\(raw: level)(\(messageWithCallSite))
             """
     }
 

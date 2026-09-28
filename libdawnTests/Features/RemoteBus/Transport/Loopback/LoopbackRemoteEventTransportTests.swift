@@ -7,16 +7,16 @@ struct LoopbackRemoteEventTransportTests {
     @Test("publish round-trips over loopback")
     @MainActor
     func publishRoundTrips() async throws {
-        let hostBus = PaEventBus()
-        let eventServer = PaEventServer(bus: hostBus)
+        let hostBus = EventBus()
+        let eventServer = EventServer(bus: hostBus)
         let link = LoopbackEventLink()
         eventServer.attach(link.server)
 
-        let remoteBus = PaRemoteEventBus(transport: link.client)
+        let remoteBus = RemoteEventBus(transport: link.client)
         let listener = RecordingListener()
         remoteBus.addListener(listener)
 
-        let event = PaEvent.switchSpace(PaSwitchSpaceEvent(spaceIndex: 4))
+        let event = Event.switchSpace(SwitchSpaceEvent(spaceIndex: 4))
         remoteBus.publish(event)
 
         try await Task.sleep(for: .milliseconds(200))
@@ -29,20 +29,20 @@ struct LoopbackRemoteEventTransportTests {
 
     @Test("ask round-trips over loopback")
     func askRoundTrips() async throws {
-        let hostBus = PaEventBus()
+        let hostBus = EventBus()
         let responder = PingResponder()
         await MainActor.run {
             hostBus.addListener(responder)
         }
 
-        let eventServer = PaEventServer(bus: hostBus)
+        let eventServer = EventServer(bus: hostBus)
         let link = LoopbackEventLink()
         eventServer.attach(link.server)
 
-        let remoteBus = PaRemoteEventBus(transport: link.client)
-        let reply = try await remoteBus.ask(.debugPing(PaDebugPingEvent()), timeout: .seconds(2))
+        let remoteBus = RemoteEventBus(transport: link.client)
+        let reply = try await remoteBus.ask(.debugPing(DebugPingEvent()), timeout: .seconds(2))
 
-        #expect(reply == .debugPong(PaDebugPongEvent(message: "remote-ok")))
+        #expect(reply == .debugPong(DebugPongEvent(message: "remote-ok")))
 
         remoteBus.disconnect()
         eventServer.stop()
@@ -53,8 +53,8 @@ struct LoopbackRemoteEventTransportTests {
         let link = LoopbackEventLink()
         link.client.close()
 
-        await #expect(throws: PaEventRemoteError.notConnected) {
-            _ = try await link.client.ask(.debugPing(PaDebugPingEvent()))
+        await #expect(throws: EventRemoteError.notConnected) {
+            _ = try await link.client.ask(.debugPing(DebugPingEvent()))
         }
     }
 
@@ -81,13 +81,13 @@ struct LoopbackRemoteEventTransportTests {
     func publishAfterCloseDoesNotDeliver() {
         final class DeliveryBox: @unchecked Sendable {
             private let lock = NSLock()
-            private var events: [PaEvent] = []
+            private var events: [Event] = []
 
-            func append(_ event: PaEvent) {
+            func append(_ event: Event) {
                 lock.withLock { events.append(event) }
             }
 
-            func snapshot() -> [PaEvent] {
+            func snapshot() -> [Event] {
                 lock.withLock { events }
             }
         }
@@ -100,7 +100,7 @@ struct LoopbackRemoteEventTransportTests {
         }
 
         link.client.close()
-        link.server.deliver(.switchSpace(PaSwitchSpaceEvent(spaceIndex: 1)))
+        link.server.deliver(.switchSpace(SwitchSpaceEvent(spaceIndex: 1)))
 
         #expect(delivered.snapshot().isEmpty)
     }
@@ -109,8 +109,8 @@ struct LoopbackRemoteEventTransportTests {
     func askThrowsNotConnectedWhenServerHasNoAskHandler() async {
         let link = LoopbackEventLink()
 
-        await #expect(throws: PaEventRemoteError.notConnected) {
-            _ = try await link.client.ask(.debugPing(PaDebugPingEvent()))
+        await #expect(throws: EventRemoteError.notConnected) {
+            _ = try await link.client.ask(.debugPing(DebugPingEvent()))
         }
     }
 }

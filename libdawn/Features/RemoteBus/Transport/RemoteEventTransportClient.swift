@@ -1,14 +1,14 @@
 public protocol RemoteEventTransportClient: AnyObject, Sendable {
     var isConnected: Bool { get }
-    var connectionState: PaRemoteConnectionState { get }
+    var connectionState: RemoteConnectionState { get }
 
-    func setDeliveryHandler(_ handler: @escaping @Sendable (PaEvent) -> Void)
+    func setDeliveryHandler(_ handler: @escaping @Sendable (Event) -> Void)
     func setConnectionStateHandler(
-        _ handler: (@Sendable (PaRemoteConnectionState) -> Void)?
+        _ handler: (@Sendable (RemoteConnectionState) -> Void)?
     )
-    func publish(_ event: PaEvent)
-    func subscribe(kinds: Set<PaEventKind>?)
-    func ask(_ event: PaEvent) async throws -> PaEvent
+    func publish(_ event: Event)
+    func subscribe(kinds: Set<EventKind>?)
+    func ask(_ event: Event) async throws -> Event
     func attemptReconnect() async throws
     func close()
 }

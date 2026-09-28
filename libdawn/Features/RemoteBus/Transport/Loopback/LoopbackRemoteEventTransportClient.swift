@@ -2,9 +2,9 @@ import Foundation
 
 public final class LoopbackRemoteEventTransportClient: RemoteEventTransportClient, @unchecked Sendable {
     private let lock = NSLock()
-    private var deliveryHandler: (@Sendable (PaEvent) -> Void)?
-    private var connectionStateHandler: (@Sendable (PaRemoteConnectionState) -> Void)?
-    private var state: PaRemoteConnectionState = .connected
+    private var deliveryHandler: (@Sendable (Event) -> Void)?
+    private var connectionStateHandler: (@Sendable (RemoteConnectionState) -> Void)?
+    private var state: RemoteConnectionState = .connected
     private var stopped = false
     weak var server: LoopbackRemoteEventTransportServer?
 
@@ -12,35 +12,35 @@ public final class LoopbackRemoteEventTransportClient: RemoteEventTransportClien
         lock.withLock { state == .connected }
     }
 
-    public var connectionState: PaRemoteConnectionState {
+    public var connectionState: RemoteConnectionState {
         lock.withLock { state }
     }
 
-    public func setDeliveryHandler(_ handler: @escaping @Sendable (PaEvent) -> Void) {
+    public func setDeliveryHandler(_ handler: @escaping @Sendable (Event) -> Void) {
         lock.withLock {
             deliveryHandler = handler
         }
     }
 
     public func setConnectionStateHandler(
-        _ handler: (@Sendable (PaRemoteConnectionState) -> Void)?
+        _ handler: (@Sendable (RemoteConnectionState) -> Void)?
     ) {
         lock.withLock {
             connectionStateHandler = handler
         }
     }
 
-    public func publish(_ event: PaEvent) {
+    public func publish(_ event: Event) {
         server?.handlePublish(event)
     }
 
-    public func subscribe(kinds: Set<PaEventKind>?) {
+    public func subscribe(kinds: Set<EventKind>?) {
         server?.handleSubscribe(kinds)
     }
 
-    public func ask(_ event: PaEvent) async throws -> PaEvent {
+    public func ask(_ event: Event) async throws -> Event {
         guard isConnected, let server else {
-            throw PaEventRemoteError.notConnected
+            throw EventRemoteError.notConnected
         }
         return try await server.handleAsk(event)
     }
@@ -54,7 +54,7 @@ public final class LoopbackRemoteEventTransportClient: RemoteEventTransportClien
 
         guard canReconnect else {
             setConnectionState(.disconnected)
-            throw PaEventRemoteError.notConnected
+            throw EventRemoteError.notConnected
         }
 
         setConnectionState(.connected)
@@ -75,7 +75,7 @@ public final class LoopbackRemoteEventTransportClient: RemoteEventTransportClien
         notifyConnectionState(.disconnected)
     }
 
-    func receiveDeliver(_ event: PaEvent) {
+    func receiveDeliver(_ event: Event) {
         let handler = lock.withLock { deliveryHandler }
         handler?(event)
     }
@@ -95,14 +95,14 @@ public final class LoopbackRemoteEventTransportClient: RemoteEventTransportClien
         setConnectionState(.connecting)
     }
 
-    private func setConnectionState(_ newState: PaRemoteConnectionState) {
+    private func setConnectionState(_ newState: RemoteConnectionState) {
         lock.withLock {
             state = newState
         }
         notifyConnectionState(newState)
     }
 
-    private func notifyConnectionState(_ state: PaRemoteConnectionState) {
+    private func notifyConnectionState(_ state: RemoteConnectionState) {
         let handler = lock.withLock { connectionStateHandler }
         handler?(state)
     }

@@ -2,7 +2,7 @@ import SwiftUI
 
 @main
 struct MainApp: App {
-    @NSApplicationDelegateAdaptor(PaSettingsAppDelegate.self) private var appDelegate
+    @NSApplicationDelegateAdaptor(SettingsAppDelegate.self) private var appDelegate
 
     private let screens: [ConfigurationPane] = [
         ConfigurationPane("Profiles") { WorkspaceSwitcherView() },

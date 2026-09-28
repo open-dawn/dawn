@@ -7,8 +7,8 @@ struct XPCRemoteEventTransportTests {
     @Test("publish round-trips over XPC")
     @MainActor
     func publishRoundTrips() async throws {
-        let hostBus = PaEventBus()
-        let eventServer = PaEventServer(bus: hostBus)
+        let hostBus = EventBus()
+        let eventServer = EventServer(bus: hostBus)
         let acceptor = XPCRemoteEventTransportAcceptor(eventServer: eventServer)
         acceptor.start()
 
@@ -17,7 +17,7 @@ struct XPCRemoteEventTransportTests {
             return
         }
 
-        let remoteBus = PaRemoteEventBus(transport: XPCRemoteEventTransportClient(endpoint: endpoint))
+        let remoteBus = RemoteEventBus(transport: XPCRemoteEventTransportClient(endpoint: endpoint))
         let listener = RecordingListener()
         remoteBus.addListener(listener)
 
@@ -26,7 +26,7 @@ struct XPCRemoteEventTransportTests {
             return
         }
 
-        let event = PaEvent.switchSpace(PaSwitchSpaceEvent(spaceIndex: 4))
+        let event = Event.switchSpace(SwitchSpaceEvent(spaceIndex: 4))
         remoteBus.publish(event)
 
         try await Task.sleep(for: .milliseconds(200))
@@ -40,13 +40,13 @@ struct XPCRemoteEventTransportTests {
 
     @Test("ask round-trips over XPC")
     func askRoundTrips() async throws {
-        let hostBus = PaEventBus()
+        let hostBus = EventBus()
         let responder = PingResponder()
         await MainActor.run {
             hostBus.addListener(responder)
         }
 
-        let eventServer = PaEventServer(bus: hostBus)
+        let eventServer = EventServer(bus: hostBus)
         let acceptor = XPCRemoteEventTransportAcceptor(eventServer: eventServer)
         acceptor.start()
 
@@ -55,15 +55,15 @@ struct XPCRemoteEventTransportTests {
             return
         }
 
-        let remoteBus = PaRemoteEventBus(transport: XPCRemoteEventTransportClient(endpoint: endpoint))
+        let remoteBus = RemoteEventBus(transport: XPCRemoteEventTransportClient(endpoint: endpoint))
         guard await waitUntilConnected(remoteBus) else {
             Issue.record("Expected XPC handshake to succeed")
             return
         }
 
-        let reply = try await remoteBus.ask(.debugPing(PaDebugPingEvent()), timeout: .seconds(2))
+        let reply = try await remoteBus.ask(.debugPing(DebugPingEvent()), timeout: .seconds(2))
 
-        #expect(reply == .debugPong(PaDebugPongEvent(message: "remote-ok")))
+        #expect(reply == .debugPong(DebugPongEvent(message: "remote-ok")))
 
         remoteBus.disconnect()
         acceptor.stop()
@@ -72,8 +72,8 @@ struct XPCRemoteEventTransportTests {
 
     @Test("host stop leaves the client disconnected")
     func hostStopLeavesClientDisconnected() async throws {
-        let hostBus = PaEventBus()
-        let eventServer = PaEventServer(bus: hostBus)
+        let hostBus = EventBus()
+        let eventServer = EventServer(bus: hostBus)
         let acceptor = XPCRemoteEventTransportAcceptor(eventServer: eventServer)
         acceptor.start()
 
@@ -82,7 +82,7 @@ struct XPCRemoteEventTransportTests {
             return
         }
 
-        let remoteBus = PaRemoteEventBus(transport: XPCRemoteEventTransportClient(endpoint: endpoint))
+        let remoteBus = RemoteEventBus(transport: XPCRemoteEventTransportClient(endpoint: endpoint))
         defer { remoteBus.disconnect() }
 
         guard await waitUntilConnected(remoteBus) else {
@@ -94,7 +94,7 @@ struct XPCRemoteEventTransportTests {
         eventServer.stop()
 
         #expect(await waitUntilDisconnected(remoteBus))
-        await #expect(throws: PaEventRemoteError.notConnected) {
+        await #expect(throws: EventRemoteError.notConnected) {
             try await remoteBus.attemptReconnect()
         }
     }
@@ -106,7 +106,7 @@ struct XPCRemoteEventTransportTests {
         )
         // Snapshot before wrapping so an optimistic connected flash during init is not missed.
         var sawConnected = transport.isConnected || transport.connectionState == .connected
-        let remoteBus = PaRemoteEventBus(transport: transport)
+        let remoteBus = RemoteEventBus(transport: transport)
         defer { remoteBus.disconnect() }
 
         // Wait through the handshake timeout so a late connected cannot slip through.
@@ -126,8 +126,8 @@ struct XPCRemoteEventTransportTests {
 
     @Test("stale invalidation does not drop a newer connection")
     func staleInvalidationDoesNotDropNewerConnection() async throws {
-        let hostBus = PaEventBus()
-        let eventServer = PaEventServer(bus: hostBus)
+        let hostBus = EventBus()
+        let eventServer = EventServer(bus: hostBus)
         let acceptor = XPCRemoteEventTransportAcceptor(eventServer: eventServer)
         acceptor.start()
         defer {
@@ -141,7 +141,7 @@ struct XPCRemoteEventTransportTests {
         }
 
         let transport = XPCRemoteEventTransportClient(endpoint: endpoint)
-        let remoteBus = PaRemoteEventBus(transport: transport)
+        let remoteBus = RemoteEventBus(transport: transport)
         defer { remoteBus.disconnect() }
 
         guard await waitUntilConnected(remoteBus) else {
@@ -167,14 +167,14 @@ struct XPCRemoteEventTransportTests {
 
     @Test("An older reconnect cannot tear down a newer connection")
     func olderReconnectCantTearDownNewerConnection() async throws {
-        let hostBus = PaEventBus()
+        let hostBus = EventBus()
         let responder = PingResponder()
 
         await MainActor.run {
             hostBus.addListener(responder)
         }
 
-        let eventServer = PaEventServer(bus: hostBus)
+        let eventServer = EventServer(bus: hostBus)
         let acceptor = XPCRemoteEventTransportAcceptor(eventServer: eventServer)
         acceptor.start()
 
@@ -189,7 +189,7 @@ struct XPCRemoteEventTransportTests {
         }
 
         let transport = XPCRemoteEventTransportClient(endpoint: endpoint)
-        let remoteBus = PaRemoteEventBus(transport: transport)
+        let remoteBus = RemoteEventBus(transport: transport)
         let gate = FirstConnectingGate()
 
         defer {
@@ -238,12 +238,12 @@ struct XPCRemoteEventTransportTests {
 
         do {
             let reply = try await transport.ask(
-                .debugPing(PaDebugPingEvent())
+                .debugPing(DebugPingEvent())
             )
 
             #expect(
                 reply == .debugPong(
-                    PaDebugPongEvent(message: "remote-ok")
+                    DebugPongEvent(message: "remote-ok")
                 )
             )
         } catch {
@@ -272,7 +272,7 @@ struct XPCRemoteEventTransportTests {
         let transport = XPCRemoteEventTransportClient(
             endpoint: listener.endpoint
         )
-        let remoteBus = PaRemoteEventBus(transport: transport)
+        let remoteBus = RemoteEventBus(transport: transport)
 
         defer {
             host.resumeSuspendedHandshake(with: false)
@@ -305,7 +305,7 @@ struct XPCRemoteEventTransportTests {
 
         host.resumeSuspendedHandshake(with: true)
 
-        await #expect(throws: PaEventRemoteError.notConnected) {
+        await #expect(throws: EventRemoteError.notConnected) {
             try await reconnect.value
         }
 
@@ -322,7 +322,7 @@ private final class FirstConnectingGate: @unchecked Sendable {
     private var isPaused = false
     private var wasReleased = false
 
-    func handle(_ state: PaRemoteConnectionState) {
+    func handle(_ state: RemoteConnectionState) {
         guard state == .connecting else { return }
 
         let shouldPause = lock.withLock {
@@ -369,7 +369,7 @@ private final class FirstConnectingGate: @unchecked Sendable {
     }
 }
 
-private final class ControllableHandshakeHost: NSObject, PaEventHostXPC, @unchecked Sendable {
+private final class ControllableHandshakeHost: NSObject, EventHostXPC, @unchecked Sendable {
     private let lock = NSLock()
 
     private var shouldSuspendNextHandshake = false
@@ -438,7 +438,7 @@ private final class ControllableHandshakeHost: NSObject, PaEventHostXPC, @unchec
     }
 
     func ask(_ data: Data, withReply reply: @escaping (Data?, (any Error)?) -> Void) {
-        reply(nil, PaEventRemoteError.notConnected)
+        reply(nil, EventRemoteError.notConnected)
     }
 }
 
@@ -456,12 +456,12 @@ private final class ControllableHandshakeListenerDelegate: NSObject, NSXPCListen
         shouldAcceptNewConnection connection: NSXPCConnection
     ) -> Bool {
         connection.exportedInterface = NSXPCInterface(
-            with: PaEventHostXPC.self
+            with: EventHostXPC.self
         )
         connection.exportedObject = host
 
         connection.remoteObjectInterface = NSXPCInterface(
-            with: PaRemoteEventBusXPC.self
+            with: RemoteEventBusXPC.self
         )
 
         lock.withLock {

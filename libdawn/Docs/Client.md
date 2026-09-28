@@ -1,6 +1,6 @@
 # Client
 
-Clients never talk to `PaEventBus` directly. They use `PaRemoteEventBus` with a transport that points at the host.
+Clients never talk to `EventBus` directly. They use `RemoteEventBus` with a transport that points at the host.
 
 ## Connect
 
@@ -14,26 +14,26 @@ import libdawn
 let transport = XPCRemoteEventTransportClient(
     machServiceName: "app.opendawn.dawnAgent"
 )
-let remote = PaRemoteEventBus(transport: transport)
+let remote = RemoteEventBus(transport: transport)
 
 remote.isConnected  // true only after a transport handshake with the host
 remote.disconnect()
 ```
 
-On launch, subscribe to the host’s empty distributed notification (`app.opendawn.dawnAgent.eventBusReady`). Keep one `PaRemoteEventBus` and call `attemptReconnect()` when the ping fires, and once when a live connection drops. Do not retry in a loop after a failed handshake; wait for the next ready ping.
+On launch, subscribe to the host’s empty distributed notification (`app.opendawn.dawnAgent.eventBusReady`). Keep one `RemoteEventBus` and call `attemptReconnect()` when the ping fires, and once when a live connection drops. Do not retry in a loop after a failed handshake; wait for the next ready ping.
 
 `publish` is best-effort. Use `ask` when you need confirmation from a host listener.
 
 In-process tests can still use `XPCRemoteEventTransportClient(endpoint:)` with an anonymous listener.
 
-This rendezvous is implemented by the host and client. The client API is the `PaRemoteEventBus`.
+This rendezvous is implemented by the host and client. The client API is the `RemoteEventBus`.
 
 ## Listen
 
 ```swift
 @MainActor
 final class MyClientListener: Listener {
-    func handle(_ event: PaEvent, reply: (@Sendable (PaEvent) -> Void)?) {
+    func handle(_ event: Event, reply: (@Sendable (Event) -> Void)?) {
         // reply is always nil on the client. Host asks never reach remotes.
         if case .switchSpace(let payload) = event {
             // do something with it
@@ -55,10 +55,10 @@ Client listeners only receive **publish** fan-out from the host. **They are not 
 ## Publish and ask
 
 ```swift
-remote.publish(.switchSpace(PaSwitchSpaceEvent(spaceIndex: 3)))
+remote.publish(.switchSpace(SwitchSpaceEvent(spaceIndex: 3)))
 
 let pong = try await remote.ask(
-    .debugPing(PaDebugPingEvent()),
+    .debugPing(DebugPingEvent()),
     timeout: .seconds(5)
 )
 ```
@@ -69,22 +69,22 @@ let pong = try await remote.ask(
 
 Errors:
 
-- `PaEventRemoteError.notConnected` — the transport is down
-- `PaEventAskError.noHandler` — the host has no local listener for that kind
-- `PaEventAskError.timeout` — a host listener did not reply in time
-- `PaEventRemoteError.invalidPayload` — the host reply could not be decoded
+- `EventRemoteError.notConnected` — the transport is down
+- `EventAskError.noHandler` — the host has no local listener for that kind
+- `EventAskError.timeout` — a host listener did not reply in time
+- `EventRemoteError.invalidPayload` — the host reply could not be decoded
 
 ## Tests without a real transport
 
 Testing can use the `LoopbackEventLink` class. It is a pair of local client and server implementations. 
 
 ```swift
-let hostBus = PaEventBus()
-let eventServer = PaEventServer(bus: hostBus)
+let hostBus = EventBus()
+let eventServer = EventServer(bus: hostBus)
 let link = LoopbackEventLink()
 eventServer.attach(link.server)
 
-let remote = PaRemoteEventBus(transport: link.client)
+let remote = RemoteEventBus(transport: link.client)
 remote.addListener(myListener)
-try await remote.ask(.debugPing(PaDebugPingEvent()))
+try await remote.ask(.debugPing(DebugPingEvent()))
 ```

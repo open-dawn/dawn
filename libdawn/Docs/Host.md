@@ -1,6 +1,6 @@
 # Host
 
-dawnAgent is the production host. It owns one `PaEventBus`, registers local listeners, and accepts remote clients through `PaEventServer`.
+dawnAgent is the production host. It owns one `EventBus`, registers local listeners, and accepts remote clients through `EventServer`.
 
 The bus is not a singleton. Tests create their own.
 
@@ -11,10 +11,10 @@ import libdawn
 
 @MainActor
 final class LayoutEngine: Listener {
-    func handle(_ event: PaEvent, reply: (@Sendable (PaEvent) -> Void)?) {
+    func handle(_ event: Event, reply: (@Sendable (Event) -> Void)?) {
         switch event {
         case .debugPing:
-            reply?(.debugPong(PaDebugPongEvent(message: "ok")))
+            reply?(.debugPong(DebugPongEvent(message: "ok")))
         case .switchSpace(let payload):
             // apply layout
             _ = payload.spaceIndex
@@ -24,7 +24,7 @@ final class LayoutEngine: Listener {
     }
 }
 
-let bus = PaEventBus()
+let bus = EventBus()
 let layout = LayoutEngine()
 bus.addListener(layout, kinds: [.switchSpace, .debugPing])
 // omit kinds (or pass nil) to receive every kind
@@ -35,11 +35,11 @@ bus.addListener(layout, kinds: [.switchSpace, .debugPing])
 `kinds: nil` (the default) means every kind. A non-empty set filters. An empty set means none.
 
 ```swift
-bus.publish(.switchSpace(PaSwitchSpaceEvent(spaceIndex: 1)))
+bus.publish(.switchSpace(SwitchSpaceEvent(spaceIndex: 1)))
 
-let reply = try await bus.ask(.debugPing(PaDebugPingEvent()))
-// PaEventAskError.noHandler — no local listener for that kind
-// PaEventAskError.timeout   — a listener was called but did not reply in time
+let reply = try await bus.ask(.debugPing(DebugPingEvent()))
+// EventAskError.noHandler — no local listener for that kind
+// EventAskError.timeout   — a listener was called but did not reply in time
 ```
 
 `ask` only considers local listeners. A connected remote process does not count. If nobody on the host can reply, you get `noHandler` immediately, not a timeout.
@@ -51,11 +51,11 @@ Call `reply` at most once. The first reply wins if several listeners handle the 
 ## Accepting remotes
 
 ```swift
-let eventServer = PaEventServer(bus: bus)
+let eventServer = EventServer(bus: bus)
 let acceptor = XPCRemoteEventTransportAcceptor(eventServer: eventServer)
 acceptor.start()
 ```
-Each protocol implementation has its own Acceptor, responsible for hosting the service and accepting the connections, running `PaEventServer.attach` to register a successfull connection.
+Each protocol implementation has its own Acceptor, responsible for hosting the service and accepting the connections, running `EventServer.attach` to register a successfull connection.
 
 For XPC, each accepted XPC connection becomes a server-side transport attached to the bus. Remote `publish` is republished locally (and fanned out, including back to that client). Remote `ask` is `bus.ask`. Remote subscriptions update which kinds that client receives.
 
@@ -75,7 +75,7 @@ You can `attach` / `detach` any `RemoteEventTransportServer` (XPC from the accep
 dawnAgent is a login item. Launchd advertises a Mach service named as the helper’s bundle identifier. That name is how clients connect; do not archive `NSXPCListenerEndpoint` (it can only travel through an `NSXPCCoder` on a live XPC connection).
 
 ```swift
-let eventServer = PaEventServer(bus: bus)
+let eventServer = EventServer(bus: bus)
 let acceptor = XPCRemoteEventTransportAcceptor(
     eventServer: eventServer,
     machServiceName: "app.opendawn.dawnAgent"
@@ -97,12 +97,12 @@ Client reconnect (subscribe to the ping, connect with `XPCRemoteEventTransportCl
 Testing can use the `LoopbackEventLink` class. It is a pair of local client and server implementations. 
 
 ```swift
-let hostBus = PaEventBus()
-let eventServer = PaEventServer(bus: hostBus)
+let hostBus = EventBus()
+let eventServer = EventServer(bus: hostBus)
 let link = LoopbackEventLink()
 eventServer.attach(link.server)
 
-let remote = PaRemoteEventBus(transport: link.client)
+let remote = RemoteEventBus(transport: link.client)
 remote.addListener(myListener)
-try await remote.ask(.debugPing(PaDebugPingEvent()))
+try await remote.ask(.debugPing(DebugPingEvent()))
 ```

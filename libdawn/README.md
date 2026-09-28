@@ -2,7 +2,7 @@
 
 Typed pub/sub and request/reply between PineappleWM processes. Apps implement `Listener` and call `publish` / `ask`. XPC is one transport, not the API.
 
-**Host** is dawnAgent: it owns `PaEventBus` and accepts remote connections. **Clients** (Settings, CLIs, or other app that wants to interact with the host) use `PaRemoteEventBus` over a transport you inject.
+**Host** is dawnAgent: it owns `EventBus` and accepts remote connections. **Clients** (Settings, CLIs, or other app that wants to interact with the host) use `RemoteEventBus` over a transport you inject.
 
 > This framework has been made with the assumption that this can change in the future or be used in a different context. dawnAgent is indeed the host implementation, but it isn't the only possibility this framework allows.
 
@@ -17,14 +17,14 @@ Typed pub/sub and request/reply between PineappleWM processes. Apps implement `L
 ```mermaid
 flowchart LR
   subgraph pawm [dawnAgent]
-    Bus[PaEventBus]
+    Bus[EventBus]
     Local[Local listeners]
-    Server[PaEventServer]
+    Server[EventServer]
     Local --> Bus
     Server --> Bus
   end
   subgraph settings [dawnApp]
-    Remote[PaRemoteEventBus]
+    Remote[RemoteEventBus]
     UI[Listeners]
     UI --> Remote
   end
@@ -35,8 +35,8 @@ flowchart LR
 
 | Process | Access point | Typical setup |
 |---------|----------------|---------------|
-| Host | `PaEventBus` | `PaEventServer` + `XPCRemoteEventTransportAcceptor(eventServer:machServiceName:)` |
-| Clients | `PaRemoteEventBus` | `XPCRemoteEventTransportClient(machServiceName:)` |
+| Host | `EventBus` | `EventServer` + `XPCRemoteEventTransportAcceptor(eventServer:machServiceName:)` |
+| Clients | `RemoteEventBus` | `XPCRemoteEventTransportClient(machServiceName:)` |
 
 ## `publish` vs `ask`
 
@@ -47,13 +47,13 @@ flowchart LR
 | Remote listeners | Receive it | Do not. A remote `ask` is answered on the host. |
 
 ```swift
-bus.publish(.switchSpace(PaSwitchSpaceEvent(spaceIndex: 2)))
+bus.publish(.switchSpace(SwitchSpaceEvent(spaceIndex: 2)))
 
-let pong = try await bus.ask(.debugPing(PaDebugPingEvent()))
+let pong = try await bus.ask(.debugPing(DebugPingEvent()))
 ```
 
 ## Events
 
-Closed catalog on `PaEvent` / `PaEventKind`. Payloads live in this kit so every process decodes the same type. Add cases here, not in any other target.
+Closed catalog on `Event` / `EventKind`. Payloads live in this kit so every process decodes the same type. Add cases here, not in any other target.
 
 See [API](Docs/API.md#events).

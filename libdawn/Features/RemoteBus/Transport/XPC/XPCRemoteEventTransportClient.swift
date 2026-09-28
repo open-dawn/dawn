@@ -4,7 +4,7 @@ public final class XPCRemoteEventTransportClient: NSObject, RemoteEventTransport
     private struct ReconnectStart {
         let generation: UInt64
         let connectionToInvalidate: NSXPCConnection?
-        let stateHandler: (@Sendable (PaRemoteConnectionState) -> Void)?
+        let stateHandler: (@Sendable (RemoteConnectionState) -> Void)?
     }
 
     private enum ConnectionSource: Sendable {
@@ -15,10 +15,10 @@ public final class XPCRemoteEventTransportClient: NSObject, RemoteEventTransport
     private let lock = NSLock()
     private let connectionSource: ConnectionSource
     private var connection: NSXPCConnection?
-    private var hostProxy: PaEventHostXPC?
-    private var deliveryHandler: (@Sendable (PaEvent) -> Void)?
-    private var connectionStateHandler: (@Sendable (PaRemoteConnectionState) -> Void)?
-    private var state: PaRemoteConnectionState = .disconnected
+    private var hostProxy: EventHostXPC?
+    private var deliveryHandler: (@Sendable (Event) -> Void)?
+    private var connectionStateHandler: (@Sendable (RemoteConnectionState) -> Void)?
+    private var state: RemoteConnectionState = .disconnected
     private var connectionGeneration: UInt64 = 0
     private var stopped = false
 
@@ -40,27 +40,27 @@ public final class XPCRemoteEventTransportClient: NSObject, RemoteEventTransport
         lock.withLock { state == .connected }
     }
 
-    public var connectionState: PaRemoteConnectionState {
+    public var connectionState: RemoteConnectionState {
         lock.withLock { state }
     }
 
-    public func setDeliveryHandler(_ handler: @escaping @Sendable (PaEvent) -> Void) {
+    public func setDeliveryHandler(_ handler: @escaping @Sendable (Event) -> Void) {
         lock.withLock {
             deliveryHandler = handler
         }
     }
 
     public func setConnectionStateHandler(
-        _ handler: (@Sendable (PaRemoteConnectionState) -> Void)?
+        _ handler: (@Sendable (RemoteConnectionState) -> Void)?
     ) {
         lock.withLock {
             connectionStateHandler = handler
         }
     }
 
-    public func publish(_ event: PaEvent) {
+    public func publish(_ event: Event) {
         guard let hostProxy = currentHostProxy(),
-              let data = try? PaEventCodec.encode(event)
+              let data = try? EventCodec.encode(event)
         else {
             return
         }
@@ -68,7 +68,7 @@ public final class XPCRemoteEventTransportClient: NSObject, RemoteEventTransport
         hostProxy.publish(data)
     }
 
-    public func subscribe(kinds: Set<PaEventKind>?) {
+    public func subscribe(kinds: Set<EventKind>?) {
         guard let hostProxy = currentHostProxy() else { return }
 
         if let kinds {
@@ -78,12 +78,12 @@ public final class XPCRemoteEventTransportClient: NSObject, RemoteEventTransport
         }
     }
 
-    public func ask(_ event: PaEvent) async throws -> PaEvent {
+    public func ask(_ event: Event) async throws -> Event {
         guard let hostProxy = currentHostProxy() else {
-            throw PaEventRemoteError.notConnected
+            throw EventRemoteError.notConnected
         }
 
-        let data = try PaEventCodec.encode(event)
+        let data = try EventCodec.encode(event)
 
         return try await withCheckedThrowingContinuation { continuation in
             var resumed = false
@@ -100,12 +100,12 @@ public final class XPCRemoteEventTransportClient: NSObject, RemoteEventTransport
                     }
 
                     guard let responseData else {
-                        continuation.resume(throwing: PaEventRemoteError.invalidPayload)
+                        continuation.resume(throwing: EventRemoteError.invalidPayload)
                         return
                     }
 
                     do {
-                        continuation.resume(returning: try PaEventCodec.decode(responseData))
+                        continuation.resume(returning: try EventCodec.decode(responseData))
                     } catch {
                         continuation.resume(throwing: error)
                     }
@@ -116,7 +116,7 @@ public final class XPCRemoteEventTransportClient: NSObject, RemoteEventTransport
 
     public func attemptReconnect() async throws {
         guard let reconnect = beginReconnect() else {
-            throw PaEventRemoteError.notConnected
+            throw EventRemoteError.notConnected
         }
 
         reconnect.stateHandler?(.connecting)
@@ -135,7 +135,7 @@ public final class XPCRemoteEventTransportClient: NSObject, RemoteEventTransport
 
         guard established else {
             setConnection(.disconnected, generation: reconnect.generation)
-            throw PaEventRemoteError.notConnected
+            throw EventRemoteError.notConnected
         }
 
         let connected = await completeHandshake(generation: reconnect.generation)
@@ -145,7 +145,7 @@ public final class XPCRemoteEventTransportClient: NSObject, RemoteEventTransport
                 .disconnected,
                 generation: reconnect.generation
             )
-            throw PaEventRemoteError.notConnected
+            throw EventRemoteError.notConnected
         }
     }
 
@@ -201,9 +201,9 @@ public final class XPCRemoteEventTransportClient: NSObject, RemoteEventTransport
             connection = NSXPCConnection(listenerEndpoint: endpoint)
         }
 
-        connection.exportedInterface = NSXPCInterface(with: PaRemoteEventBusXPC.self)
+        connection.exportedInterface = NSXPCInterface(with: RemoteEventBusXPC.self)
         connection.exportedObject = self
-        connection.remoteObjectInterface = NSXPCInterface(with: PaEventHostXPC.self)
+        connection.remoteObjectInterface = NSXPCInterface(with: EventHostXPC.self)
         connection.interruptionHandler = { [weak self] in
             self?.handleInterruption(generation: generation)
         }
@@ -215,7 +215,7 @@ public final class XPCRemoteEventTransportClient: NSObject, RemoteEventTransport
         self.connection = connection
         self.hostProxy = connection.remoteObjectProxyWithErrorHandler { [weak self] _ in
             self?.handleInterruption(generation: generation)
-        } as? PaEventHostXPC
+        } as? EventHostXPC
         state = hostProxy == nil ? .disconnected : .connecting
     }
 
@@ -240,8 +240,8 @@ public final class XPCRemoteEventTransportClient: NSObject, RemoteEventTransport
         setConnection(.disconnected, generation: generation)
     }
 
-    private func setConnection(_ newState: PaRemoteConnectionState, generation: UInt64) {
-        let handler = lock.withLock { () -> (@Sendable (PaRemoteConnectionState) -> Void)? in
+    private func setConnection(_ newState: RemoteConnectionState, generation: UInt64) {
+        let handler = lock.withLock { () -> (@Sendable (RemoteConnectionState) -> Void)? in
             guard connectionGeneration == generation else { return nil }
             state = newState
             return connectionStateHandler
@@ -253,14 +253,14 @@ public final class XPCRemoteEventTransportClient: NSObject, RemoteEventTransport
         lock.withLock { connectionGeneration }
     }
 
-    private func currentHostProxy() -> PaEventHostXPC? {
+    private func currentHostProxy() -> EventHostXPC? {
         lock.withLock { hostProxy }
     }
 }
 
 private extension XPCRemoteEventTransportClient {
     private func completeHandshake(generation: UInt64) async -> Bool {
-        let snapshot = lock.withLock { () -> (isCurrent: Bool, state: PaRemoteConnectionState) in
+        let snapshot = lock.withLock { () -> (isCurrent: Bool, state: RemoteConnectionState) in
             (connectionGeneration == generation && !stopped, state)
         }
 
@@ -310,7 +310,7 @@ private extension XPCRemoteEventTransportClient {
         let result = lock.withLock {
             () -> (
                 committed: Bool,
-                handler: (@Sendable (PaRemoteConnectionState) -> Void)?
+                handler: (@Sendable (RemoteConnectionState) -> Void)?
             ) in
 
             guard connectionGeneration == generation,
@@ -352,9 +352,9 @@ private final class HandshakeSession: @unchecked Sendable {
     }
 }
 
-extension XPCRemoteEventTransportClient: PaRemoteEventBusXPC {
+extension XPCRemoteEventTransportClient: RemoteEventBusXPC {
     func deliver(_ data: Data) {
-        guard let event = try? PaEventCodec.decode(data) else { return }
+        guard let event = try? EventCodec.decode(data) else { return }
         let handler = lock.withLock { deliveryHandler }
         handler?(event)
     }
