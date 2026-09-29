@@ -7,7 +7,7 @@ options:
 settings:
   base:
     SWIFT_VERSION: &swiftversion "6"
-    MARKETING_VERSION: &mktversion "0.0.0"
+    MARKETING_VERSION: &mktversion "1.0.0"
     CURRENT_PROJECT_VERSION: &buildversion "1"
 
 packages:
