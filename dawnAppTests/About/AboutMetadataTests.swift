@@ -15,7 +15,7 @@ struct AboutMetadataTests {
     func decodesValidMetadata() throws {
         let json = """
         {
-          "copyright": "PineApple INC 2026",
+          "copyright": "DAWN 2026",
           "license": "GNU GENERAL PUBLIC LICENSE",
           "commit": {
             "sha": "2b94d72b4578ddad0892af886f37739d1f1a396f",
@@ -88,7 +88,7 @@ struct AboutMetadataTests {
     }
 
     private func makeMetadata(
-        copyright: String = "PineApple INC 2026",
+        copyright: String = "DAWN 2026",
         license: String = "GNU GENERAL PUBLIC LICENSE",
         sha: String = "2b94d72b4578ddad0892af886f37739d1f1a396f",
         reference: String = "stable",

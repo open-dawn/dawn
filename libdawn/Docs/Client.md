@@ -65,7 +65,7 @@ let pong = try await remote.ask(
 
 `publish` is sent to the host bus and fanned out to matching listeners, including this client.
 
-`ask` waits for one reply from a **local host** listener. Your client's `Listener` is not called. A one-shot tool (`pacli status`) can `ask` with zero listeners.
+`ask` waits for one reply from a **local host** listener. Your client's `Listener` is not called. A one-shot tool (`dawncli status`) can `ask` with zero listeners.
 
 Errors:
 

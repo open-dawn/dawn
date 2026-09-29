@@ -1,6 +1,6 @@
 # libdawn
 
-Typed pub/sub and request/reply between PineappleWM processes. Apps implement `Listener` and call `publish` / `ask`. XPC is one transport, not the API.
+Typed pub/sub and request/reply between DAWN processes. Apps implement `Listener` and call `publish` / `ask`. XPC is one transport, not the API.
 
 **Host** is dawnAgent: it owns `EventBus` and accepts remote connections. **Clients** (Settings, CLIs, or other app that wants to interact with the host) use `RemoteEventBus` over a transport you inject.
 
@@ -16,7 +16,7 @@ Typed pub/sub and request/reply between PineappleWM processes. Apps implement `L
 
 ```mermaid
 flowchart LR
-  subgraph pawm [dawnAgent]
+  subgraph dawnAgent [dawnAgent]
     Bus[EventBus]
     Local[Local listeners]
     Server[EventServer]

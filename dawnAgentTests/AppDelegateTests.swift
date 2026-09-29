@@ -65,12 +65,12 @@ struct AppDelegateTests {
             timeout: .seconds(1)
         )
 
-        guard case .contextsFetched(let paContextsFetchedEvent) = response else {
+        guard case .contextsFetched(let contextsFetchedEvent) = response else {
             Issue.record("Expected contextsFetched, received \(response)")
             return
         }
 
-        #expect(paContextsFetchedEvent.contexts == expectedContext)
+        #expect(contextsFetchedEvent.contexts == expectedContext)
     }
 
     @Test("Startup failure does not start event bus service")
