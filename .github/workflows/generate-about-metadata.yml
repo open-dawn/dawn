@@ -30,17 +30,17 @@ jobs:
           --sha "$COMMIT_SHA" \
           --reference "$COMMIT_REFERENCE" \
           --repository_url "$REPOSITORY_URL" \
-          --output PaSettingsUI/About/AboutMetadata.json
+          --output dawnApp/About/AboutMetadata.json
 
       - name: Validate generated JSON
         run: | 
           python -m json.tool \
-            PaSettingsUI/About/AboutMetadata.json
+            dawnApp/About/AboutMetadata.json
 
       - name: Upload generated metadata
         uses: actions/upload-artifact@v7
         with:
           name: about-metadata
-          path: PaSettingsUI/About/AboutMetadata.json
+          path: dawnApp/About/AboutMetadata.json
           if-no-files-found: error
           retention-days: 7

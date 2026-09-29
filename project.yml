@@ -1,158 +1,181 @@
-name: pineapplewm
+name: dawn
 options:
   bundleIdPrefix: app.opendawn
+  deploymentTarget:
+    macOS: &deployversion "26.0"
 
 settings:
   base:
     SWIFT_VERSION: &swiftversion "6"
+    MARKETING_VERSION: &mktversion "0.1.0"
+    CURRENT_PROJECT_VERSION: &buildversion "1"
 
 packages:
-  PaLogging:
-    path: LocalPackages/PaLogging
+  dawnLogging:
+    path: LocalPackages/dawnLogging
 
 targets:
 
-  PaSettingsUI:
+  dawnApp:
     type: application
     platform: macOS
-    deploymentTarget: &deployversion "26.0"
+    deploymentTarget: *deployversion
     sources:
-      - PaSettingsUI
+      - dawnApp
     info:
-      path: PaSettingsUI/Info.plist
+      path: dawnApp/Info.plist
       properties:
-        CFBundleDisplayName: "PineappleWM Settings"
+        CFBundleName: DAWN
+        CFBundleDisplayName: DAWN
         CFBundleShortVersionString: "$(MARKETING_VERSION)"
         CFBundleVersion: "$(CURRENT_PROJECT_VERSION)"
+        LSApplicationCategoryType: public.app-category.utilities
+        LSMinimumSystemVersion: "$(MACOSX_DEPLOYMENT_TARGET)"
+        NSHumanReadableCopyright: "Copyright © 2026 Open Dawn"
     settings:
       base:
-        MARKETING_VERSION: &mktversion "0.0.0"
-        CURRENT_PROJECT_VERSION: &buildversion "1"
+        PRODUCT_NAME: DAWN
+        PRODUCT_MODULE_NAME: dawnApp
+        MARKETING_VERSION: *mktversion
+        CURRENT_PROJECT_VERSION: *buildversion
       configs:
         Debug:
           ENABLE_TESTABILITY: YES
     dependencies:
-      - target: PaEventKit
-      - target: PaWM
+      - target: libdawn
+      - target: dawnAgent
         link: false
         embed: true
         copy:
           destination: wrapper
           subpath: Contents/Library/LoginItems
-      - package: PaLogging
+      - package: dawnLogging
     scheme:
       testTargets:
-        - PaSettingsUITests
+        - dawnAppTests
       gatherCoverageData: true
 
-  PaWM:
+  dawnAgent:
     type: application
     platform: macOS
     deploymentTarget: *deployversion
     sources:
-      - PaWM
+      - dawnAgent
     info:
-      path: PaWM/Info.plist
+      path: dawnAgent/Info.plist
       properties:
-        CFBundleDisplayName: "PineappleWM Launch Agent"
+        CFBundleName: "DAWN Agent"
+        CFBundleDisplayName: "DAWN Agent"
+        CFBundleShortVersionString: "$(MARKETING_VERSION)"
+        CFBundleVersion: "$(CURRENT_PROJECT_VERSION)"
+        LSMinimumSystemVersion: "$(MACOSX_DEPLOYMENT_TARGET)"
         LSUIElement: true
+        NSHumanReadableCopyright: "Copyright © 2026 Open Dawn"
     settings:
       base:
+        PRODUCT_NAME: dawnAgent
         MARKETING_VERSION: *mktversion
+        CURRENT_PROJECT_VERSION: *buildversion
       configs:
         Debug:
           ENABLE_TESTABILITY: YES
     dependencies:
-      - target: PaEventKit
-      - package: PaLogging
+      - target: libdawn
+      - package: dawnLogging
     scheme:
       testTargets:
-        - PaWMTests
+        - dawnAgentTests
       gatherCoverageData: true
-  
-  PaEventKit:
+
+  libdawn:
     type: framework
     platform: macOS
     deploymentTarget: "15.0"
     sources:
-      - path: PaEventKit
+      - path: libdawn
         excludes:
           - README.md
           - Docs/**
     info:
-      path: PaEventKit/Info.plist
+      path: libdawn/Info.plist
       properties:
-        CFBundleDisplayName: "PineappleWM PaEventKit Framework"
+        CFBundleName: libdawn
+        CFBundleDisplayName: libdawn
+        CFBundleShortVersionString: "$(MARKETING_VERSION)"
+        CFBundleVersion: "$(CURRENT_PROJECT_VERSION)"
+        NSHumanReadableCopyright: "Copyright © 2026 Open Dawn"
     settings:
       base:
+        PRODUCT_NAME: libdawn
         MARKETING_VERSION: *mktversion
+        CURRENT_PROJECT_VERSION: *buildversion
         SWIFT_VERSION: *swiftversion
       configs:
         Debug:
           ENABLE_TESTABILITY: YES
     dependencies:
-      - package: PaLogging
+      - package: dawnLogging
     scheme:
       testTargets:
-        - PaEventKitTests
+        - libdawnTests
       gatherCoverageData: true
 
-  PaEventKitTests:
+  libdawnTests:
     type: bundle.unit-test
     platform: macOS
     deploymentTarget: *deployversion
     sources:
-      - PaEventKitTests
+      - libdawnTests
     settings:
       GENERATE_INFOPLIST_FILE: YES
       SWIFT_VERSION: *swiftversion
     dependencies:
-      - target: PaEventKit
+      - target: libdawn
 
-  PaWMTests:
+  dawnAgentTests:
     type: bundle.unit-test
     platform: macOS
     deploymentTarget: *deployversion
     sources:
-      - PaWMTests
+      - dawnAgentTests
     settings:
       GENERATE_INFOPLIST_FILE: YES
       SWIFT_VERSION: *swiftversion
-      TEST_HOST: $(BUILT_PRODUCTS_DIR)/PaWM.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/PaWM
+      TEST_HOST: $(BUILT_PRODUCTS_DIR)/dawnAgent.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/dawnAgent
       BUNDLE_LOADER: $(TEST_HOST)
     dependencies:
-      - target: PaWM
-      - target: PaEventKit
+      - target: dawnAgent
+      - target: libdawn
 
-  PaSettingsUITests:
+  dawnAppTests:
     type: bundle.unit-test
     platform: macOS
     deploymentTarget: *deployversion
     sources:
-      - PaSettingsUITests
+      - dawnAppTests
     settings:
       GENERATE_INFOPLIST_FILE: YES
       SWIFT_VERSION: *swiftversion
-      TEST_HOST: $(BUILT_PRODUCTS_DIR)/PaSettingsUI.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/PaSettingsUI
+      TEST_HOST: $(BUILT_PRODUCTS_DIR)/DAWN.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/DAWN
       BUNDLE_LOADER: $(TEST_HOST)
     dependencies:
-      - target: PaSettingsUI
-      - target: PaEventKit
+      - target: dawnApp
+      - target: libdawn
 
 schemes:
-  pineapplewm:
+  dawn:
     build:
       targets:
-        PaEventKit: all
-        PaWM: all
-        PaSettingsUI: all
-        PaEventKitTests: [test]
-        PaWMTests: [test]
-        PaSettingsUITests: [test]
+        libdawn: all
+        dawnAgent: all
+        dawnApp: all
+        libdawnTests: [test]
+        dawnAgentTests: [test]
+        dawnAppTests: [test]
     test:
       gatherCoverageData: true
       targets:
-        - PaEventKitTests
-        - PaWMTests
-        - PaSettingsUITests
-        - package: PaLogging/PaLoggingTests
+        - libdawnTests
+        - dawnAgentTests
+        - dawnAppTests
+        - package: dawnLogging/dawnLoggingTests

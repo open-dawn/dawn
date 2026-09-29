@@ -1,13 +1,13 @@
-# Releasing PineappleWM
+# Releasing DAWN
 
-This document defines how PineappleWM releases are prepared and distributed
+This document defines how DAWN releases are prepared and distributed
 
 ## Distribution
 
-PineappleWM is distributed through:
+DAWN is distributed through:
 
 - GitHub Releases.
-- The official PineappleWM website.
+- The official DAWN website.
 
 GitHub Releases is the canonical source for the release artifacts. The website must link to the GitHub artifact or distribute the exact same file and checksum. A release must never be rebuilt separately for the website.
 
@@ -18,24 +18,24 @@ The first alpha supports:
 - macOS 26.0 or later.
 - Apple Silicon Macs.
 - Distribution through a signed and notarized macOS disk image.
-- Installation by dragging PineappleWM into `/Applications`.
+- Installation by dragging DAWN into `/Applications`.
 
 Release artifacts use the following naming convention:
 
-`PineappleWM-<version>.dmg`
+`DAWN-<version>.dmg`
 
 For the first alpha:
 
-`PineappleWM-0.1.0-alpha.1.dmg`
+`DAWN-0.1.0-alpha.1.dmg`
 
 The disk image must contain:
 
-- `PineappleWM.app`
+- `DAWN.app`
 - A symbolic link to `/Applications`
 
 ## Versioning
 
-PineappleWM uses semantic versioning for Git tags.
+DAWN uses semantic versioning for Git tags.
 
 The first alpha release is:
 
@@ -101,7 +101,7 @@ Every published release tag must point to the exact commit released from `stable
 14. Generate a SHA-256 checksum.
 15. Create a draft GitHub prerelease and attach the DMG and checksum.
 16. Download the attached disk image through a browser.
-17. Mount it, copy PineappleWM into `/Applications`, and test it on a clean Mac.
+17. Mount it, copy DAWN into `/Applications`, and test it on a clean Mac.
 18. Publish the GitHub prerelease.
 19. Merge any release-only fixes back into `main`.
 
@@ -118,7 +118,7 @@ A release must not be published unless:
 - Apple notarization succeeds.
 - The notarization ticket is stapled to the disk image.
 - Gatekeeper accepts the downloaded disk image and application.
-- The disk image contains `PineappleWM.app` and a symbolic link to `/Applications`.
+- The disk image contains `DAWN.app` and a symbolic link to `/Applications`.
 - The application launches from `/Applications` on a clean macOS 26 user account.
 - Launching directly from the mounted disk image has also been tested.
 - Login-item behavior works after copying the applicatoin into `/Applications`.
