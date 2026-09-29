@@ -141,8 +141,8 @@ jobs:
 
       - name: Build Release configuration
         if: >-
-          github.event.name == 'workflow_dispatch' ||
-          github.ref == 'refs/head/stable' ||
+          github.event_name == 'workflow_dispatch' ||
+          github.ref == 'refs/heads/stable' ||
           github.base_ref == 'stable'
         shell: bash
         run: |

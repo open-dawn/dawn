@@ -97,7 +97,7 @@ Every published release tag must point to the exact commit released from `stable
 10. Sign the disk image with a Developer ID Application certificate.
 11. Verify the integrity and signatures of the disk image and application.
 12. Submit the disk image to Apple for notarization.
-13. Staple and validate te notarization ticket.
+13. Staple and validate the notarization ticket.
 14. Generate a SHA-256 checksum.
 15. Create a draft GitHub prerelease and attach the DMG and checksum.
 16. Download the attached disk image through a browser.
@@ -112,8 +112,8 @@ A release must not be published unless:
 - CI passes on the tagged commit.
 - The application was built from a clean checkout.
 - Version and build metadata match the release.
-- The application and all embedded executable code have valid Developer ID Applcation signatures
-- The disk image has a valid Developer ID Applicaion signature.
+- The application and all embedded executable code have valid Developer ID Application signatures
+- The disk image has a valid Developer ID Application signature.
 - The disk image passes an integrity check.
 - Apple notarization succeeds.
 - The notarization ticket is stapled to the disk image.
@@ -121,7 +121,7 @@ A release must not be published unless:
 - The disk image contains `DAWN.app` and a symbolic link to `/Applications`.
 - The application launches from `/Applications` on a clean macOS 26 user account.
 - Launching directly from the mounted disk image has also been tested.
-- Login-item behavior works after copying the applicatoin into `/Applications`.
+- Login-item behavior works after copying the application into `/Applications`.
 - The application contains the intended Apple Silicon architecture.
 - Installation has been tested using a browser-downloaded disk image.
 - The published checksum matches the downloadable artifact.
