@@ -10,6 +10,13 @@ settings:
     MARKETING_VERSION: &mktversion "0.1.0"
     CURRENT_PROJECT_VERSION: &buildversion "1"
 
+  configs:
+    Release:
+      CODE_SIGN_STYLE: Manual
+      CODE_SIGN_IDENTITY: "Developer ID Application"
+      DEVELOPMENT_TEAM: "2Q5VC69BFD"
+      ENABLE_HARDENED_RUNTIME: YES
+
 packages:
   dawnLogging:
     path: LocalPackages/dawnLogging
@@ -76,6 +83,7 @@ targets:
         PRODUCT_NAME: dawnAgent
         MARKETING_VERSION: *mktversion
         CURRENT_PROJECT_VERSION: *buildversion
+        SKIP_INSTALL: YES
       configs:
         Debug:
           ENABLE_TESTABILITY: YES
