@@ -19,9 +19,9 @@ final class DawnLoggingTests: XCTestCase {
             #log("Hello")
             """,
             expandedSource: #"""
-            Loggers.general.debug("[\(#fileID, privacy: .public):\(#line, privacy: .public) \#
-            \(#function, privacy: .public)] Hello")
-            """#,
+                Loggers.general.debug("[\(#fileID, privacy: .public):\(#line, privacy: .public) \#
+                \(#function, privacy: .public)] Hello")
+                """#,
             macros: testMacros
         )
     }
@@ -32,9 +32,9 @@ final class DawnLoggingTests: XCTestCase {
             #log("Connection established", level: .info, category: .transport)
             """,
             expandedSource: #"""
-            Loggers.transport.info("[\(#fileID, privacy: .public):\(#line, privacy: .public) \#
-            \(#function, privacy: .public)] Connection established")
-            """#,
+                Loggers.transport.info("[\(#fileID, privacy: .public):\(#line, privacy: .public) \#
+                \(#function, privacy: .public)] Connection established")
+                """#,
             macros: testMacros
         )
     }
@@ -45,9 +45,9 @@ final class DawnLoggingTests: XCTestCase {
             #log("ID: \(id, privacy: .private)", level: .info, category: .settings)
             """#,
             expandedSource: #"""
-            Loggers.settings.info("[\(#fileID, privacy: .public):\(#line, privacy: .public) \#
-            \(#function, privacy: .public)] ID: \(id, privacy: .private)")
-            """#,
+                Loggers.settings.info("[\(#fileID, privacy: .public):\(#line, privacy: .public) \#
+                \(#function, privacy: .public)] ID: \(id, privacy: .private)")
+                """#,
             macros: testMacros
         )
     }
@@ -58,9 +58,57 @@ final class DawnLoggingTests: XCTestCase {
             #log(#"ID: \#(id, privacy: .private)"#, category: .settings)
             """##,
             expandedSource: ##"""
-            Loggers.settings.debug(#"[\#(#fileID, privacy: .public):\#(#line, privacy: .public) \##
-            \#(#function, privacy: .public)] ID: \#(id, privacy: .private)"#)
-            """##,
+                Loggers.settings.debug(#"[\#(#fileID, privacy: .public):\#(#line, privacy: .public) \##
+                \#(#function, privacy: .public)] ID: \#(id, privacy: .private)"#)
+                """##,
+            macros: testMacros
+        )
+    }
+
+    func testMultilineLog() {
+        assertMacroExpansion(
+            #"""
+            #log(
+            """
+            Connection failed; \
+            retrying
+            """,
+            level: .error,
+            category: .transport
+            )
+            """#,
+            expandedSource: #"""
+                Loggers.transport.error(
+                    """
+                    [\(#fileID, privacy: .public):\(#line, privacy: .public) \#
+                \(#function, privacy: .public)] Connection failed; \
+                    retrying
+                    """)
+                """#,
+            macros: testMacros
+        )
+    }
+
+    func testMultilineLogPreservesPrivacyInterpolation() {
+        assertMacroExpansion(
+            #"""
+            #log(
+                """
+                ID: \(id, privacy: .private); \
+                retrying
+                """,
+                level: .info,
+                category: .settings
+            )
+            """#,
+            expandedSource: #"""
+                Loggers.settings.info(
+                    """
+                    [\(#fileID, privacy: .public):\(#line, privacy: .public) \#
+                \(#function, privacy: .public)] ID: \(id, privacy: .private); \
+                    retrying
+                    """)
+                """#,
             macros: testMacros
         )
     }
