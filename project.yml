@@ -77,6 +77,7 @@ targets:
         CFBundleVersion: "$(CURRENT_PROJECT_VERSION)"
         LSMinimumSystemVersion: "$(MACOSX_DEPLOYMENT_TARGET)"
         LSUIElement: true
+        NSAccessibilityUsageDescription: "DAWN Agent draws a border around the focused window and needs Accessibility access to read window frames."
         NSHumanReadableCopyright: "Copyright © 2026 Open Dawn"
     settings:
       base:

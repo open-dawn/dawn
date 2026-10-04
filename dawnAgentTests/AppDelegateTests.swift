@@ -20,13 +20,15 @@ struct AppDelegateTests {
         let provider = ContextProviderStub()
 
         let delegate = AppDelegate(
-            eventBusService: service
-        ) { bus in
-            WindowManagerListener(
-                bus: bus,
-                contextManager: provider
-            )
-        }
+            eventBusService: service,
+            makeWindowManagerListener: { bus in
+                WindowManagerListener(
+                    bus: bus,
+                    contextManager: provider
+                )
+            },
+            makeFocusBorderController: { NoOpFocusBorderController() }
+        )
 
         try await delegate.start()
 
@@ -50,13 +52,15 @@ struct AppDelegateTests {
         let provider = ContextProviderStub(contexts: expectedContext)
 
         let delegate = AppDelegate(
-            eventBusService: service
-        ) { bus in
-            WindowManagerListener(
-                bus: bus,
-                contextManager: provider
-            )
-        }
+            eventBusService: service,
+            makeWindowManagerListener: { bus in
+                WindowManagerListener(
+                    bus: bus,
+                    contextManager: provider
+                )
+            },
+            makeFocusBorderController: { NoOpFocusBorderController() }
+        )
 
         try await delegate.start()
 
@@ -78,10 +82,12 @@ struct AppDelegateTests {
         let service = EventBusServiceSpy()
 
         let delegate = AppDelegate(
-            eventBusService: service
-        ) { _ in
-            throw StartupError.expected
-        }
+            eventBusService: service,
+            makeWindowManagerListener: { _ in
+                throw StartupError.expected
+            },
+            makeFocusBorderController: { NoOpFocusBorderController() }
+        )
 
         await #expect(throws: StartupError.expected) {
             try await delegate.start()
@@ -96,14 +102,17 @@ struct AppDelegateTests {
         let service = EventBusServiceSpy()
         let provider = ContextProviderStub()
 
+        let focusBorder = NoOpFocusBorderController()
         let delegate = AppDelegate(
-            eventBusService: service
-        ) { bus in
-            WindowManagerListener(
-                bus: bus,
-                contextManager: provider
-            )
-        }
+            eventBusService: service,
+            makeWindowManagerListener: { bus in
+                WindowManagerListener(
+                    bus: bus,
+                    contextManager: provider
+                )
+            },
+            makeFocusBorderController: { focusBorder }
+        )
 
         try await delegate.start()
 
@@ -114,6 +123,7 @@ struct AppDelegateTests {
         )
 
         #expect(service.stopCallCount == 1)
+        #expect(focusBorder.stopCallCount == 1)
         #expect(!service.bus.hasListeners(for: .getContexts(GetContextsEvent())))
         #expect(!service.bus.hasListeners(for: .debugPing(DebugPingEvent())))
     }
@@ -124,14 +134,18 @@ struct AppDelegateTests {
         let provider = ContextProviderStub()
         var factoryCallCount = 0
 
-        let delegate = AppDelegate(eventBusService: service) { bus in
-            factoryCallCount += 1
+        let delegate = AppDelegate(
+            eventBusService: service,
+            makeWindowManagerListener: { bus in
+                factoryCallCount += 1
 
-            return WindowManagerListener(
-                bus: bus,
-                contextManager: provider
-            )
-        }
+                return WindowManagerListener(
+                    bus: bus,
+                    contextManager: provider
+                )
+            },
+            makeFocusBorderController: { NoOpFocusBorderController() }
+        )
 
         try await delegate.start()
         try await delegate.start()
@@ -147,10 +161,12 @@ struct AppDelegateTests {
         let factory = PausingListenerFactory(provider: provider)
 
         let delegate = AppDelegate(
-            eventBusService: service
-        ) { bus in
-            await factory.makeListener(bus: bus)
-        }
+            eventBusService: service,
+            makeWindowManagerListener: { bus in
+                await factory.makeListener(bus: bus)
+            },
+            makeFocusBorderController: { NoOpFocusBorderController() }
+        )
 
         let firstStart = Task { @MainActor in
             try await delegate.start()
@@ -181,19 +197,21 @@ struct AppDelegateTests {
         var attemptCount = 0
 
         let delegate = AppDelegate(
-            eventBusService: service
-        ) { bus in
-            attemptCount += 1
+            eventBusService: service,
+            makeWindowManagerListener: { bus in
+                attemptCount += 1
 
-            if attemptCount == 1 {
-                throw StartupError.expected
-            }
+                if attemptCount == 1 {
+                    throw StartupError.expected
+                }
 
-            return WindowManagerListener(
-                bus: bus,
-                contextManager: provider
-            )
-        }
+                return WindowManagerListener(
+                    bus: bus,
+                    contextManager: provider
+                )
+            },
+            makeFocusBorderController: { NoOpFocusBorderController() }
+        )
 
         await #expect(throws: StartupError.expected) {
             try await delegate.start()
@@ -304,4 +322,18 @@ private final class PausingListenerFactory {
 
 private enum StartupError: Error, Equatable {
     case expected
+}
+
+@MainActor
+private final class NoOpFocusBorderController: FocusBorderControlling {
+    private(set) var startCallCount = 0
+    private(set) var stopCallCount = 0
+
+    func start() {
+        startCallCount += 1
+    }
+
+    func stop() {
+        stopCallCount += 1
+    }
 }

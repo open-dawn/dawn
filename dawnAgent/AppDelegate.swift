@@ -10,17 +10,23 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private let makeWindowManagerListener: WindowManagerListenerFactory
     private var windowManagerListener: WindowManagerListener?
     private var debugPingListener: DebugPingListener?
+    private var focusBorderController: (any FocusBorderControlling)?
     private var startupTask: Task<Void, Never>?
     private var isStartingOrStarted = false
+    private let makeFocusBorderController: @MainActor () -> any FocusBorderControlling
 
     init(
         eventBusService: any EventBusServicing = EventBusService(),
         makeWindowManagerListener: @escaping WindowManagerListenerFactory = { bus in
             try await WindowManagerListener(bus: bus)
+        },
+        makeFocusBorderController: @escaping @MainActor () -> any FocusBorderControlling = {
+            FocusBorderController()
         }
     ) {
         self.eventBusService = eventBusService
         self.makeWindowManagerListener = makeWindowManagerListener
+        self.makeFocusBorderController = makeFocusBorderController
         super.init()
     }
 
@@ -55,6 +61,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         eventBusService.stop()
 
+        focusBorderController?.stop()
+        focusBorderController = nil
         windowManagerListener = nil
         debugPingListener = nil
     }
@@ -90,6 +98,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             self.debugPingListener = DebugPingListener(
                 bus: eventBusService.bus
             )
+
+            let focusBorderController = makeFocusBorderController()
+            focusBorderController.start()
+            self.focusBorderController = focusBorderController
 
             #log(
                 "Starting dawnAgent event bus",

@@ -29,9 +29,14 @@ extension NSPanel: BorderPanel {}
 @MainActor
 final class FocusBorderOverlay: FocusBorderOverlaying {
     private var panel: any BorderPanel
-    let borderWidth: CGFloat = 2.0
+    private let configuration: FocusBorderConfiguration
+
+    var borderWidth: CGFloat {
+        configuration.borderWidth
+    }
 
     init(
+        configuration: FocusBorderConfiguration = .default,
         panel: any BorderPanel = NSPanel(
             contentRect: .zero,
             styleMask: [.borderless, .nonactivatingPanel],
@@ -39,13 +44,14 @@ final class FocusBorderOverlay: FocusBorderOverlaying {
             defer: false
         )
     ) {
+        self.configuration = configuration
         self.panel = panel
         prepareFloatingOverlay()
         prepareBorder()
     }
 
     func show(frame: CGRect) {
-        panel.setFrame(frame, display: true)
+        panel.setFrame(expandedFrame(for: frame), display: true)
         panel.orderFrontRegardless()
     }
 
@@ -55,6 +61,11 @@ final class FocusBorderOverlay: FocusBorderOverlaying {
 
     func hide() {
         panel.orderOut(nil)
+    }
+
+    private func expandedFrame(for frame: CGRect) -> CGRect {
+        let inset = -configuration.borderWidth
+        return frame.insetBy(dx: inset, dy: inset)
     }
 
     private func prepareFloatingOverlay() {
@@ -69,12 +80,14 @@ final class FocusBorderOverlay: FocusBorderOverlaying {
     }
 
     private func prepareBorder() {
-        let border = NSView(frame: NSRect())
+        let border = NSView(frame: .zero)
+        border.autoresizingMask = [.width, .height]
         border.wantsLayer = true
         border.layer?.isOpaque = false
         border.layer?.backgroundColor = NSColor.clear.cgColor
-        border.layer?.borderColor = NSColor.blue.cgColor
-        border.layer?.borderWidth = borderWidth
+        border.layer?.borderColor = configuration.borderColor.cgColor
+        border.layer?.borderWidth = configuration.borderWidth
+        border.layer?.cornerRadius = configuration.cornerRadius + configuration.borderWidth
 
         panel.contentView = border
     }
