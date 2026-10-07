@@ -1,13 +1,15 @@
 import AppKit
-import libdawn
 import dawnLogging
+import libdawn
 
-typealias WindowManagerListenerFactory = @MainActor (EventBus) async throws -> WindowManagerListener
+typealias WorkspaceRuntimeFactory = @MainActor (EventBus) async throws -> WorkspaceRuntime
 
 @MainActor
 final class AppDelegate: NSObject, NSApplicationDelegate {
     private let eventBusService: any EventBusServicing
-    private let makeWindowManagerListener: WindowManagerListenerFactory
+    private let makeWorkspaceRuntime: WorkspaceRuntimeFactory
+
+    private var workspaceRuntime: WorkspaceRuntime?
     private var windowManagerListener: WindowManagerListener?
     private var debugPingListener: DebugPingListener?
     private var startupTask: Task<Void, Never>?
@@ -15,12 +17,19 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     init(
         eventBusService: any EventBusServicing = EventBusService(),
-        makeWindowManagerListener: @escaping WindowManagerListenerFactory = { bus in
-            try await WindowManagerListener(bus: bus)
+        makeWorkspaceRuntime: @escaping WorkspaceRuntimeFactory = { bus in
+            let publisher = EventBusContextSnapshotPublisher(bus: bus)
+
+            let contextManager = try await ContextManager(snapshotPublisher: publisher)
+
+            return WorkspaceRuntime(
+                contextManager: contextManager,
+            )
         }
     ) {
         self.eventBusService = eventBusService
-        self.makeWindowManagerListener = makeWindowManagerListener
+        self.makeWorkspaceRuntime = makeWorkspaceRuntime
+
         super.init()
     }
 
@@ -57,6 +66,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         windowManagerListener = nil
         debugPingListener = nil
+        workspaceRuntime = nil
     }
 
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {
@@ -69,23 +79,31 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         do {
             #log(
-                "Creating WindowManager listener",
+                "Creating workspace runtime",
                 level: .info,
                 category: .appLifecycle
             )
 
-            let windowManagerListener = try await makeWindowManagerListener(
+            let workspaceRuntime = try await makeWorkspaceRuntime(
                 eventBusService.bus
             )
+
+            await workspaceRuntime.refresh()
 
             try Task.checkCancellation()
 
             #log(
-                "WindowManager listener created",
+                "Workspace runtime created",
                 level: .info,
                 category: .appLifecycle
             )
 
+            let windowManagerListener = WindowManagerListener(
+                bus: eventBusService.bus,
+                workspace: workspaceRuntime
+            )
+
+            self.workspaceRuntime = workspaceRuntime
             self.windowManagerListener = windowManagerListener
             self.debugPingListener = DebugPingListener(
                 bus: eventBusService.bus

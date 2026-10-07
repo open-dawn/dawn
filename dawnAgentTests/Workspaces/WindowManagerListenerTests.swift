@@ -1,6 +1,6 @@
 import Foundation
-import libdawn
 import Testing
+import libdawn
 
 @testable import dawnAgent
 
@@ -35,7 +35,8 @@ struct WindowManagerListenerTests {
         }
 
         let mockContextManager = FakeContextManager()
-        let listener = WindowManagerListener(bus: mockBus, contextManager: mockContextManager)
+        let workspace = WorkspaceRuntime(contextManager: mockContextManager)
+        let listener = WindowManagerListener(bus: mockBus, workspace: workspace)
         for event in events {
             #expect(mockBus.hasListeners(for: event.event) == event.afterResult)
         }
@@ -47,7 +48,8 @@ struct WindowManagerListenerTests {
     func handle_GetContextsEvent() async throws {
         let mockBus = EventBus()
         let mockContextManager = FakeContextManager()
-        let listener = WindowManagerListener(bus: mockBus, contextManager: mockContextManager)
+        let workspace = WorkspaceRuntime(contextManager: mockContextManager)
+        let listener = WindowManagerListener(bus: mockBus, workspace: workspace)
 
         let event = Event.getContexts(GetContextsEvent())
         let eventResponse = try await mockBus.ask(event)
@@ -66,11 +68,13 @@ struct WindowManagerListenerTests {
         let mockContextManager = FakeContextManager()
         mockContextManager.contexts = createMockWorkspaceContext(3)
         let switcherSpy = ContextSwitchingSpy()
+        let workspace = WorkspaceRuntime(contextManager: mockContextManager, contextSwitching: switcherSpy)
+
         let mockBus = EventBus()
+
         let listener = WindowManagerListener(
             bus: mockBus,
-            contextManager: mockContextManager,
-            contextSwitching: switcherSpy
+            workspace: workspace
         )
         let event = Event.switchSpace(SwitchSpaceEvent(spaceIndex: 1))
 
@@ -78,6 +82,7 @@ struct WindowManagerListenerTests {
         await mockContextManager.waitUntilSwitched()
 
         #expect(switcherSpy.switchedContexts == [mockContextManager.contexts[1]])
+        #expect(workspace.lastRequestedContextID == mockContextManager.contexts[1].id)
     }
 
     @Test("switchSpace with invalid index switches that context")
@@ -85,27 +90,32 @@ struct WindowManagerListenerTests {
         let mockContextManager = FakeContextManager()
         mockContextManager.contexts = createMockWorkspaceContext(1)
         let switcherSpy = ContextSwitchingSpy()
+
+        let workspace = WorkspaceRuntime(contextManager: mockContextManager, contextSwitching: switcherSpy)
         let mockBus = EventBus()
+
         let listener = WindowManagerListener(
             bus: mockBus,
-            contextManager: mockContextManager,
-            contextSwitching: switcherSpy
+            workspace: workspace
         )
+
         let event = Event.switchSpace(SwitchSpaceEvent(spaceIndex: 2))
 
         listener.handle(event, reply: nil)
         await mockContextManager.waitUntilSwitched()
 
         #expect(switcherSpy.switchedContexts == [])
+        #expect(workspace.lastRequestedContextID == nil)
     }
 
     @Test("getAllContexts return the same of ContextManager")
     func getAllContextsRespectContextManagerReturns() async {
         let mockContextManager = FakeContextManager()
         mockContextManager.contexts = createMockWorkspaceContext(3)
+        let workspace = WorkspaceRuntime(contextManager: mockContextManager)
 
         let mockBus = EventBus()
-        let listener = WindowManagerListener(bus: mockBus, contextManager: mockContextManager)
+        let listener = WindowManagerListener(bus: mockBus, workspace: workspace)
 
         #expect(await listener.getAllContexts() == mockContextManager.contexts)
     }
@@ -115,8 +125,10 @@ struct WindowManagerListenerTests {
         let mockContextManager = FakeContextManager()
         mockContextManager.contexts = createMockWorkspaceContext(3)
 
+        let workspace = WorkspaceRuntime(contextManager: mockContextManager)
+
         let mockBus = EventBus()
-        let listener = WindowManagerListener(bus: mockBus, contextManager: mockContextManager)
+        let listener = WindowManagerListener(bus: mockBus, workspace: workspace)
 
         #expect(await listener.getContextWithIndex(0) == mockContextManager.contexts[0])
     }
@@ -126,8 +138,10 @@ struct WindowManagerListenerTests {
         let mockContextManager = FakeContextManager()
         mockContextManager.contexts = createMockWorkspaceContext(3)
 
+        let workspace = WorkspaceRuntime(contextManager: mockContextManager)
+
         let mockBus = EventBus()
-        let listener = WindowManagerListener(bus: mockBus, contextManager: mockContextManager)
+        let listener = WindowManagerListener(bus: mockBus, workspace: workspace)
 
         #expect(await listener.getContextWithIndex(1) == mockContextManager.contexts[1])
     }
@@ -137,8 +151,10 @@ struct WindowManagerListenerTests {
         let mockContextManager = FakeContextManager()
         mockContextManager.contexts = []
 
+        let workspace = WorkspaceRuntime(contextManager: mockContextManager)
+
         let mockBus = EventBus()
-        let listener = WindowManagerListener(bus: mockBus, contextManager: mockContextManager)
+        let listener = WindowManagerListener(bus: mockBus, workspace: workspace)
 
         #expect(await listener.getContextWithIndex(1) == nil)
     }
@@ -165,10 +181,12 @@ struct WindowManagerListenerTests {
         let contextManager = FakeContextManager()
         contextManager.createResult = createdContext
 
+        let workspace = WorkspaceRuntime(contextManager: contextManager)
+
         let bus = EventBus()
         let listener = WindowManagerListener(
             bus: bus,
-            contextManager: contextManager
+            workspace: workspace
         )
 
         let response = try await bus.ask(.createContext(payload))
@@ -195,10 +213,12 @@ struct WindowManagerListenerTests {
         let contextManager = FakeContextManager()
         contextManager.createError = SettingsStoreError.emptyContextName
 
+        let workspace = WorkspaceRuntime(contextManager: contextManager)
+
         let bus = EventBus()
         let listener = WindowManagerListener(
             bus: bus,
-            contextManager: contextManager
+            workspace: workspace
         )
 
         let response = try await bus.ask(.createContext(payload))
@@ -224,10 +244,13 @@ struct WindowManagerListenerTests {
         )
 
         let contextManager = FakeContextManager()
+
+        let workspace = WorkspaceRuntime(contextManager: contextManager)
+
         let bus = EventBus()
         let listener = WindowManagerListener(
             bus: bus,
-            contextManager: contextManager
+            workspace: workspace
         )
 
         listener.handle(.createContext(payload), reply: nil)
@@ -249,11 +272,13 @@ struct WindowManagerListenerTests {
 
         context.name = "Updated Work"
 
+        let workspace = WorkspaceRuntime(contextManager: contextManager)
+
         let payload = UpdateContextEvent(context: context)
         let bus = EventBus()
         let listener = WindowManagerListener(
             bus: bus,
-            contextManager: contextManager
+            workspace: workspace
         )
 
         let response = try await bus.ask(.updateContext(payload))
@@ -283,10 +308,12 @@ struct WindowManagerListenerTests {
             context.id
         )
 
+        let workspace = WorkspaceRuntime(contextManager: contextManager)
+
         let bus = EventBus()
         let listener = WindowManagerListener(
             bus: bus,
-            contextManager: contextManager
+            workspace: workspace
         )
 
         let response = try await bus.ask(
@@ -317,10 +344,12 @@ struct WindowManagerListenerTests {
             missingID
         )
 
+        let workspace = WorkspaceRuntime(contextManager: contextManager)
+
         let bus = EventBus()
         let listener = WindowManagerListener(
             bus: bus,
-            contextManager: contextManager
+            workspace: workspace
         )
 
         let response = try await bus.ask(
@@ -353,11 +382,13 @@ struct WindowManagerListenerTests {
         let contextManager = FakeContextManager()
         contextManager.contexts = [context]
 
+        let workspace = WorkspaceRuntime(contextManager: contextManager)
+
         let payload = DeleteContextEvent(contextID: context.id)
         let bus = EventBus()
         let listener = WindowManagerListener(
             bus: bus,
-            contextManager: contextManager
+            workspace: workspace
         )
 
         let response = try await bus.ask(.deleteContext(payload))
@@ -386,11 +417,13 @@ struct WindowManagerListenerTests {
         contextManager.contexts = [context]
 
         let switcher = ContextSwitchingSpy()
+
+        let workspace = WorkspaceRuntime(contextManager: contextManager, contextSwitching: switcher)
+
         let bus = EventBus()
         let listener = WindowManagerListener(
             bus: bus,
-            contextManager: contextManager,
-            contextSwitching: switcher
+            workspace: workspace
         )
 
         let response = try await bus.ask(
@@ -400,6 +433,7 @@ struct WindowManagerListenerTests {
         )
 
         #expect(switcher.switchedContexts == [context])
+        #expect(workspace.lastRequestedContextID == context.id)
         #expect(
             response
                 == .contextMutationAcknowledged(
@@ -416,11 +450,13 @@ struct WindowManagerListenerTests {
 
         let contextManager = FakeContextManager()
         let switcher = ContextSwitchingSpy()
+
+        let workspace = WorkspaceRuntime(contextManager: contextManager, contextSwitching: switcher)
+
         let bus = EventBus()
         let listener = WindowManagerListener(
             bus: bus,
-            contextManager: contextManager,
-            contextSwitching: switcher
+            workspace: workspace
         )
 
         let response = try await bus.ask(
@@ -430,6 +466,7 @@ struct WindowManagerListenerTests {
         )
 
         #expect(switcher.switchedContexts.isEmpty)
+        #expect(workspace.lastRequestedContextID == nil)
         #expect(
             response
                 == .contextMutationAcknowledged(

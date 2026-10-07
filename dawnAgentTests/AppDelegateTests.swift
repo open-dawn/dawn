@@ -6,8 +6,8 @@
 //
 
 import AppKit
-import libdawn
 import Testing
+import libdawn
 
 @testable import dawnAgent
 
@@ -21,9 +21,8 @@ struct AppDelegateTests {
 
         let delegate = AppDelegate(
             eventBusService: service
-        ) { bus in
-            WindowManagerListener(
-                bus: bus,
+        ) { _ in
+            WorkspaceRuntime(
                 contextManager: provider
             )
         }
@@ -51,9 +50,8 @@ struct AppDelegateTests {
 
         let delegate = AppDelegate(
             eventBusService: service
-        ) { bus in
-            WindowManagerListener(
-                bus: bus,
+        ) { _ in
+            WorkspaceRuntime(
                 contextManager: provider
             )
         }
@@ -98,9 +96,8 @@ struct AppDelegateTests {
 
         let delegate = AppDelegate(
             eventBusService: service
-        ) { bus in
-            WindowManagerListener(
-                bus: bus,
+        ) { _ in
+            WorkspaceRuntime(
                 contextManager: provider
             )
         }
@@ -124,11 +121,10 @@ struct AppDelegateTests {
         let provider = ContextProviderStub()
         var factoryCallCount = 0
 
-        let delegate = AppDelegate(eventBusService: service) { bus in
+        let delegate = AppDelegate(eventBusService: service) { _ in
             factoryCallCount += 1
 
-            return WindowManagerListener(
-                bus: bus,
+            return WorkspaceRuntime(
                 contextManager: provider
             )
         }
@@ -144,12 +140,12 @@ struct AppDelegateTests {
     func overlappingStartsInitializeOnlyOnce() async throws {
         let service = EventBusServiceSpy()
         let provider = ContextProviderStub()
-        let factory = PausingListenerFactory(provider: provider)
+        let factory = PausingWorkspaceRuntimeFactory(provider: provider)
 
         let delegate = AppDelegate(
             eventBusService: service
-        ) { bus in
-            await factory.makeListener(bus: bus)
+        ) { _ in
+            await factory.makeRuntime()
         }
 
         let firstStart = Task { @MainActor in
@@ -182,15 +178,14 @@ struct AppDelegateTests {
 
         let delegate = AppDelegate(
             eventBusService: service
-        ) { bus in
+        ) { _ in
             attemptCount += 1
 
             if attemptCount == 1 {
                 throw StartupError.expected
             }
 
-            return WindowManagerListener(
-                bus: bus,
+            return WorkspaceRuntime(
                 contextManager: provider
             )
         }
@@ -203,6 +198,37 @@ struct AppDelegateTests {
 
         #expect(attemptCount == 2)
         #expect(service.startCallCount == 1)
+    }
+
+    @Test("Start loads initial workspace snapshot")
+    func startLoadsInitialWorkspaceSnapshot() async throws {
+        let service = EventBusServiceSpy()
+
+        let expectedContexts = [
+            WorkspaceContext(
+                name: "Study",
+                symbol: "book"
+            )
+        ]
+
+        let provider = ContextProviderStub(
+            contexts: expectedContexts
+        )
+
+        let runtime = WorkspaceRuntime(
+            contextManager: provider
+        )
+
+        let delegate = AppDelegate(
+            eventBusService: service
+        ) { _ in
+            runtime
+        }
+
+        try await delegate.start()
+
+        #expect(provider.getAvailableContextsCallCount == 1)
+        #expect(runtime.contexts == expectedContexts)
     }
 }
 
@@ -231,6 +257,8 @@ private final class EventBusServiceSpy: EventBusServicing {
 
 @MainActor
 private final class ContextProviderStub: ContextProviding {
+    private(set) var getAvailableContextsCallCount = 0
+
     func createContext(
         name: String,
         symbol: String,
@@ -256,12 +284,13 @@ private final class ContextProviderStub: ContextProviding {
     }
 
     func getAvailableContexts() async -> [WorkspaceContext] {
-        contexts
+        getAvailableContextsCallCount += 1
+        return contexts
     }
 }
 
 @MainActor
-private final class PausingListenerFactory {
+private final class PausingWorkspaceRuntimeFactory {
     private let provider: ContextProviderStub
     private var callWaiter: CheckedContinuation<Void, Never>?
     private var factoryContinuation: CheckedContinuation<Void, Never>?
@@ -272,27 +301,28 @@ private final class PausingListenerFactory {
         self.provider = provider
     }
 
-    func makeListener(bus: EventBus) async -> WindowManagerListener {
+    func makeRuntime() async -> WorkspaceRuntime {
         callCount += 1
 
         callWaiter?.resume()
         callWaiter = nil
 
-        await withCheckedContinuation { continuation in
-            factoryContinuation = continuation
+        await withCheckedContinuation {
+            factoryContinuation = $0
         }
 
-        return WindowManagerListener(
-            bus: bus,
+        return WorkspaceRuntime(
             contextManager: provider
         )
     }
 
     func waitUntilCalled() async {
-        guard callCount == 0 else { return }
+        guard callCount == 0 else {
+            return
+        }
 
-        await withCheckedContinuation { continuation in
-            callWaiter = continuation
+        await withCheckedContinuation {
+            callWaiter = $0
         }
     }
 
