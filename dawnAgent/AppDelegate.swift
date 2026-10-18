@@ -3,12 +3,15 @@ import dawnLogging
 import libdawn
 
 typealias WorkspaceRuntimeFactory = @MainActor (EventBus) async throws -> WorkspaceRuntime
+typealias MenuBarControllerFactory = @MainActor (WorkspaceRuntime) -> any MenuBarControlling
 
 @MainActor
 final class AppDelegate: NSObject, NSApplicationDelegate {
     private let eventBusService: any EventBusServicing
+    private let makeMenuBarController: MenuBarControllerFactory
     private let makeWorkspaceRuntime: WorkspaceRuntimeFactory
 
+    private var menuBarController: (any MenuBarControlling)?
     private var workspaceRuntime: WorkspaceRuntime?
     private var windowManagerListener: WindowManagerListener?
     private var debugPingListener: DebugPingListener?
@@ -17,6 +20,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     init(
         eventBusService: any EventBusServicing = EventBusService(),
+        makeMenuBarController: @escaping MenuBarControllerFactory = {
+            MenuBarController(workspace: $0)
+        },
         makeWorkspaceRuntime: @escaping WorkspaceRuntimeFactory = { bus in
             let publisher = EventBusContextSnapshotPublisher(bus: bus)
 
@@ -28,6 +34,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
     ) {
         self.eventBusService = eventBusService
+        self.makeMenuBarController = makeMenuBarController
         self.makeWorkspaceRuntime = makeWorkspaceRuntime
 
         super.init()
@@ -62,6 +69,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         startupTask?.cancel()
         startupTask = nil
 
+        menuBarController?.stop()
+        menuBarController = nil
+
         eventBusService.stop()
 
         windowManagerListener = nil
@@ -84,9 +94,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 category: .appLifecycle
             )
 
-            let workspaceRuntime = try await makeWorkspaceRuntime(
-                eventBusService.bus
-            )
+            let workspaceRuntime = try await makeWorkspaceRuntime(eventBusService.bus)
 
             await workspaceRuntime.refresh()
 
@@ -103,11 +111,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 workspace: workspaceRuntime
             )
 
+            let debugPingListener = DebugPingListener(bus: eventBusService.bus)
+
+            let menuBarController = makeMenuBarController(workspaceRuntime)
+
             self.workspaceRuntime = workspaceRuntime
             self.windowManagerListener = windowManagerListener
-            self.debugPingListener = DebugPingListener(
-                bus: eventBusService.bus
-            )
+            self.debugPingListener = debugPingListener
+            self.menuBarController = menuBarController
+
 
             #log(
                 "Starting dawnAgent event bus",
