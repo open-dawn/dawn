@@ -12,8 +12,4 @@ import Testing
 @MainActor
 @Suite
 struct LibdawnUITests {
-    @Test
-    func exampleTest() async throws {
-
-    }
 }

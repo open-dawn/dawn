@@ -53,7 +53,7 @@ public struct ContextCard: View {
 
                     VStack(alignment: .leading, spacing: 3) {
                         Text(model.name)
-                            .font(.system(size: 12, weight: .bold))
+                            .font(DawnTextStyle.contextTitle)
                             .lineLimit(1)
 
                         statusContent
@@ -85,17 +85,13 @@ public struct ContextCard: View {
         .background {
             RoundedRectangle(cornerRadius: 9)
                 .fill(
-                    Color.black.opacity(
-                        isHovering ? 0.34 : 0.25
-                    )
+                    isHovering ? DawnColors.contextCardHoveredBackground : DawnColors.contextCardBackground
                 )
         }
         .overlay {
             RoundedRectangle(cornerRadius: 9)
                 .strokeBorder(
-                    Color.white.opacity(
-                        isHovering ? 0.10 : 0.04
-                    )
+                    isHovering ? DawnColors.contextCardHoveredBorder : DawnColors.contextCardBorder
                 )
         }
         .onHover {
@@ -141,17 +137,17 @@ public struct ContextCard: View {
         switch model.status {
         case .active(let activityText):
             Label(activityText, systemImage: "clock.fill")
-                .font(.system(size: 9))
+                .font(DawnTextStyle.contextMetadata)
                 .foregroundStyle(.secondary)
 
             Text("Currently active")
-                .font(.system(size: 9))
+                .font(DawnTextStyle.contextMetadata)
                 .foregroundStyle(.secondary)
 
         case .inactive(let lastUsedText):
             if let lastUsedText {
                 Label(lastUsedText, systemImage: "clock.fill")
-                    .font(.system(size: 9))
+                    .font(DawnTextStyle.contextMetadata)
                     .foregroundStyle(.secondary)
             }
         }
@@ -161,7 +157,7 @@ public struct ContextCard: View {
     private var applicationContent: some View {
         if model.applications.isEmpty {
             Text("No apps")
-                .font(.system(size: 9))
+                .font(DawnTextStyle.contextMetadata)
                 .foregroundStyle(.secondary)
         } else {
             HStack(spacing: 6) {
@@ -186,7 +182,7 @@ public struct ContextCard: View {
 
                 if remainingApplicationCount > 0 {
                     Text(remainingApplicationsLabel)
-                        .font(.system(size: 9))
+                        .font(DawnTextStyle.contextMetadata)
                         .foregroundStyle(.secondary)
                 }
             }
