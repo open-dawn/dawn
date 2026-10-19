@@ -128,6 +128,28 @@ targets:
         - libdawnTests
       gatherCoverageData: true
 
+  libdawnUI:
+    type: framework
+    platform: macOS
+    deploymentTarget: *deployversion
+    sources:
+      - libdawnUI
+    settings:
+      base:
+        PRODUCT_NAME: libdawnUI
+        PRODUCT_MODULE_NAME: libdawnUI
+        MARKETING_VERSION: *mktversion
+        CURRENT_PROJECT_VERSION: *buildversion
+        SWIFT_VERSION: *swiftversion
+        GENERATE_INFOPLIST_FILE: YES
+      configs:
+        Debug:
+          ENABLE_TESTABILITY: YES
+    scheme:
+      testTargets:
+        - libdawnUITests
+      gatherCoverageData: true
+
   libdawnTests:
     type: bundle.unit-test
     platform: macOS
@@ -139,6 +161,18 @@ targets:
       SWIFT_VERSION: *swiftversion
     dependencies:
       - target: libdawn
+
+  libdawnUITests:
+    type: bundle.unit-test
+    platform: macOS
+    deploymentTarget: *deployversion
+    sources:
+      - libdawnUITests
+    settings:
+      GENERATE_INFOPLIST_FILE: YES
+      SWIFT_VERSION: *swiftversion
+    dependencies:
+      - target: libdawnUI
 
   dawnAgentTests:
     type: bundle.unit-test
@@ -177,13 +211,16 @@ schemes:
         libdawn: all
         dawnAgent: all
         dawnApp: all
+        libdawnUI: all
         libdawnTests: [test]
         dawnAgentTests: [test]
         dawnAppTests: [test]
+        libdawnUITests: [test]
     test:
       gatherCoverageData: true
       targets:
         - libdawnTests
         - dawnAgentTests
         - dawnAppTests
+        - libdawnUITests
         - package: dawnLogging/dawnLoggingTests
