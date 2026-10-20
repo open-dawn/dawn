@@ -9,7 +9,7 @@ struct ContextDetailViewModelTests {
     @Test("Starts with no active operation, error, or presented creator")
     func initialState() {
         let contextManager = WorkspaceContextManagerSpy()
-        let viewModel = ContextDetailView.ViewModel(contextManager: contextManager)
+        let viewModel = ContextDetailViewModel(contextManager: contextManager)
 
         #expect(viewModel.operationInProgress == nil)
         #expect(viewModel.error == nil)
@@ -20,7 +20,7 @@ struct ContextDetailViewModelTests {
     @Test("Presents and dismisses the context creator")
     func contextCreatorPresentation() throws {
         let contextManager = WorkspaceContextManagerSpy()
-        let viewModel = ContextDetailView.ViewModel(
+        let viewModel = ContextDetailViewModel(
             contextManager: contextManager
         )
 
@@ -39,7 +39,7 @@ struct ContextDetailViewModelTests {
         )
 
         let contextManager = WorkspaceContextManagerSpy()
-        let viewModel = ContextDetailView.ViewModel(
+        let viewModel = ContextDetailViewModel(
             contextManager: contextManager
         )
 
@@ -64,7 +64,7 @@ struct ContextDetailViewModelTests {
         )
 
         let contextManager = WorkspaceContextManagerSpy()
-        let viewModel = ContextDetailView.ViewModel(
+        let viewModel = ContextDetailViewModel(
             contextManager: contextManager
         )
 
@@ -85,7 +85,7 @@ struct ContextDetailViewModelTests {
         let contextManager = WorkspaceContextManagerSpy()
         contextManager.error = SettingsContextStoreError.notConnected
 
-        let viewModel = ContextDetailView.ViewModel(
+        let viewModel = ContextDetailViewModel(
             contextManager: contextManager
         )
 
@@ -106,7 +106,7 @@ struct ContextDetailViewModelTests {
         let contextManager = WorkspaceContextManagerSpy()
         contextManager.error = SettingsContextStoreError.timeout
 
-        let viewModel = ContextDetailView.ViewModel(
+        let viewModel = ContextDetailViewModel(
             contextManager: contextManager
         )
 
@@ -132,7 +132,7 @@ struct ContextDetailViewModelTests {
         let contextManager = WorkspaceContextManagerSpy()
         contextManager.error = TestError.expected
 
-        let viewModel = ContextDetailView.ViewModel(
+        let viewModel = ContextDetailViewModel(
             contextManager: contextManager
         )
 
@@ -148,7 +148,7 @@ struct ContextDetailViewModelTests {
             name: "Personal",
             symbol: "person"
         )
-        let viewModel = ContextDetailView.ViewModel(
+        let viewModel = ContextDetailViewModel(
             contextManager: WorkspaceContextManagerSpy()
         )
 
@@ -169,7 +169,7 @@ struct ContextDetailViewModelTests {
             name: "Work",
             symbol: "briefcase"
         )
-        let viewModel = ContextDetailView.ViewModel(
+        let viewModel = ContextDetailViewModel(
             contextManager: WorkspaceContextManagerSpy()
         )
 
@@ -190,7 +190,7 @@ struct ContextDetailViewModelTests {
         let contextManager = WorkspaceContextManagerSpy()
         contextManager.error = SettingsContextStoreError.notConnected
 
-        let viewModel = ContextDetailView.ViewModel(
+        let viewModel = ContextDetailViewModel(
             contextManager: contextManager
         )
 

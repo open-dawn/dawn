@@ -1,7 +1,7 @@
 import SwiftUI
 
 struct GeneralSettingsView: View {
-    @State private var viewModel = Self.ViewModel()
+    @State private var viewModel = GeneralSettingsViewModel()
 
     var body: some View {
         VStack {
@@ -34,7 +34,7 @@ struct GeneralSettingsView: View {
     }
 
     @ViewBuilder
-    private func settingRow(_ setting: SettingItem<Self.ViewModel>) -> some View {
+    private func settingRow(_ setting: SettingItem<GeneralSettingsViewModel>) -> some View {
         HStack {
             switch setting.inputType {
             case .toggle(let keyPath):

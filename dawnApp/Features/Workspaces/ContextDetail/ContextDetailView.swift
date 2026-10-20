@@ -3,7 +3,7 @@ import SwiftUI
 
 struct ContextDetailView: View {
     let context: WorkspaceContext
-    let viewModel: ViewModel
+    let viewModel: ContextDetailViewModel
     let interactionsDisabled: Bool
     let onDelete: (WorkspaceContext) -> Void
 

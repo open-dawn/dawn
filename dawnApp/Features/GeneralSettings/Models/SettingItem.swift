@@ -1,6 +1,6 @@
 import Foundation
 
-struct SettingItem<ViewModel: BaseViewModel>: Identifiable {
+struct SettingItem<ViewModel: AnyObject>: Identifiable {
     let id: UUID = UUID()
     let title: String
     let description: String

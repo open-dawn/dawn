@@ -16,7 +16,7 @@ private struct AppShellContent: View {
     @Environment(SettingsEventBusService.self)
     private var eventBusService
 
-    @State private var viewModel: ContextDetailView.ViewModel
+    @State private var viewModel: ContextDetailViewModel
     @State private var columnVisibility: NavigationSplitViewVisibility = .automatic
     @State private var selectedDestination: SidebarDestination?
     @State private var searchText = ""
@@ -46,7 +46,7 @@ private struct AppShellContent: View {
     init(store: SettingsContextStore) {
         self.store = store
         _viewModel = State(
-            initialValue: ContextDetailView.ViewModel(
+            initialValue: ContextDetailViewModel(
                 contextManager: store
             )
         )

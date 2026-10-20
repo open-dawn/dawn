@@ -5,7 +5,7 @@ import Testing
 struct GeneralSettingsViewModelTests {
     @Test("starts a view model with no error")
     func initialState() {
-        let viewModel = GeneralSettingsView.ViewModel()
+        let viewModel = GeneralSettingsViewModel()
         #expect(viewModel.error == nil)
         #expect(viewModel.errorMessage == nil)
         #expect(viewModel.isLoading == false)
@@ -14,15 +14,15 @@ struct GeneralSettingsViewModelTests {
 
     @Test("reset all settings to default value")
     func resetSettingsToDefault() {
-        let viewModel = GeneralSettingsView.ViewModel()
+        let viewModel = GeneralSettingsViewModel()
         // Change values to random
         for section in viewModel.sectionsWithSettings {
             for setting in section.settings {
                 let anyKeyPath = setting.inputType.getKeyPath(viewModel)
-                if let boolPath = anyKeyPath as? ReferenceWritableKeyPath<GeneralSettingsView.ViewModel, Bool> {
+                if let boolPath = anyKeyPath as? ReferenceWritableKeyPath<GeneralSettingsViewModel, Bool> {
                     viewModel[keyPath: boolPath].toggle()
                 } else if let stringPath = anyKeyPath
-                    as? ReferenceWritableKeyPath<GeneralSettingsView.ViewModel, String>
+                    as? ReferenceWritableKeyPath<GeneralSettingsViewModel, String>
                 {
                     viewModel[keyPath: stringPath] += "__"
                 }
@@ -48,7 +48,7 @@ struct GeneralSettingsViewModelTests {
 
     @Test("resetSettingToDefault sets error when default type mismatches")
     func resetSettingToDefaultSetsErrorWhenTypeMismatches() {
-        let viewModel = GeneralSettingsView.ViewModel()
+        let viewModel = GeneralSettingsViewModel()
         let toggle = viewModel.sectionsWithSettings[0].settings[0]
         let invalid = SettingItem("Invalid item", desc: "Invalid description",
                                   type: toggle.inputType,
