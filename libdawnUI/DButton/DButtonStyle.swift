@@ -7,7 +7,7 @@
 
 import SwiftUI
 
-enum DButtonStyle: CaseIterable {
+public enum DButtonStyle: CaseIterable {
     case primary
     case secondary
     case danger

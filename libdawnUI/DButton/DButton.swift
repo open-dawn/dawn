@@ -7,14 +7,14 @@
 
 import SwiftUI
 
-struct DButton<Leading: View, Content: View, Trailing: View>: View {
-    let style: DButtonStyle
-    let action: () -> Void
-    let leading: Leading
-    let content: Content
-    let trailing: Trailing
+public struct DButton<Leading: View, Content: View, Trailing: View>: View {
+    private let style: DButtonStyle
+    private let action: () -> Void
+    private let leading: Leading
+    private let content: Content
+    private let trailing: Trailing
 
-    init(
+    public init(
         style: DButtonStyle = .primary,
         action: @escaping () -> Void = {},
         @ViewBuilder content: () -> Content = {EmptyView()},
@@ -28,7 +28,7 @@ struct DButton<Leading: View, Content: View, Trailing: View>: View {
         self.trailing = trailing()
     }
 
-    var body: some View {
+    public var body: some View {
         Button(action: action) {
             HStack(alignment: .center, spacing: style.spacing) {
                 if Leading.self != EmptyView.self {
