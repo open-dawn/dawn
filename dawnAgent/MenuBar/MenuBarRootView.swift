@@ -11,12 +11,29 @@ import libdawn
 import libdawnUI
 
 struct MenuBarRootView: View {
+    private enum MenuBarRoute {
+        case contextList
+        case contextCreation
+    }
+
     let workspace: WorkspaceRuntime
 
     @State private var activatingContextID: UUID?
     @State private var activationError: String?
+    @State private var route: MenuBarRoute = .contextList
 
     var body: some View {
+        switch route {
+        case .contextList:
+            contextList
+        case .contextCreation:
+            ContextCreationFlowView {
+                route = .contextList
+            }
+        }
+    }
+
+    private var contextList: some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack(spacing: 5) {
                 Image(systemName: "sun.horizon")
@@ -28,7 +45,7 @@ struct MenuBarRootView: View {
                 Spacer()
 
                 Button {
-                    // TODO: Create context creation flux
+                    route = .contextCreation
                 } label: {
                     Image(systemName: "plus")
                         .font(.system(size: 20, weight: .light))
