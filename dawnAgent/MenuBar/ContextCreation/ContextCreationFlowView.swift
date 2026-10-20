@@ -16,6 +16,7 @@ struct ContextCreationFlowView: View {
     }
 
     @State private var step: Step = .identity
+    @State private var draft = ContextCreationDraft()
 
     let onExit: () -> Void
 
@@ -69,11 +70,13 @@ struct ContextCreationFlowView: View {
         switch step {
         case .identity:
             VStack {
-                Text("Identity")
-
-                Button("Next") {
-                    step = .applications
-                }
+                ContextIdentityStepView(
+                    name: $draft.name,
+                    selectedSymbolName: $draft.symbolName,
+                    onNext: {
+                        step = .applications
+                    }
+                )
             }
         case .applications:
             VStack {
