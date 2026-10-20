@@ -29,31 +29,32 @@ struct DButton<Leading: View, Content: View, Trailing: View>: View {
     }
     
     var body: some View {
-        HStack(alignment: .center, spacing: style.spacing) {
-            if (Leading.self != EmptyView.self) {
-                leading
-                    .font(style.iconFont)
+        Button(action: action) {
+            HStack(alignment: .center, spacing: style.spacing) {
+                if (Leading.self != EmptyView.self) {
+                    leading
+                        .font(style.iconFont)
+                }
+                
+                content
+                    .font(style.labelFont)
+                
+                if (Trailing.self != EmptyView.self) {
+                    trailing
+                        .font(style.iconFont)
+                }
             }
-            
-            content
-                .font(style.labelFont)
-
-            if (Trailing.self != EmptyView.self) {
-                trailing
-                    .font(style.iconFont)
+            .padding(.vertical, style.verticalPadding)
+            .padding(.horizontal, style.horizontalPadding)
+            .lineLimit(1)
+            .foregroundStyle(style.fgStyle)
+            .underline(style.underlined, color: style.fgStyle)
+            .background {
+                RoundedRectangle(cornerRadius: style.cornerRadius)
+                    .fill(style.bgStyle)
             }
+            .contentShape(Rectangle())
         }
-        .padding(.vertical, style.verticalPadding)
-        .padding(.horizontal, style.horizontalPadding)
-        .lineLimit(1)
-        .foregroundStyle(style.fgStyle)
-        .underline(style.underlined, color: style.fgStyle)
-        .background {
-            RoundedRectangle(cornerRadius: style.cornerRadius)
-                .fill(style.bgStyle)
-        }
-        .onTapGesture {
-            action()
-        }
+        .buttonStyle(.plain)
     }
 }
