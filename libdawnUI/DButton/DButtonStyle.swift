@@ -83,4 +83,24 @@ enum DButtonStyle: CaseIterable {
         case .link: return true
         }
     }
+
+    var labelFont: Font {
+        switch (self) {
+        case .primary: return DawnTextStyle.buttonLabel
+        case .secondary: return DawnTextStyle.buttonLabel
+        case .danger: return DawnTextStyle.buttonLabel
+        case .warning: return DawnTextStyle.buttonLabel
+        case .link: return DawnTextStyle.buttonLabel
+        }
+    }
+
+    var iconFont: Font {
+        switch (self) {
+        case .primary: return DawnTextStyle.buttonIcon
+        case .secondary: return DawnTextStyle.buttonIcon
+        case .danger: return DawnTextStyle.buttonIcon
+        case .warning: return DawnTextStyle.buttonIcon
+        case .link: return DawnTextStyle.buttonIcon
+        }
+    }
 }
