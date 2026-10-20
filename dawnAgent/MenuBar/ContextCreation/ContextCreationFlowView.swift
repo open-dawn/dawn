@@ -79,13 +79,16 @@ struct ContextCreationFlowView: View {
                 )
             }
         case .applications:
-            VStack {
-                Text("Applications")
-
-                Button("Next") {
+            ContextApplicationsStepView(
+                applications: [],
+                selectedApplicationIDs: $draft.selectedApplicationIDs,
+                onChooseApplication: {
+                    // TODO: Connect the system application picker
+                },
+                onNext: {
                     step = .openingBehaviour
                 }
-            }
+            )
         case .openingBehaviour:
             VStack {
                 Text("Opening behaviour")
