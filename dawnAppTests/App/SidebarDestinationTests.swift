@@ -36,6 +36,51 @@ struct SidebarDestinationTests {
         #expect(destination.reconciled(with: [work, personal]) == destination)
     }
 
+    @Test("reconciliation after a refresh keeps the selection when the context remains")
+    func reconciliationAfterRefreshKeepsSelection() {
+        let work = WorkspaceContext(name: "Work", symbol: "briefcase")
+        let refreshedWork = WorkspaceContext(id: work.id, name: "Work (renamed)", symbol: "case")
+        let gaming = WorkspaceContext(name: "Gaming", symbol: "gamecontroller.fill")
+
+        // Simulates SettingsContextStore.contexts being replaced by a refresh.
+        let afterRefresh: [WorkspaceContext] = [refreshedWork, gaming]
+
+        #expect(
+            SidebarDestination.context(work.id).reconciled(with: afterRefresh)
+                == .context(work.id)
+        )
+    }
+
+    @Test("reconciliation after deletion clears the selection")
+    func reconciliationAfterDeletionClearsSelection() {
+        let work = WorkspaceContext(name: "Work", symbol: "briefcase")
+        let personal = WorkspaceContext(name: "Personal", symbol: "person")
+        let destination = SidebarDestination.context(work.id)
+
+        // The selected context is gone from the refreshed list.
+        #expect(destination.reconciled(with: [personal]) == nil)
+        // Every context was deleted.
+        #expect(destination.reconciled(with: []) == nil)
+    }
+
+    @Test("each destination routes to a distinct target")
+    func destinationsRouteDistinctly() {
+        let work = WorkspaceContext(name: "Work", symbol: "briefcase")
+        let personal = WorkspaceContext(name: "Personal", symbol: "person")
+
+        let routes: [SidebarDestination] = [
+            .context(work.id),
+            .context(personal.id),
+            .settings,
+            .about
+        ]
+
+        // No two destinations route to the same detail target.
+        #expect(Set(routes).count == routes.count)
+        // Only context destinations resolve to a context to display.
+        #expect(routes.map(\.contextID) == [work.id, personal.id, nil, nil])
+    }
+
     @Test("reconciliation keeps fixed destinations and follows renames by identifier")
     func reconciliationKeepsFixedDestinations() {
         let work = WorkspaceContext(name: "Work", symbol: "briefcase")
