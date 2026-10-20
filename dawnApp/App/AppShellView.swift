@@ -1,3 +1,4 @@
+import libdawn
 import SwiftUI
 
 struct AppShellView: View {
@@ -18,6 +19,25 @@ private struct AppShellContent: View {
     @State private var viewModel: ContextDetailView.ViewModel
     @State private var columnVisibility: NavigationSplitViewVisibility = .automatic
     @State private var selectedDestination: SidebarDestination?
+    @State private var searchText = ""
+    @State private var isArchivedSectionExpanded = false
+
+    private var filteredContexts: [WorkspaceContext] {
+        ContextSearchFilter.filter(store.contexts, searchText: searchText)
+    }
+
+    private var isSearching: Bool {
+        !searchText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+    }
+
+    /// The archived section starts collapsed, but always expands while
+    /// searching so matching (or missing) archived results are visible.
+    private var archivedSectionExpansion: Binding<Bool> {
+        Binding(
+            get: { isArchivedSectionExpanded || isSearching },
+            set: { isArchivedSectionExpanded = $0 }
+        )
+    }
 
     private var interactionsDisabled: Bool {
         !eventBusService.isConnected || store.isLoading || viewModel.operationInProgress != nil
@@ -50,13 +70,19 @@ private struct AppShellContent: View {
                         viewModel.dismissContextCreator()
                     }
                 }
-            )
-        ) {
-            ContextCreatorView(context: viewModel.contextBeingEdited)
-        }
-    }
+            ),
+            onDismiss: {
+                viewModel.dismissContextCreator()
 
-    // MARK: - Sidebar
+                Task {
+                    await store.refresh()
+                }
+            },
+            content: {
+                ContextCreatorView(context: viewModel.contextBeingEdited)
+            }
+        )
+    }
 
     private var sidebar: some View {
         List(selection: $selectedDestination) {
@@ -70,9 +96,40 @@ private struct AppShellContent: View {
                 .selectionDisabled()
             }
 
-            Section("Contexts") {
-                contextsSectionContent
-            }
+            Section(
+                content: {
+                    contextsSectionContent
+                },
+                header: {
+                    HStack {
+                        Text("Contexts")
+
+                        Spacer()
+
+                        Button {
+                            viewModel.presentContextCreator()
+                        } label: {
+                            Image(systemName: "plus")
+                        }
+                        .buttonStyle(.borderless)
+                        .disabled(interactionsDisabled)
+                        .help("Create a new context")
+                        .accessibilityLabel("Create a new context")
+                    }
+                }
+            )
+
+            Section(
+                isExpanded: archivedSectionExpansion,
+                content: {
+                    Text(isSearching ? "No archived contexts found" : "No archived contexts")
+                        .foregroundStyle(.secondary)
+                        .selectionDisabled()
+                },
+                header: {
+                    Text("Archived contexts")
+                }
+            )
 
             if let error = viewModel.error ?? store.error {
                 Section {
@@ -97,6 +154,7 @@ private struct AppShellContent: View {
             }
         }
         .navigationTitle("DAWN")
+        .searchable(text: $searchText, placement: .sidebar, prompt: "Search contexts")
     }
 
     @ViewBuilder
@@ -124,8 +182,12 @@ private struct AppShellContent: View {
             Text("No contexts")
                 .foregroundStyle(.secondary)
                 .selectionDisabled()
+        } else if filteredContexts.isEmpty {
+            Text("No contexts matching \"\(searchText)\"")
+                .foregroundStyle(.secondary)
+                .selectionDisabled()
         } else {
-            ForEach(store.contexts) { context in
+            ForEach(filteredContexts) { context in
                 Label(context.name, systemImage: context.symbol)
                     .tag(SidebarDestination.context(context.id))
             }
