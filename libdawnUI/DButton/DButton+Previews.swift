@@ -20,7 +20,7 @@ import SwiftUI
                 Image(systemName: "message.fill")
             }
         }
-        
+
         DButton(style: .secondary) {
             print("progress btn")
         } content: {

@@ -13,7 +13,7 @@ struct DButton<Leading: View, Content: View, Trailing: View>: View {
     let leading: Leading
     let content: Content
     let trailing: Trailing
-    
+
     init(
         style: DButtonStyle = .primary,
         action: @escaping () -> Void = {},
@@ -27,19 +27,19 @@ struct DButton<Leading: View, Content: View, Trailing: View>: View {
         self.content = content()
         self.trailing = trailing()
     }
-    
+
     var body: some View {
         Button(action: action) {
             HStack(alignment: .center, spacing: style.spacing) {
-                if (Leading.self != EmptyView.self) {
+                if Leading.self != EmptyView.self {
                     leading
                         .font(style.iconFont)
                 }
-                
+
                 content
                     .font(style.labelFont)
-                
-                if (Trailing.self != EmptyView.self) {
+
+                if Trailing.self != EmptyView.self {
                     trailing
                         .font(style.iconFont)
                 }

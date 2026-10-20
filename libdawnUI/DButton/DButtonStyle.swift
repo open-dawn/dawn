@@ -13,9 +13,9 @@ enum DButtonStyle: CaseIterable {
     case danger
     case warning
     case link
-    
+
     var fgStyle: Color {
-        switch (self) {
+        switch self {
         case .primary: return DawnColors.secondaryBackground
         case .secondary: return DawnColors.primaryForeground
         case .danger: return DawnColors.dangerForeground
@@ -23,9 +23,9 @@ enum DButtonStyle: CaseIterable {
         case .link: return DawnColors.primaryForeground
         }
     }
-    
+
     var bgStyle: Color {
-        switch (self) {
+        switch self {
         case .primary: return DawnColors.primaryForeground
         case .secondary: return DawnColors.secondaryBackground
         case .danger: return DawnColors.dangerBackground
@@ -33,9 +33,9 @@ enum DButtonStyle: CaseIterable {
         case .link: return .clear
         }
     }
-    
+
     var spacing: CGFloat {
-        switch (self) {
+        switch self {
         case .primary: return 8
         case .secondary: return 8
         case .danger: return 8
@@ -43,9 +43,9 @@ enum DButtonStyle: CaseIterable {
         case .link: return 8
         }
     }
-    
+
     var verticalPadding: CGFloat {
-        switch (self) {
+        switch self {
         case .primary: return 12
         case .secondary: return 12
         case .danger: return 12
@@ -53,9 +53,9 @@ enum DButtonStyle: CaseIterable {
         case .link: return 6
         }
     }
-    
+
     var horizontalPadding: CGFloat {
-        switch (self) {
+        switch self {
         case .primary: return 16
         case .secondary: return 16
         case .danger: return 16
@@ -63,9 +63,9 @@ enum DButtonStyle: CaseIterable {
         case .link: return 0
         }
     }
-    
+
     var cornerRadius: CGFloat {
-        switch (self) {
+        switch self {
         case .primary: return 8
         case .secondary: return 8
         case .danger: return 8
@@ -73,9 +73,9 @@ enum DButtonStyle: CaseIterable {
         case .link: return 8
         }
     }
-    
+
     var underlined: Bool {
-        switch (self) {
+        switch self {
         case .primary: return false
         case .secondary: return false
         case .danger: return false
@@ -85,7 +85,7 @@ enum DButtonStyle: CaseIterable {
     }
 
     var labelFont: Font {
-        switch (self) {
+        switch self {
         case .primary: return DawnTextStyle.buttonLabel
         case .secondary: return DawnTextStyle.buttonLabel
         case .danger: return DawnTextStyle.buttonLabel
@@ -95,7 +95,7 @@ enum DButtonStyle: CaseIterable {
     }
 
     var iconFont: Font {
-        switch (self) {
+        switch self {
         case .primary: return DawnTextStyle.buttonIcon
         case .secondary: return DawnTextStyle.buttonIcon
         case .danger: return DawnTextStyle.buttonIcon
