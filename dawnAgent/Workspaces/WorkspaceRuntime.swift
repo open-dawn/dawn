@@ -87,7 +87,7 @@ final class WorkspaceRuntime: WorkspaceCoordinating {
             throw SettingsStoreError.contextNotFound(id)
         }
 
-        contextSwitching.switchToContext(to: context)
+        try await contextSwitching.switchToContext(to: context)
         lastRequestedContextID = context.id
     }
 }

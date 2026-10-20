@@ -3,36 +3,18 @@ import libdawn
 
 @MainActor
 protocol ContextSwitching {
-    func switchToContext(to context: WorkspaceContext)
+    func switchToContext(to context: WorkspaceContext) async throws
 }
 
 @MainActor
 struct DefaultContextSwitching: ContextSwitching {
-    func switchToContext(to context: WorkspaceContext) {
+    func switchToContext(to context: WorkspaceContext) async throws {
         let appsList: [WorkspaceApplication] = context.applications
 
-        Task { @MainActor in
-            do {
-                try await WMActionIdentifier.resetWindows.action.execute()
-            } catch {
-                #log(
-                    "Error reseting windows: \(error.localizedDescription)",
-                    level: .error,
-                    category: .general
-                )
-            }
+        try await WMActionIdentifier.resetWindows.action.execute()
 
-            for app in appsList {
-                do {
-                    try await WMActionIdentifier.openApp(app).action.execute()
-                } catch {
-                    #log(
-                        "Error opening app \(app.bundleIdentifier) (\(error))",
-                        level: .error,
-                        category: .general
-                    )
-                }
-            }
+        for app in appsList {
+            try await WMActionIdentifier.openApp(app).action.execute()
         }
     }
 }

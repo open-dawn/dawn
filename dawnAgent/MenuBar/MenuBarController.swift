@@ -78,7 +78,7 @@ final class MenuBarController: NSObject, MenuBarControlling {
         popover.animates = true
         popover.contentSize = NSSize(
             width: 320,
-            height: 120
+            height: 360
         )
 
         popover.contentViewController = NSHostingController(

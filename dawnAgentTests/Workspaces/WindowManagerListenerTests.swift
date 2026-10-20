@@ -574,8 +574,13 @@ final class FakeContextManager: ContextProviding {
 
 final class ContextSwitchingSpy: ContextSwitching {
     var switchedContexts: [WorkspaceContext] = []
+    var error: (any Error)?
 
-    func switchToContext(to context: WorkspaceContext) {
+    func switchToContext(to context: WorkspaceContext) async throws {
+        if let error {
+            throw error
+        }
+
         switchedContexts.append(context)
     }
 }

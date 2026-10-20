@@ -120,7 +120,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             self.debugPingListener = debugPingListener
             self.menuBarController = menuBarController
 
-
             #log(
                 "Starting dawnAgent event bus",
                 level: .info,

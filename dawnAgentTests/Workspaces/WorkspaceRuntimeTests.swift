@@ -160,6 +160,86 @@ struct WorkspaceRuntimeTests {
 
         #expect(runtime.contexts == newContexts)
     }
+
+    @Test("Failed activation preserves the previously active context")
+    func failedActivationPreservesSelection() async throws {
+        let initiallyActiveContext = WorkspaceContext(
+            name: "Work",
+            symbol: "briefcase"
+        )
+
+        let failingContext = WorkspaceContext(
+            name: "Personal",
+            symbol: "person"
+        )
+
+        let contextManager = FakeContextManager()
+        contextManager.contexts = [
+            initiallyActiveContext,
+            failingContext
+        ]
+
+        let switcher = ContextSwitchingSpy()
+
+        let runtime = WorkspaceRuntime(
+            contextManager: contextManager,
+            contextSwitching: switcher
+        )
+
+        try await runtime.activateContext(
+            id: initiallyActiveContext.id
+        )
+
+        switcher.error = ContextSwitchingTestError.failed
+
+        await #expect(throws: ContextSwitchingTestError.failed) {
+            try await runtime.activateContext(id: failingContext.id)
+        }
+
+        #expect(runtime.lastRequestedContextID == initiallyActiveContext.id)
+
+        #expect(switcher.switchedContexts == [initiallyActiveContext])
+    }
+
+    @Test("Switch context replies with unexpected failure when activation fails")
+    func switchContextRepliesWithActivationFailure() async throws {
+        let context = WorkspaceContext(
+            name: "Work",
+            symbol: "briefcase"
+        )
+
+        let contextManager = FakeContextManager()
+        contextManager.contexts = [context]
+
+        let switcher = ContextSwitchingSpy()
+        switcher.error = ContextSwitchingTestError.failed
+
+        let workspace = WorkspaceRuntime(
+            contextManager: contextManager,
+            contextSwitching: switcher
+        )
+
+        let bus = EventBus()
+        let listener = WindowManagerListener(
+            bus: bus,
+            workspace: workspace
+        )
+
+        let response = try await bus.ask(
+            .switchContext(
+                SwitchContextEvent(contextID: context.id)
+            )
+        )
+
+        #expect(
+            response == .contextMutationAcknowledged(
+                .failure(failure: .unexpected)
+            )
+        )
+        #expect(workspace.lastRequestedContextID == nil)
+
+        _ = listener
+    }
 }
 
 @MainActor
@@ -240,4 +320,8 @@ private final class OutOfOrderContextProvider: ContextProviding {
     func deleteContext(id: UUID) async throws {
         fatalError("Not used by this test")
     }
+}
+
+private enum ContextSwitchingTestError: Error, Equatable {
+    case failed
 }
