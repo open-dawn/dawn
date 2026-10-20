@@ -1,29 +1,23 @@
 import Foundation
+import libdawn
 
-enum SidebarDestination: Hashable, CaseIterable, Identifiable {
-    case profiles
+enum SidebarDestination: Hashable {
+    case context(UUID) // UUID represents the target context
     case settings
     case about
 
-    static let initial: SidebarDestination = .profiles
-
-    var id: SidebarDestination {
-        self
-    }
-
-    var title: String {
+    var contextID: UUID? {
         switch self {
-        case .profiles: "Profiles"
-        case .settings: "Settings"
-        case .about: "About"
+        case let .context(id): id
+        case .settings, .about: nil
         }
     }
 
-    var systemImage: String {
-        switch self {
-        case .profiles: "rectangle.stack"
-        case .settings: "gearshape"
-        case .about: "info.circle"
+    func reconciled(with contexts: [WorkspaceContext]) -> SidebarDestination? {
+        guard let contextID else {
+            return self
         }
+
+        return contexts.contains { $0.id == contextID } ? self : nil
     }
 }

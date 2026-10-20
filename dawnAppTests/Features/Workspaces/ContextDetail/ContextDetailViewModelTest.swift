@@ -1,38 +1,33 @@
+@testable import dawnApp
 import Foundation
 import libdawn
 import Testing
 
-@testable import dawnApp
-
 @MainActor
-@Suite("WorkspaceSwitcher ViewModel")
-struct WorkspaceSwitcherViewModelTests {
+@Suite("ContextDetail ViewModel")
+struct ContextDetailViewModelTests {
     @Test("Starts with no active operation, error, or presented creator")
-    func initialState() async throws {
+    func initialState() {
         let contextManager = WorkspaceContextManagerSpy()
-        let viewModel = WorkspaceSwitcherView.ViewModel(
-            contextManager: contextManager
-        )
+        let viewModel = ContextDetailView.ViewModel(contextManager: contextManager)
 
         #expect(viewModel.operationInProgress == nil)
         #expect(viewModel.error == nil)
-        #expect(!viewModel.isCreatingOrEditing)
+        #expect(!viewModel.isCreatingOrEditing == true)
         #expect(viewModel.contextBeingEdited == nil)
     }
 
     @Test("Presents and dismisses the context creator")
-    func contextCreatorPresentation() async throws {
+    func contextCreatorPresentation() throws {
         let contextManager = WorkspaceContextManagerSpy()
-        let viewModel = WorkspaceSwitcherView.ViewModel(
+        let viewModel = ContextDetailView.ViewModel(
             contextManager: contextManager
         )
 
         viewModel.presentContextCreator()
-
-        try #require(viewModel.isCreatingOrEditing)
+        try #require(viewModel.isCreatingOrEditing == true)
 
         viewModel.dismissContextCreator()
-
         #expect(viewModel.isCreatingOrEditing == false)
     }
 
@@ -44,7 +39,7 @@ struct WorkspaceSwitcherViewModelTests {
         )
 
         let contextManager = WorkspaceContextManagerSpy()
-        let viewModel = WorkspaceSwitcherView.ViewModel(
+        let viewModel = ContextDetailView.ViewModel(
             contextManager: contextManager
         )
 
@@ -69,7 +64,7 @@ struct WorkspaceSwitcherViewModelTests {
         )
 
         let contextManager = WorkspaceContextManagerSpy()
-        let viewModel = WorkspaceSwitcherView.ViewModel(
+        let viewModel = ContextDetailView.ViewModel(
             contextManager: contextManager
         )
 
@@ -90,7 +85,7 @@ struct WorkspaceSwitcherViewModelTests {
         let contextManager = WorkspaceContextManagerSpy()
         contextManager.error = SettingsContextStoreError.notConnected
 
-        let viewModel = WorkspaceSwitcherView.ViewModel(
+        let viewModel = ContextDetailView.ViewModel(
             contextManager: contextManager
         )
 
@@ -111,7 +106,7 @@ struct WorkspaceSwitcherViewModelTests {
         let contextManager = WorkspaceContextManagerSpy()
         contextManager.error = SettingsContextStoreError.timeout
 
-        let viewModel = WorkspaceSwitcherView.ViewModel(
+        let viewModel = ContextDetailView.ViewModel(
             contextManager: contextManager
         )
 
@@ -137,7 +132,7 @@ struct WorkspaceSwitcherViewModelTests {
         let contextManager = WorkspaceContextManagerSpy()
         contextManager.error = TestError.expected
 
-        let viewModel = WorkspaceSwitcherView.ViewModel(
+        let viewModel = ContextDetailView.ViewModel(
             contextManager: contextManager
         )
 
@@ -153,18 +148,18 @@ struct WorkspaceSwitcherViewModelTests {
             name: "Personal",
             symbol: "person"
         )
-        let viewModel = WorkspaceSwitcherView.ViewModel(
+        let viewModel = ContextDetailView.ViewModel(
             contextManager: WorkspaceContextManagerSpy()
         )
 
         viewModel.presentContextEditor(context)
 
-        #expect(viewModel.isCreatingOrEditing)
+        #expect(viewModel.isCreatingOrEditing == true)
         #expect(viewModel.contextBeingEdited == context)
 
         viewModel.dismissContextCreator()
 
-        #expect(!viewModel.isCreatingOrEditing)
+        #expect(!viewModel.isCreatingOrEditing == true)
         #expect(viewModel.contextBeingEdited == nil)
     }
 
@@ -174,14 +169,14 @@ struct WorkspaceSwitcherViewModelTests {
             name: "Work",
             symbol: "briefcase"
         )
-        let viewModel = WorkspaceSwitcherView.ViewModel(
+        let viewModel = ContextDetailView.ViewModel(
             contextManager: WorkspaceContextManagerSpy()
         )
 
         viewModel.presentContextEditor(context)
         viewModel.presentContextCreator()
 
-        #expect(viewModel.isCreatingOrEditing)
+        #expect(viewModel.isCreatingOrEditing == true)
         #expect(viewModel.contextBeingEdited == nil)
     }
 
@@ -195,7 +190,7 @@ struct WorkspaceSwitcherViewModelTests {
         let contextManager = WorkspaceContextManagerSpy()
         contextManager.error = SettingsContextStoreError.notConnected
 
-        let viewModel = WorkspaceSwitcherView.ViewModel(
+        let viewModel = ContextDetailView.ViewModel(
             contextManager: contextManager
         )
 
@@ -234,6 +229,7 @@ private final class WorkspaceContextManagerSpy: WorkspaceContextManaging {
         }
     }
 }
+
 private enum TestError: Error {
     case expected
 }

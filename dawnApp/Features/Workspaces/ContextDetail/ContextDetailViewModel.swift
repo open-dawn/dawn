@@ -1,7 +1,7 @@
 import Foundation
 import libdawn
 
-extension WorkspaceSwitcherView {
+extension ContextDetailView {
     @Observable
     @MainActor
     class ViewModel {
@@ -17,7 +17,6 @@ extension WorkspaceSwitcherView {
             self.contextManager = contextManager
         }
 
-        // MARK: - User Interactions
         func presentContextCreator() {
             contextBeingEdited = nil
             isCreatingOrEditing = true
@@ -37,7 +36,7 @@ extension WorkspaceSwitcherView {
             error = nil
         }
 
-        public func runContext(_ context: WorkspaceContext) async {
+        func runContext(_ context: WorkspaceContext) async {
             guard operationInProgress == nil else { return }
 
             operationInProgress = context.id
@@ -53,7 +52,7 @@ extension WorkspaceSwitcherView {
             }
         }
 
-        public func deleteContext(_ context: WorkspaceContext) async {
+        func deleteContext(_ context: WorkspaceContext) async {
             guard operationInProgress == nil else { return }
 
             operationInProgress = context.id
