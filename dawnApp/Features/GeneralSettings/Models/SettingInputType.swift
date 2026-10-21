@@ -1,6 +1,6 @@
 import Foundation
 
-enum SettingInputType<ViewModel: BaseViewModel> {
+enum SettingInputType<ViewModel: AnyObject> {
     case toggle(ReferenceWritableKeyPath<ViewModel, Bool>)
     case textField(ReferenceWritableKeyPath<ViewModel, String>)
 

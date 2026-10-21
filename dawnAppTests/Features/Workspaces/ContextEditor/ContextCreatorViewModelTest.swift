@@ -9,7 +9,7 @@ struct ContextCreatorViewModelTests {
     @Test("starts a view model with an empty context")
     func initialState() {
         let contextCreator = ContextCreatorSpy()
-        let viewModel = ContextCreatorView.ViewModel(contextSaver: contextCreator)
+        let viewModel = ContextCreatorViewModel(contextSaver: contextCreator)
 
         #expect(viewModel.error == nil)
         #expect(viewModel.errorMessage == nil)
@@ -31,7 +31,7 @@ struct ContextCreatorViewModelTests {
         )
 
         let selector = ApplicationSelectorSpy(result: application)
-        let viewModel = ContextCreatorView.ViewModel(
+        let viewModel = ContextCreatorViewModel(
             contextSaver: ContextCreatorSpy(),
             applicationSelector: selector
         )
@@ -47,7 +47,7 @@ struct ContextCreatorViewModelTests {
     @Test("Cancelling application selection changes nothing")
     func cancelApplicationSelection() async {
         let selector = ApplicationSelectorSpy(result: nil)
-        let viewModel = ContextCreatorView.ViewModel(
+        let viewModel = ContextCreatorViewModel(
             contextSaver: ContextCreatorSpy(),
             applicationSelector: selector
         )
@@ -65,7 +65,7 @@ struct ContextCreatorViewModelTests {
         let selector = ApplicationSelectorSpy(
             error: ApplicationSelectionError.missingBundleIdentifier
         )
-        let viewModel = ContextCreatorView.ViewModel(
+        let viewModel = ContextCreatorViewModel(
             contextSaver: ContextCreatorSpy(),
             applicationSelector: selector
         )
@@ -80,7 +80,7 @@ struct ContextCreatorViewModelTests {
     @Test("Maps an unexpected application-selection error")
     func unknownApplicationSelectionError() async {
         let selector = ApplicationSelectorSpy(error: TestError.expected)
-        let viewModel = ContextCreatorView.ViewModel(
+        let viewModel = ContextCreatorViewModel(
             contextSaver: ContextCreatorSpy(),
             applicationSelector: selector
         )
@@ -95,7 +95,7 @@ struct ContextCreatorViewModelTests {
     @Test("Exposes loading state while selecting an application")
     func applicationSelectionLoadingState() async {
         let selector = ApplicationSelectorSpy()
-        let viewModel = ContextCreatorView.ViewModel(
+        let viewModel = ContextCreatorViewModel(
             contextSaver: ContextCreatorSpy(),
             applicationSelector: selector
         )
@@ -116,7 +116,7 @@ struct ContextCreatorViewModelTests {
         let selector = ApplicationSelectorSpy(
             error: ApplicationSelectionError.invalidApplication
         )
-        let viewModel = ContextCreatorView.ViewModel(
+        let viewModel = ContextCreatorViewModel(
             contextSaver: ContextCreatorSpy(),
             applicationSelector: selector
         )
@@ -136,7 +136,7 @@ struct ContextCreatorViewModelTests {
             displayName: "Safari"
         )
 
-        let viewModel = ContextCreatorView.ViewModel(
+        let viewModel = ContextCreatorViewModel(
             contextSaver: ContextCreatorSpy()
         )
         viewModel.context.applications = [application]
@@ -154,7 +154,7 @@ struct ContextCreatorViewModelTests {
             displayName: "Safari"
         )
 
-        let viewModel = ContextCreatorView.ViewModel(
+        let viewModel = ContextCreatorViewModel(
             contextSaver: ContextCreatorSpy()
         )
         viewModel.context.applications = [application]
@@ -175,7 +175,7 @@ struct ContextCreatorViewModelTests {
             displayName: "Mail"
         )
 
-        let viewModel = ContextCreatorView.ViewModel(
+        let viewModel = ContextCreatorViewModel(
             contextSaver: ContextCreatorSpy()
         )
         viewModel.context.applications = [safari, mail]
@@ -193,7 +193,7 @@ struct ContextCreatorViewModelTests {
         )
 
         let contextCreator = ContextCreatorSpy()
-        let viewModel = ContextCreatorView.ViewModel(
+        let viewModel = ContextCreatorViewModel(
             contextSaver: contextCreator
         )
 
@@ -220,7 +220,7 @@ struct ContextCreatorViewModelTests {
     @Test("Save exposes loading state during creation")
     func saveContextLoadingState() async {
         let contextCreator = ContextCreatorSpy()
-        let viewModel = ContextCreatorView.ViewModel(
+        let viewModel = ContextCreatorViewModel(
             contextSaver: contextCreator
         )
 
@@ -244,7 +244,7 @@ struct ContextCreatorViewModelTests {
             .emptyContextName
         )
 
-        let viewModel = ContextCreatorView.ViewModel(
+        let viewModel = ContextCreatorViewModel(
             contextSaver: contextCreator
         )
 
@@ -263,7 +263,7 @@ struct ContextCreatorViewModelTests {
         let contextCreator = ContextCreatorSpy()
         contextCreator.error = TestError.expected
 
-        let viewModel = ContextCreatorView.ViewModel(
+        let viewModel = ContextCreatorViewModel(
             contextSaver: contextCreator
         )
 
@@ -279,7 +279,7 @@ struct ContextCreatorViewModelTests {
         let contextCreator = ContextCreatorSpy()
         contextCreator.error = SettingsContextStoreError.timeout
 
-        let viewModel = ContextCreatorView.ViewModel(
+        let viewModel = ContextCreatorViewModel(
             contextSaver: contextCreator
         )
 
@@ -297,7 +297,7 @@ struct ContextCreatorViewModelTests {
         let contextCreator = ContextCreatorSpy()
         contextCreator.error = SettingsContextStoreError.notConnected
 
-        let viewModel = ContextCreatorView.ViewModel(
+        let viewModel = ContextCreatorViewModel(
             contextSaver: contextCreator
         )
 
@@ -322,7 +322,7 @@ struct ContextCreatorViewModelTests {
             ]
         )
 
-        let viewModel = ContextCreatorView.ViewModel(
+        let viewModel = ContextCreatorViewModel(
             contextSaver: ContextCreatorSpy(),
             context: context
         )
@@ -339,7 +339,7 @@ struct ContextCreatorViewModelTests {
         )
 
         let contextSaver = ContextCreatorSpy()
-        let viewModel = ContextCreatorView.ViewModel(
+        let viewModel = ContextCreatorViewModel(
             contextSaver: contextSaver,
             context: original
         )
@@ -371,7 +371,7 @@ struct ContextCreatorViewModelTests {
         let contextSaver = ContextCreatorSpy()
         contextSaver.error = expectedError
 
-        let viewModel = ContextCreatorView.ViewModel(
+        let viewModel = ContextCreatorViewModel(
             contextSaver: contextSaver,
             context: context
         )

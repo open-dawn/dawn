@@ -20,12 +20,12 @@ struct ContextCreatorView: View {
 }
 
 private struct ContextCreatorContent: View {
-    @State private var viewModel: ContextCreatorView.ViewModel
+    @State private var viewModel: ContextCreatorViewModel
     @Environment(\.dismiss) private var dismiss
 
     init(contextSaver: any ContextSaving, context: WorkspaceContext?) {
         _viewModel = State(
-            initialValue: ContextCreatorView.ViewModel(
+            initialValue: ContextCreatorViewModel(
                 contextSaver: contextSaver,
                 context: context
             )
