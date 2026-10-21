@@ -2,7 +2,7 @@ import Foundation
 import libdawn
 
 enum SidebarDestination: Hashable {
-    case context(UUID) // UUID represents the target context
+    case context(UUID)
     case settings
     case about
 

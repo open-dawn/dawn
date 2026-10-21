@@ -13,7 +13,7 @@ struct ContextDetailViewModelTests {
 
         #expect(viewModel.operationInProgress == nil)
         #expect(viewModel.error == nil)
-        #expect(!viewModel.isCreatingOrEditing == true)
+        #expect(viewModel.isCreatingOrEditing == false)
         #expect(viewModel.contextBeingEdited == nil)
     }
 
@@ -159,7 +159,7 @@ struct ContextDetailViewModelTests {
 
         viewModel.dismissContextCreator()
 
-        #expect(!viewModel.isCreatingOrEditing == true)
+        #expect(viewModel.isCreatingOrEditing == false)
         #expect(viewModel.contextBeingEdited == nil)
     }
 

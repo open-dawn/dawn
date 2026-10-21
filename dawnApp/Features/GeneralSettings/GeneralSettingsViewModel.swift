@@ -1,7 +1,6 @@
 import Foundation
 import SwiftUI
 
-// Pending: create a different struct with settings for testing.
 @Observable
 final class GeneralSettingsViewModel {
     private(set) var openAtLogin: Bool
@@ -44,8 +43,6 @@ final class GeneralSettingsViewModel {
         }
     }
 
-    // MARK: - Sync function
-
     func setSettings() {
         // Pending: persist current settings.
         print("Calling setSettings()")
@@ -57,7 +54,6 @@ final class GeneralSettingsViewModel {
     }
 
     func resetSettingsToDefaults() {
-        // Pending: reset settings using persistent storage.
         for section in sectionsWithSettings {
             for setting in section.settings {
                 resetSettingToDefault(setting)
@@ -65,9 +61,7 @@ final class GeneralSettingsViewModel {
         }
     }
 
-    func getCurrentSettings() throws(ViewModelError) {
-        // Pending: implement this function
-    }
+    func getCurrentSettings() throws(ViewModelError) {}
 
     func resetSettingToDefault(_ setting: SettingItem<GeneralSettingsViewModel>) {
         let anyKeyPath = setting.inputType.getKeyPath(self)

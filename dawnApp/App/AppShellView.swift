@@ -30,8 +30,6 @@ private struct AppShellContent: View {
         !searchText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
     }
 
-    /// The archived section starts collapsed, but always expands while
-    /// searching so matching (or missing) archived results are visible.
     private var archivedSectionExpansion: Binding<Bool> {
         Binding(
             get: { isArchivedSectionExpanded || isSearching },

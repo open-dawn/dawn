@@ -42,7 +42,6 @@ struct SidebarDestinationTests {
         let refreshedWork = WorkspaceContext(id: work.id, name: "Work (renamed)", symbol: "case")
         let gaming = WorkspaceContext(name: "Gaming", symbol: "gamecontroller.fill")
 
-        // Simulates SettingsContextStore.contexts being replaced by a refresh.
         let afterRefresh: [WorkspaceContext] = [refreshedWork, gaming]
 
         #expect(
@@ -57,9 +56,7 @@ struct SidebarDestinationTests {
         let personal = WorkspaceContext(name: "Personal", symbol: "person")
         let destination = SidebarDestination.context(work.id)
 
-        // The selected context is gone from the refreshed list.
         #expect(destination.reconciled(with: [personal]) == nil)
-        // Every context was deleted.
         #expect(destination.reconciled(with: []) == nil)
     }
 
@@ -75,9 +72,7 @@ struct SidebarDestinationTests {
             .about
         ]
 
-        // No two destinations route to the same detail target.
         #expect(Set(routes).count == routes.count)
-        // Only context destinations resolve to a context to display.
         #expect(routes.map(\.contextID) == [work.id, personal.id, nil, nil])
     }
 
