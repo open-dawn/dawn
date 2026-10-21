@@ -163,7 +163,8 @@ struct SidebarContextList: View {
                 .lineLimit(2)
                 .frame(maxWidth: .infinity, alignment: .leading)
         }
-        .padding(.vertical, 6)
+        .padding(.vertical, 8)
+        .padding(.horizontal, 12)
         .accessibilityElement(children: .combine)
     }
 

@@ -94,6 +94,10 @@ import SwiftUI
         .frame(width: 300)
 }
 
+#Preview("Sidebar / No context") {
+    SidebarPreview(content: SidebarPreviewData.empty)
+}
+
 private struct SidebarPreview: View {
     private let content: SidebarContent
     private let search: SidebarSearchState
@@ -264,6 +268,15 @@ private enum SidebarPreviewData {
             update: availableUpdate
         )
     }
+    
+    static var empty: SidebarContent {
+        SidebarContent(
+            contexts: [],
+            archivedContexts: [],
+            activeContextID: nil,
+            update: availableUpdate
+        )
+    }
 
     static var full: SidebarContent {
         SidebarContent(
@@ -281,10 +294,6 @@ private enum SidebarPreviewData {
         name: "Personal (2024)",
         symbol: "archivebox"
     )
-
-    static var empty: SidebarContent {
-        SidebarContent(update: nil)
-    }
 
     static var loading: SidebarContent {
         SidebarContent(isLoading: true, interactionsDisabled: true)
