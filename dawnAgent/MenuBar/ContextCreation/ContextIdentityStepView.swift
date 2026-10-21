@@ -7,6 +7,7 @@
 
 import Foundation
 import SwiftUI
+import libdawnUI
 
 struct ContextIdentityStepView: View {
     private static let symbols = [
@@ -50,17 +51,10 @@ struct ContextIdentityStepView: View {
                 symbolPicker
             }
 
-            // TODO: Update this button with shared asset when the asset it's merged on main
-            Button(action: onNext) {
+            DButton(action: onNext) {
                 Text("Next")
-                    .font(.system(size: 14, weight: .bold))
-                    .foregroundStyle(.black)
                     .frame(maxWidth: .infinity)
-                    .padding(.vertical, 11)
-                    .background(.white)
-                    .clipShape(RoundedRectangle(cornerRadius: 7))
             }
-            .buttonStyle(.plain)
             .disabled(!canContinue)
             .opacity(canContinue ? 1 : 0.5)
         }

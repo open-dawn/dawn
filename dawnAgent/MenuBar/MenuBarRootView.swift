@@ -53,7 +53,7 @@ struct MenuBarRootView: View {
                 .buttonStyle(.plain)
 
                 Button {
-                    // TODO: Open dawnApp in general settings view
+                    // PIN-122: Open dawnApp in general settings view
                 } label: {
                     Image(systemName: "gearshape")
                         .font(.system(size: 20, weight: .light))
@@ -61,7 +61,7 @@ struct MenuBarRootView: View {
                 .buttonStyle(.plain)
             }
 
-            // TODO: If there is a active context, it should appear here above the list
+            // PIN-122: If there is a active context, it should appear here above the list
 
             HStack(alignment: .center) {
                 Text("Contexts")
@@ -70,7 +70,7 @@ struct MenuBarRootView: View {
                 Spacer()
 
                 Button {
-                    // TODO: Open dawnApp in current/latest context settings
+                    // PIN-122: Open dawnApp in current/latest context settings
                 } label: {
                     Text("view in app")
                         .font(.system(size: 12, weight: .light))
@@ -175,7 +175,7 @@ struct MenuBarRootView: View {
         case .activate:
             activate(context)
         case .stop, .openInApp, .delete:
-            // TODO: Implement these actions in the functionality issue.
+            // PIN-122: Implement these actions in the functionality issue.
             break
         }
     }

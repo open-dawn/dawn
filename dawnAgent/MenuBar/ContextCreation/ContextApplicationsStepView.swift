@@ -7,6 +7,7 @@
 
 import Foundation
 import SwiftUI
+import libdawnUI
 
 struct ContextApplicationsStepView: View {
     let applications: [ContextCreationApplication]
@@ -47,16 +48,10 @@ struct ContextApplicationsStepView: View {
             searchBar
             applicationGrid
 
-            Button(action: onNext) {
+            DButton(action: onNext) {
                 Text("Next")
-                    .font(.system(size: 14, weight: .bold))
-                    .foregroundStyle(.black)
                     .frame(maxWidth: .infinity)
-                    .padding(.vertical, 11)
-                    .background(.white)
-                    .clipShape(RoundedRectangle(cornerRadius: 7))
             }
-            .buttonStyle(.plain)
         }
     }
 

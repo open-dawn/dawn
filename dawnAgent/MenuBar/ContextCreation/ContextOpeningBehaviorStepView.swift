@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import libdawnUI
 
 struct ContextOpeningBehaviorStepView: View {
     @Binding var selectedBehavior: ContextOpeningBehavior
@@ -30,16 +31,10 @@ struct ContextOpeningBehaviorStepView: View {
             }
             .padding(.horizontal, 28)
 
-            Button(action: onFinish) {
+            DButton(action: onFinish) {
                 Text("Finish")
-                    .font(.system(size: 14, weight: .bold))
-                    .foregroundStyle(.black)
                     .frame(maxWidth: .infinity)
-                    .padding(.vertical, 11)
-                    .background(.white)
-                    .clipShape(RoundedRectangle(cornerRadius: 7))
             }
-            .buttonStyle(.plain)
         }
     }
 

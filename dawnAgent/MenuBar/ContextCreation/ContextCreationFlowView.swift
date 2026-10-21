@@ -82,7 +82,7 @@ struct ContextCreationFlowView: View {
                 applications: [],
                 selectedApplicationIDs: $draft.selectedApplicationIDs,
                 onChooseApplication: {
-                    // TODO: Connect the system application picker
+                    // PIN-122: Connect the system application picker
                 },
                 onNext: {
                     step = .openingBehaviour
@@ -98,11 +98,11 @@ struct ContextCreationFlowView: View {
         case .confirmation:
             ContextCreationConfirmationView(
                 onFinishAndSwitch: {
-                    // TODO: Persist and activate the context
+                    // PIN-122: Persist and activate the context
                     onExit()
                 },
                 onFinish: {
-                    // TODO: Persist the context and return to root
+                    // PIN-122: Persist the context and return to root
                     onExit()
                 }
             )

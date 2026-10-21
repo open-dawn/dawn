@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import libdawnUI
 
 struct ContextCreationConfirmationView: View {
     let onFinishAndSwitch: () -> Void
@@ -27,27 +28,16 @@ struct ContextCreationConfirmationView: View {
                 .frame(width: 118, height: 147)
                 .accessibilityHidden(true)
 
-            VStack(spacing: 0) {
-                Button(action: onFinishAndSwitch) {
+            VStack(spacing: 6) {
+                DButton(style: .primary,action: onFinishAndSwitch) {
                     Text("Finish and switch")
-                        .font(.system(size: 14, weight: .bold))
-                        .foregroundStyle(.white)
                         .frame(maxWidth: .infinity)
-                        .padding(.vertical, 11)
-                        .contentShape(Rectangle())
                 }
-                .buttonStyle(.plain)
 
-                Button(action: onFinish) {
+                DButton(style: .secondary, action: onFinish) {
                     Text("Finish")
-                        .font(.system(size: 14, weight: .bold))
-                        .foregroundStyle(.black)
                         .frame(maxWidth: .infinity)
-                        .padding(.vertical, 11)
-                        .background(.white)
-                        .clipShape(RoundedRectangle(cornerRadius: 7))
                 }
-                .buttonStyle(.plain)
             }
         }
     }
