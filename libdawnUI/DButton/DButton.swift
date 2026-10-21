@@ -16,8 +16,8 @@ public struct DButton<Leading: View, Content: View, Trailing: View>: View {
 
     public init(
         style: DButtonStyle = .primary,
-        action: @escaping () -> Void = {},
-        @ViewBuilder content: () -> Content = {EmptyView()},
+        action: @escaping () -> Void,
+        @ViewBuilder content: () -> Content,
         @ViewBuilder leading: () -> Leading = {EmptyView()},
         @ViewBuilder trailing: () -> Trailing = {EmptyView()}
     ) {
