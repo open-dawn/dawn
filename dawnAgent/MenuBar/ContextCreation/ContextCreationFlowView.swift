@@ -90,13 +90,12 @@ struct ContextCreationFlowView: View {
                 }
             )
         case .openingBehaviour:
-            VStack {
-                Text("Opening behaviour")
-
-                Button("Finish") {
+            ContextOpeningBehaviorStepView(
+                selectedBehavior: $draft.openingBehaviour,
+                onFinish: {
                     step = .confirmation
                 }
-            }
+            )
         case .confirmation:
             VStack {
                 Text("Confirmation")

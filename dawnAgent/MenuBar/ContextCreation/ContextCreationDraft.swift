@@ -11,4 +11,5 @@ struct ContextCreationDraft {
     var name = ""
     var symbolName: String?
     var selectedApplicationIDs: [UUID] = []
+    var openingBehaviour: ContextOpeningBehavior = .hideOthers
 }
