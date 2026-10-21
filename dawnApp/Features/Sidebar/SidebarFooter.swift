@@ -143,16 +143,26 @@ private struct SidebarErrorNotice: View {
     let onDismiss: () -> Void
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 4) {
-            Label(message, systemImage: "exclamationmark.triangle")
-                .font(DawnTextStyle.sidebarMeta)
-                .foregroundStyle(DawnColors.dangerForeground)
-                .lineLimit(3)
+        HStack(spacing: 6) {
+            Image(systemName: "exclamationmark.triangle.fill")
+                .font(DawnTextStyle.sidebarIcon)
+                .accessibilityHidden(true)
 
-            Button("Dismiss", action: onDismiss)
-                .buttonStyle(.borderless)
-                .font(DawnTextStyle.sidebarMeta)
+            Text(message)
+                .font(DawnTextStyle.sidebarWarning)
+                .lineLimit(3)
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
+        .foregroundStyle(DawnColors.dangerForeground)
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, SidebarMetrics.warningVerticalPadding)
+        .background {
+            RoundedRectangle(cornerRadius: SidebarMetrics.cornerRadius, style: .continuous)
+                .fill(DawnColors.dangerForeground.opacity(0.15))
+        }
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(message)
+        .onTapGesture {
+            onDismiss()
+        }
     }
 }
