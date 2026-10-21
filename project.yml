@@ -57,6 +57,22 @@ targets:
           destination: wrapper
           subpath: Contents/Library/LoginItems
       - package: dawnLogging
+    postCompileScripts:
+      - &swiftlint
+        name: SwiftLint
+        basedOnDependencyAnalysis: false
+        script: |
+          if [ "${ENABLE_PREVIEWS:-}" = "YES" ]; then
+            exit 0
+          fi
+
+          export PATH="/opt/homebrew/bin:/usr/local/bin:$PATH"
+
+          if command -v swiftlint >/dev/null 2>&1; then
+            swiftlint lint --strict "${SRCROOT}/${TARGET_NAME}"
+          else
+            echo "warning: SwiftLint is not installed. Install it with: brew install swiftlint"
+          fi
     scheme:
       testTargets:
         - dawnAppTests
@@ -90,6 +106,8 @@ targets:
     dependencies:
       - target: libdawn
       - package: dawnLogging
+    postCompileScripts:
+      - *swiftlint
     scheme:
       testTargets:
         - dawnAgentTests
@@ -123,6 +141,8 @@ targets:
           ENABLE_TESTABILITY: YES
     dependencies:
       - package: dawnLogging
+    postCompileScripts:
+      - *swiftlint
     scheme:
       testTargets:
         - libdawnTests
@@ -145,6 +165,8 @@ targets:
       configs:
         Debug:
           ENABLE_TESTABILITY: YES
+    postCompileScripts:
+      - *swiftlint
     scheme:
       testTargets:
         - libdawnUITests
@@ -161,6 +183,8 @@ targets:
       SWIFT_VERSION: *swiftversion
     dependencies:
       - target: libdawn
+    postCompileScripts:
+      - *swiftlint
 
   libdawnUITests:
     type: bundle.unit-test
@@ -173,6 +197,8 @@ targets:
       SWIFT_VERSION: *swiftversion
     dependencies:
       - target: libdawnUI
+    postCompileScripts:
+      - *swiftlint
 
   dawnAgentTests:
     type: bundle.unit-test
@@ -188,6 +214,8 @@ targets:
     dependencies:
       - target: dawnAgent
       - target: libdawn
+    postCompileScripts:
+      - *swiftlint
 
   dawnAppTests:
     type: bundle.unit-test
@@ -203,6 +231,8 @@ targets:
     dependencies:
       - target: dawnApp
       - target: libdawn
+    postCompileScripts:
+      - *swiftlint
 
 schemes:
   dawn:
