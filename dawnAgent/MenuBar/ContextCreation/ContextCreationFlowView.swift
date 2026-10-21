@@ -44,7 +44,6 @@ struct ContextCreationFlowView: View {
 
                     Spacer()
 
-
                     Button(action: onExit) {
                         Image(systemName: "xmark")
                     }
@@ -97,13 +96,16 @@ struct ContextCreationFlowView: View {
                 }
             )
         case .confirmation:
-            VStack {
-                Text("Confirmation")
-
-                Button("Finish") {
+            ContextCreationConfirmationView(
+                onFinishAndSwitch: {
+                    // TODO: Persist and activate the context
+                    onExit()
+                },
+                onFinish: {
+                    // TODO: Persist the context and return to root
                     onExit()
                 }
-            }
+            )
         }
     }
 
