@@ -11,7 +11,7 @@ import SwiftUI
     )
 }
 
-#Preview("Sidebar / Full (update + agent stopped + archived)") {
+#Preview("Sidebar / Full") {
     SidebarPreview(
         content: SidebarPreviewData.full,
         selection: .context(SidebarPreviewData.academy.id),
@@ -265,10 +265,6 @@ private enum SidebarPreviewData {
         )
     }
 
-    /// Every sidebar element at once: the selected context is also the
-    /// active one (green badge), other contexts are listed, the archived
-    /// section is expanded, an update is available, and the DAWN Agent
-    /// is not running.
     static var full: SidebarContent {
         SidebarContent(
             contexts: [academy, gaming, study],

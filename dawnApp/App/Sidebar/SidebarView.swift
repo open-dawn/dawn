@@ -47,12 +47,8 @@ struct SidebarView: View {
             SidebarBackground()
                 .ignoresSafeArea()
         }
-        .frame(
-            minWidth: SidebarMetrics.minimumWidth,
-            idealWidth: SidebarMetrics.idealWidth,
-            maxWidth: SidebarMetrics.maximumWidth,
-            maxHeight: .infinity
-        )
+        .frame(width: SidebarMetrics.width)
+        .frame(maxHeight: .infinity)
     }
 
     private var topSection: some View {

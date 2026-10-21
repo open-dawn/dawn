@@ -71,7 +71,7 @@ struct SidebarQuickActions: View {
             .help("Clear search")
             .accessibilityLabel("Clear search")
         }
-        .padding(.horizontal, 8)
+        .padding(.horizontal, 10)
         .frame(minHeight: SidebarMetrics.controlHeight)
         .background {
             RoundedRectangle(cornerRadius: SidebarMetrics.cornerRadius, style: .continuous)

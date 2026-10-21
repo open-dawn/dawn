@@ -5,7 +5,6 @@ import SwiftUI
 struct AppShellView: View {
     @Environment(SettingsContextStore.self)
     private var contextStore
-
     var availableUpdate: AppUpdateAvailability?
 
     init(availableUpdate: AppUpdateAvailability? = nil) {
@@ -17,10 +16,8 @@ struct AppShellView: View {
             store: contextStore,
             availableUpdate: availableUpdate
         )
-        .frame(
-            minWidth: SidebarMetrics.minimumWidth + SidebarMetrics.minimumDetailWidth,
-            minHeight: SidebarMetrics.minimumWindowHeight
-        )
+        .frame(width: SidebarMetrics.width)
+        .frame(minHeight: SidebarMetrics.minimumWindowHeight)
     }
 }
 
