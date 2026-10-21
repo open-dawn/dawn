@@ -1,48 +1,46 @@
 import libdawn
+import libdawnUI
 import SwiftUI
 
 struct AppShellView: View {
     @Environment(SettingsContextStore.self)
     private var contextStore
 
+    var availableUpdate: AppUpdateAvailability?
+
+    init(availableUpdate: AppUpdateAvailability? = nil) {
+        self.availableUpdate = availableUpdate
+    }
+
     var body: some View {
-        AppShellContent(store: contextStore)
+        AppShellContent(
+            store: contextStore,
+            availableUpdate: availableUpdate
+        )
+        .frame(
+            minWidth: SidebarMetrics.minimumWidth + SidebarMetrics.minimumDetailWidth,
+            minHeight: SidebarMetrics.minimumWindowHeight
+        )
     }
 }
 
 private struct AppShellContent: View {
     let store: SettingsContextStore
+    let availableUpdate: AppUpdateAvailability?
 
     @Environment(SettingsEventBusService.self)
     private var eventBusService
 
     @State private var viewModel: ContextDetailViewModel
-    @State private var columnVisibility: NavigationSplitViewVisibility = .automatic
     @State private var selectedDestination: SidebarDestination?
-    @State private var searchText = ""
-    @State private var isArchivedSectionExpanded = false
-
-    private var filteredContexts: [WorkspaceContext] {
-        ContextSearchFilter.filter(store.contexts, searchText: searchText)
-    }
-
-    private var isSearching: Bool {
-        !searchText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-    }
-
-    private var archivedSectionExpansion: Binding<Bool> {
-        Binding(
-            get: { isArchivedSectionExpanded || isSearching },
-            set: { isArchivedSectionExpanded = $0 }
-        )
-    }
 
     private var interactionsDisabled: Bool {
         !eventBusService.isConnected || store.isLoading || viewModel.operationInProgress != nil
     }
 
-    init(store: SettingsContextStore) {
+    init(store: SettingsContextStore, availableUpdate: AppUpdateAvailability?) {
         self.store = store
+        self.availableUpdate = availableUpdate
         _viewModel = State(
             initialValue: ContextDetailViewModel(
                 contextManager: store
@@ -51,14 +49,29 @@ private struct AppShellContent: View {
     }
 
     var body: some View {
-        NavigationSplitView(columnVisibility: $columnVisibility) {
+        HSplitView {
             sidebar
-        } detail: {
+
             detail(for: selectedDestination)
-                .padding(16)
+                .padding(24)
+                .frame(
+                    minWidth: SidebarMetrics.minimumDetailWidth,
+                    maxWidth: .infinity,
+                    maxHeight: .infinity
+                )
+                .background {
+                    DawnColors.primaryBackground
+                        .ignoresSafeArea()
+                }
         }
+        .ignoresSafeArea()
+        .background {
+            WindowTranslucency()
+        }
+        .preferredColorScheme(.dark)
         .onChange(of: store.contexts) { _, contexts in
             selectedDestination = selectedDestination?.reconciled(with: contexts)
+            viewModel.reconcileActiveContext(with: contexts)
         }
         .sheet(
             isPresented: Binding<Bool>(
@@ -83,113 +96,30 @@ private struct AppShellContent: View {
     }
 
     private var sidebar: some View {
-        List(selection: $selectedDestination) {
-            Section {
-                Button {
-                    viewModel.presentContextCreator()
-                } label: {
-                    Label("New Context", systemImage: "plus")
-                }
-                .disabled(interactionsDisabled)
-                .selectionDisabled()
-            }
-
-            Section(
-                content: {
-                    contextsSectionContent
-                },
-                header: {
-                    HStack {
-                        Text("Contexts")
-
-                        Spacer()
-
-                        Button {
-                            viewModel.presentContextCreator()
-                        } label: {
-                            Image(systemName: "plus")
-                        }
-                        .buttonStyle(.borderless)
-                        .disabled(interactionsDisabled)
-                        .help("Create a new context")
-                        .accessibilityLabel("Create a new context")
-                    }
-                }
-            )
-
-            Section(
-                isExpanded: archivedSectionExpansion,
-                content: {
-                    Text(isSearching ? "No archived contexts found" : "No archived contexts")
-                        .foregroundStyle(.secondary)
-                        .selectionDisabled()
-                },
-                header: {
-                    Text("Archived contexts")
-                }
-            )
-
-            if let error = viewModel.error ?? store.error {
-                Section {
-                    Label(error.localizedDescription, systemImage: "exclamationmark.triangle")
-                        .foregroundStyle(.red)
-                        .selectionDisabled()
-
-                    Button("Dismiss") {
-                        viewModel.dismissError()
-                        store.dismissError()
-                    }
-                    .selectionDisabled()
-                }
-            }
-
-            Section {
-                Label("Settings", systemImage: "gearshape")
-                    .tag(SidebarDestination.settings)
-
-                Label("About", systemImage: "info.circle")
-                    .tag(SidebarDestination.about)
-            }
-        }
-        .navigationTitle("DAWN")
-        .searchable(text: $searchText, placement: .sidebar, prompt: "Search contexts")
+        SidebarView(
+            content: sidebarContent,
+            selectedDestination: $selectedDestination,
+            onCreateContext: { viewModel.presentContextCreator() },
+            onDismissError: dismissSidebarError
+        )
     }
 
-    @ViewBuilder
-    private var contextsSectionContent: some View {
-        if !eventBusService.isConnected {
-            Label(
-                "Workspace manager is not connected. Context actions are unavailable.",
-                systemImage: "bolt.slash"
-            )
-            .foregroundStyle(.orange)
-            .selectionDisabled()
-        }
+    private var sidebarContent: SidebarContent {
+        SidebarContent(
+            contexts: store.contexts,
+            activeContextID: viewModel.activeContextID,
+            busyContextID: viewModel.operationInProgress,
+            isLoading: store.isLoading,
+            isAgentRunning: eventBusService.isConnected,
+            interactionsDisabled: interactionsDisabled,
+            update: availableUpdate,
+            errorMessage: (viewModel.error ?? store.error)?.localizedDescription
+        )
+    }
 
-        if store.isLoading && store.contexts.isEmpty {
-            HStack(spacing: 8) {
-                ProgressView()
-                    .controlSize(.small)
-
-                Text("Loading contexts...")
-                    .foregroundStyle(.secondary)
-            }
-            .accessibilityElement(children: .combine)
-            .selectionDisabled()
-        } else if store.contexts.isEmpty {
-            Text("No contexts")
-                .foregroundStyle(.secondary)
-                .selectionDisabled()
-        } else if filteredContexts.isEmpty {
-            Text("No contexts matching \"\(searchText)\"")
-                .foregroundStyle(.secondary)
-                .selectionDisabled()
-        } else {
-            ForEach(filteredContexts) { context in
-                Label(context.name, systemImage: context.symbol)
-                    .tag(SidebarDestination.context(context.id))
-            }
-        }
+    private func dismissSidebarError() {
+        viewModel.dismissError()
+        store.dismissError()
     }
 
     @ViewBuilder

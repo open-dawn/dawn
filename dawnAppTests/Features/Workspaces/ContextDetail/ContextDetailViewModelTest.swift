@@ -12,6 +12,7 @@ struct ContextDetailViewModelTests {
         let viewModel = ContextDetailViewModel(contextManager: contextManager)
 
         #expect(viewModel.operationInProgress == nil)
+        #expect(viewModel.activeContextID == nil)
         #expect(viewModel.error == nil)
         #expect(viewModel.isCreatingOrEditing == false)
         #expect(viewModel.contextBeingEdited == nil)
@@ -53,6 +54,7 @@ struct ContextDetailViewModelTests {
         #expect(contextManager.switchedContextIDs == [context.id])
         #expect(observedOperationID == context.id)
         #expect(viewModel.operationInProgress == nil)
+        #expect(viewModel.activeContextID == context.id)
         #expect(viewModel.error == nil)
     }
 
@@ -94,6 +96,7 @@ struct ContextDetailViewModelTests {
         #expect(contextManager.switchedContextIDs == [context.id])
         #expect(viewModel.error == .notConnected)
         #expect(viewModel.operationInProgress == nil)
+        #expect(viewModel.activeContextID == nil)
     }
 
     @Test("A successful operation clears the previous error")
@@ -201,6 +204,45 @@ struct ContextDetailViewModelTests {
         viewModel.dismissError()
 
         #expect(viewModel.error == nil)
+    }
+
+    @Test("Deleting the active context clears the active marker")
+    func deleteClearsActiveContext() async {
+        let context = WorkspaceContext(name: "Work", symbol: "briefcase")
+        let viewModel = ContextDetailViewModel(
+            contextManager: WorkspaceContextManagerSpy()
+        )
+
+        await viewModel.runContext(context)
+        await viewModel.deleteContext(context)
+
+        #expect(viewModel.activeContextID == nil)
+    }
+
+    @Test("Reconciliation clears the active context when it is removed")
+    func reconcileClearsMissingActiveContext() async {
+        let context = WorkspaceContext(name: "Work", symbol: "briefcase")
+        let viewModel = ContextDetailViewModel(
+            contextManager: WorkspaceContextManagerSpy()
+        )
+
+        await viewModel.runContext(context)
+        viewModel.reconcileActiveContext(with: [])
+
+        #expect(viewModel.activeContextID == nil)
+    }
+
+    @Test("Reconciliation keeps the active context while it still exists")
+    func reconcileKeepsExistingActiveContext() async {
+        let context = WorkspaceContext(name: "Work", symbol: "briefcase")
+        let viewModel = ContextDetailViewModel(
+            contextManager: WorkspaceContextManagerSpy()
+        )
+
+        await viewModel.runContext(context)
+        viewModel.reconcileActiveContext(with: [context])
+
+        #expect(viewModel.activeContextID == context.id)
     }
 }
 
