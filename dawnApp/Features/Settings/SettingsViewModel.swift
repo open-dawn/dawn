@@ -2,11 +2,11 @@ import Foundation
 import SwiftUI
 
 @Observable
-final class GeneralSettingsViewModel {
+final class SettingsViewModel {
     private(set) var openAtLogin: Bool
     private(set) var defaultContextName: String
 
-    var sectionsWithSettings: [SettingSection<GeneralSettingsViewModel>]
+    var sectionsWithSettings: [SettingSection<SettingsViewModel>]
 
     private(set) var error: ViewModelError?
     private(set) var errorMessage: String?
@@ -63,17 +63,17 @@ final class GeneralSettingsViewModel {
 
     func getCurrentSettings() throws(ViewModelError) {}
 
-    func resetSettingToDefault(_ setting: SettingItem<GeneralSettingsViewModel>) {
+    func resetSettingToDefault(_ setting: SettingItem<SettingsViewModel>) {
         let anyKeyPath = setting.inputType.getKeyPath(self)
 
-        if let boolPath = anyKeyPath as? ReferenceWritableKeyPath<GeneralSettingsViewModel, Bool>,
+        if let boolPath = anyKeyPath as? ReferenceWritableKeyPath<SettingsViewModel, Bool>,
            let boolValue = setting.defaultValue as? Bool
         {
             self[keyPath: boolPath] = boolValue
             return
         }
 
-        if let stringPath = anyKeyPath as? ReferenceWritableKeyPath<GeneralSettingsViewModel, String>,
+        if let stringPath = anyKeyPath as? ReferenceWritableKeyPath<SettingsViewModel, String>,
            let stringValue = setting.defaultValue as? String
         {
             self[keyPath: stringPath] = stringValue

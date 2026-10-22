@@ -148,7 +148,7 @@ private struct AppShellContent: View {
             }
 
         case .settings:
-            GeneralSettingsView()
+            SettingsView()
 
         case .about:
             AboutView(

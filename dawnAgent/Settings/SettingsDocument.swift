@@ -14,13 +14,13 @@ struct SettingsDocument: Codable, Equatable, Sendable {
 
     let schemaVersion: Int
     var contexts: [WorkspaceContext]
-    var generalSettings: GeneralSettings
+    var generalSettings: Settings
 
     static var empty: SettingsDocument {
         SettingsDocument(
             schemaVersion: currentSchemaVersion,
             contexts: [],
-            generalSettings: GeneralSettings()
+            generalSettings: Settings()
         )
     }
 }
