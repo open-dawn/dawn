@@ -15,8 +15,8 @@ public enum DawnTextStyle {
     public static let buttonLabel: Font = .system(size: 16, weight: .semibold)
 
     public static let buttonIcon: Font = .system(size: 14, weight: .bold)
-    
+
     public static let primary: Font = .system(size: 16, weight: .regular)
-    
+
     public static let secondary: Font = .system(size: 16, weight: .regular)
 }
