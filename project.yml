@@ -3,6 +3,7 @@ options:
   bundleIdPrefix: app.opendawn
   deploymentTarget:
     macOS: &deployversion "26.0"
+  preGenCommand: bash Scripts/generate_build_ticket.sh
 
 settings:
   base:
@@ -29,6 +30,13 @@ targets:
     deploymentTarget: *deployversion
     sources:
       - dawnApp
+      - path: Generated/BuildTicket+Current.swift
+    preBuildScripts:
+      - name: Generate Build Ticket
+        basedOnDependencyAnalysis: false
+        outputFiles:
+          - $(SRCROOT)/Generated/BuildTicket+Current.swift
+        script: bash "${SRCROOT}/Scripts/generate_build_ticket.sh"
     info:
       path: dawnApp/Info.plist
       properties:

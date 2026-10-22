@@ -220,7 +220,7 @@ private struct AppShellContent: View {
 
         case .about:
             AboutView(
-                content: AboutMetadataLoader.loadRequired()
+                content: AboutContent.loadRequired()
             )
 
         case nil:

@@ -18,13 +18,13 @@ struct AboutView: View {
 
             HStack(spacing: 0) {
                 Text("Copyright: ")
-                Text(verbatim: content.metadata.copyright)
+                Text(verbatim: content.ticket.copyright)
                     .bold()
             }
 
             HStack(spacing: 0) {
                 Text("License: ")
-                Text(verbatim: content.metadata.license)
+                Text(verbatim: content.ticket.license)
                     .bold()
             }
 
@@ -34,20 +34,20 @@ struct AboutView: View {
                     .bold()
                 Text(" - ")
                 Link(
-                    content.metadata.commit.displayName,
-                    destination: content.metadata.commit.url
+                    content.ticket.commit.displayName,
+                    destination: content.ticket.commit.url
                 )
             }
 
             HStack(spacing: 0) {
                 Link(
                     "Privacy Policy",
-                    destination: content.metadata.privacyPolicyURL
+                    destination: content.ticket.privacyPolicyURL
                 )
                 Text(" - ")
                 Link(
                     "Terms of Use",
-                    destination: content.metadata.termsOfUseURL
+                    destination: content.ticket.termsOfServiceURL
                 )
             }
         }
