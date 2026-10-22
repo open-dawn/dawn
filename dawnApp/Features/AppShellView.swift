@@ -16,8 +16,12 @@ struct AppShellView: View {
             store: contextStore,
             availableUpdate: availableUpdate
         )
-        .frame(width: SidebarMetrics.width)
-        .frame(minHeight: SidebarMetrics.minimumWindowHeight)
+        .frame(
+            minWidth: SidebarMetrics.width + SidebarMetrics.minimumDetailWidth,
+            maxWidth: .infinity,
+            minHeight: SidebarMetrics.minimumWindowHeight,
+            maxHeight: .infinity
+        )
     }
 }
 
@@ -61,6 +65,7 @@ private struct AppShellContent: View {
                         .ignoresSafeArea()
                 }
         }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
         .ignoresSafeArea()
         .background {
             WindowTranslucency()

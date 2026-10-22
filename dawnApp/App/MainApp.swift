@@ -19,5 +19,9 @@ struct MainApp: App {
         }
         .defaultSize(width: 1080, height: 680)
         .windowStyle(.hiddenTitleBar)
+        // Never let the window shrink below the shell's minimum
+        // (sidebar + minimum detail), which would clip the content
+        // instead of resizing it.
+        .windowResizability(.contentMinSize)
     }
 }
