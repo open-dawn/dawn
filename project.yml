@@ -58,6 +58,7 @@ targets:
           ENABLE_TESTABILITY: YES
     dependencies:
       - target: libdawn
+      - target: libdawnUI
       - target: dawnAgent
         link: false
         embed: true

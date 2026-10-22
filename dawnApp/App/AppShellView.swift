@@ -55,7 +55,6 @@ private struct AppShellContent: View {
             sidebar
         } detail: {
             detail(for: selectedDestination)
-                .padding(16)
         }
         .onChange(of: store.contexts) { _, contexts in
             selectedDestination = selectedDestination?.reconciled(with: contexts)
