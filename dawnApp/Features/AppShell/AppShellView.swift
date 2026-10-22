@@ -1,4 +1,3 @@
-// NEEDS REVIEW — PIN-132 (sidebar design): changed in this issue, pending organization review.
 import libdawn
 import libdawnUI
 import SwiftUI
@@ -24,144 +23,136 @@ struct AppShellView: View {
             maxHeight: .infinity
         )
     }
-}
 
-private struct AppShellContent: View {
-    let store: SettingsContextStore
-    let availableUpdate: AppUpdateAvailability?
+    private struct AppShellContent: View {
+        let store: SettingsContextStore
+        let availableUpdate: AppUpdateAvailability?
 
-    @Environment(SettingsEventBusService.self)
-    private var eventBusService
+        @Environment(SettingsEventBusService.self)
+        private var eventBusService
 
-    @State private var viewModel: ContextDetailViewModel
-    @State private var selectedDestination: SidebarDestination?
+        @State private var viewModel: ContextDetailViewModel
+        @State private var selectedDestination: SidebarDestination?
 
-    private var interactionsDisabled: Bool {
-        !eventBusService.isConnected || store.isLoading || viewModel.operationInProgress != nil
-    }
+        private var interactionsDisabled: Bool {
+            !eventBusService.isConnected ||
+                store.isLoading ||
+                viewModel.operationInProgress != nil
+        }
 
-    init(store: SettingsContextStore, availableUpdate: AppUpdateAvailability?) {
-        self.store = store
-        self.availableUpdate = availableUpdate
-        _viewModel = State(
-            initialValue: ContextDetailViewModel(
-                contextManager: store
+        init(store: SettingsContextStore, availableUpdate: AppUpdateAvailability?) {
+            self.store = store
+            self.availableUpdate = availableUpdate
+            _viewModel = State(
+                initialValue: ContextDetailViewModel(contextManager: store)
             )
-        )
-    }
+        }
 
-    var body: some View {
-        HSplitView {
-            sidebar
-
-            detail(for: selectedDestination)
-                .padding(24)
-                .frame(
-                    minWidth: SidebarMetrics.minimumDetailWidth,
-                    maxWidth: .infinity,
-                    maxHeight: .infinity
+        var body: some View {
+            HSplitView {
+                SidebarView(
+                    content: SidebarContent(
+                        contexts: store.contexts,
+                        activeContextID: viewModel.activeContextID,
+                        busyContextID: viewModel.operationInProgress,
+                        isLoading: store.isLoading,
+                        isAgentRunning: eventBusService.isConnected,
+                        interactionsDisabled: interactionsDisabled,
+                        update: availableUpdate,
+                        errorMessage: (viewModel.error ?? store.error)?.localizedDescription
+                    ),
+                    selectedDestination: $selectedDestination,
+                    onCreateContext: { viewModel.presentContextCreator() },
+                    onDismissError: dismissSidebarError
                 )
-                .background {
-                    DawnColors.primaryBackground
-                        .ignoresSafeArea()
-                }
-        }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .ignoresSafeArea()
-        .background {
-            WindowTranslucency()
-        }
-        .preferredColorScheme(.dark)
-        .onChange(of: store.contexts) { _, contexts in
-            selectedDestination = selectedDestination?.reconciled(with: contexts)
-            viewModel.reconcileActiveContext(with: contexts)
-        }
-        .sheet(
-            isPresented: Binding<Bool>(
-                get: { viewModel.isCreatingOrEditing },
-                set: { isPresented in
-                    if !isPresented {
-                        viewModel.dismissContextCreator()
+
+                detail(for: selectedDestination)
+                    .padding(24)
+                    .frame(
+                        minWidth: SidebarMetrics.minimumDetailWidth,
+                        maxWidth: .infinity,
+                        maxHeight: .infinity
+                    )
+                    .background {
+                        DawnColors.primaryBackground
+                            .ignoresSafeArea()
                     }
-                }
-            ),
-            onDismiss: {
-                viewModel.dismissContextCreator()
-
-                Task {
-                    await store.refresh()
-                }
-            },
-            content: {
-                ContextCreatorView(context: viewModel.contextBeingEdited)
             }
-        )
-    }
-
-    private var sidebar: some View {
-        SidebarView(
-            content: sidebarContent,
-            selectedDestination: $selectedDestination,
-            onCreateContext: { viewModel.presentContextCreator() },
-            onDismissError: dismissSidebarError
-        )
-    }
-
-    private var sidebarContent: SidebarContent {
-        SidebarContent(
-            contexts: store.contexts,
-            activeContextID: viewModel.activeContextID,
-            busyContextID: viewModel.operationInProgress,
-            isLoading: store.isLoading,
-            isAgentRunning: eventBusService.isConnected,
-            interactionsDisabled: interactionsDisabled,
-            update: availableUpdate,
-            errorMessage: (viewModel.error ?? store.error)?.localizedDescription
-        )
-    }
-
-    private func dismissSidebarError() {
-        viewModel.dismissError()
-        store.dismissError()
-    }
-
-    @ViewBuilder
-    private func detail(for destination: SidebarDestination?) -> some View {
-        switch destination {
-        case let .context(contextID):
-            if let context = store.contexts.first(where: { $0.id == contextID }) {
-                ContextDetailView(
-                    context: context,
-                    viewModel: viewModel,
-                    interactionsDisabled: interactionsDisabled,
-                    onDelete: { deleted in
-                        if selectedDestination == .context(deleted.id) {
-                            selectedDestination = nil
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .ignoresSafeArea()
+            .background {
+                WindowTranslucency()
+            }
+            .preferredColorScheme(.dark)
+            .onChange(of: store.contexts) { _, contexts in
+                selectedDestination = selectedDestination?.reconciled(with: contexts)
+                viewModel.reconcileActiveContext(with: contexts)
+            }
+            .sheet( // PIN-139 Change in future with new creation sheet
+                isPresented: Binding<Bool>(
+                    get: { viewModel.isCreatingOrEditing },
+                    set: { isPresented in
+                        if !isPresented {
+                            viewModel.dismissContextCreator()
                         }
                     }
+                ),
+                onDismiss: {
+                    viewModel.dismissContextCreator()
+
+                    Task {
+                        await store.refresh()
+                    }
+                },
+                content: {
+                    ContextCreatorView(context: viewModel.contextBeingEdited)
+                }
+            )
+        }
+
+        private func dismissSidebarError() {
+            viewModel.dismissError()
+            store.dismissError()
+        }
+
+        @ViewBuilder
+        private func detail(for destination: SidebarDestination?) -> some View {
+            switch destination {
+            case let .context(contextID): 
+                if let context = store.contexts.first(where: { $0.id == contextID }) {
+                    ContextDetailView(
+                        context: context,
+                        viewModel: viewModel,
+                        interactionsDisabled: interactionsDisabled,
+                        onDelete: { deleted in
+                            if selectedDestination == .context(deleted.id) {
+                                selectedDestination = nil
+                            }
+                        }
+                    )
+                } else {
+                    ContentUnavailableView(
+                        "Context not available",
+                        systemImage: "rectangle.stack.slash",
+                        description: Text("This context is no longer available.")
+                    )
+                }
+
+            case .settings: 
+                SettingsView()
+
+            case .about: 
+                AboutView(
+                    content: AboutMetadataLoader.loadRequired()
                 )
-            } else {
+
+            case nil: 
                 ContentUnavailableView(
-                    "Context not available",
-                    systemImage: "rectangle.stack.slash",
-                    description: Text("This context is no longer available.")
+                    "No context selected",
+                    systemImage: "sidebar.leading",
+                    description: Text("Select a context in the sidebar, or create a new one.")
                 )
             }
-
-        case .settings:
-            SettingsView()
-
-        case .about:
-            AboutView(
-                content: AboutMetadataLoader.loadRequired()
-            )
-
-        case nil:
-            ContentUnavailableView(
-                "No context selected",
-                systemImage: "sidebar.leading",
-                description: Text("Select a context in the sidebar, or create a new one.")
-            )
         }
     }
 }

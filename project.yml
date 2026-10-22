@@ -1,4 +1,3 @@
-# NEEDS REVIEW — PIN-132 (sidebar design): changed in this issue, pending organization review.
 name: dawn
 options:
   bundleIdPrefix: app.opendawn

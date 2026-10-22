@@ -1,4 +1,3 @@
-// NEEDS REVIEW — PIN-132 (sidebar design): changed in this issue, pending organization review.
 import libdawnUI
 import SwiftUI
 
@@ -78,7 +77,7 @@ struct SidebarContextRow: View {
     }
 
     private var rowFill: Color {
-        SidebarChrome.fill(isSelected: state.isSelected)
+        SidebarMetrics.fill(isSelected: state.isSelected)
     }
 
     private var accessibilityValue: String {

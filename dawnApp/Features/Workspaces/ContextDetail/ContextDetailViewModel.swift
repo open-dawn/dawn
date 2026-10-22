@@ -1,4 +1,3 @@
-// NEEDS REVIEW — PIN-132 (sidebar design): changed in this issue, pending organization review.
 import Foundation
 import libdawn
 
@@ -10,12 +9,12 @@ final class ContextDetailViewModel {
     private(set) var operationInProgress: UUID?
     private(set) var activeContextID: UUID?
     private(set) var error: SettingsContextStoreError?
-
     private(set) var contextBeingEdited: WorkspaceContext?
-    var isCreatingOrEditing = false
+    var isCreatingOrEditing: Bool
 
     init(contextManager: any WorkspaceContextManaging) {
         self.contextManager = contextManager
+        isCreatingOrEditing = false
     }
 
     func presentContextCreator() {

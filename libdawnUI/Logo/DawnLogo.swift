@@ -1,4 +1,3 @@
-// NEEDS REVIEW — PIN-132 (sidebar design): changed in this issue, pending organization review.
 //
 //  DawnLogo.swift
 //  dawn
@@ -21,8 +20,6 @@ public struct DawnLogo: View {
 
     public var body: some View {
         content
-            // The logo is a fixed-size identity mark: never let a greedy
-            // parent (stack, safe-area bar, toolbar) stretch it.
             .fixedSize(horizontal: true, vertical: true)
             .foregroundStyle(DawnColors.primaryForeground)
             .accessibilityElement(children: .ignore)

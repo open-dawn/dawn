@@ -1,4 +1,3 @@
-// NEEDS REVIEW — PIN-132 (sidebar design): changed in this issue, pending organization review.
 import AppKit
 import libdawnUI
 import SwiftUI
@@ -8,7 +7,6 @@ enum SidebarMetrics {
     static let width: CGFloat = 260
     static let minimumDetailWidth: CGFloat = 520
     static let idealDetailWidth: CGFloat = 760
-
     static let minimumWindowHeight: CGFloat = 560
 
     // Inner paddings
@@ -25,9 +23,7 @@ enum SidebarMetrics {
     // Others
     static let warningVerticalPadding: CGFloat = 10
     static let tooltipNameLength = 24
-}
 
-enum SidebarChrome {
     static func fill(isSelected: Bool) -> Color {
         isSelected ? DawnColors.sidebarRowSelected : .clear
     }

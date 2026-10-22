@@ -1,4 +1,3 @@
-// NEEDS REVIEW — PIN-132 (sidebar design): changed in this issue, pending organization review.
 @testable import dawnApp
 import Foundation
 import libdawn
@@ -22,9 +21,7 @@ struct ContextDetailViewModelTests {
     @Test("Presents and dismisses the context creator")
     func contextCreatorPresentation() throws {
         let contextManager = WorkspaceContextManagerSpy()
-        let viewModel = ContextDetailViewModel(
-            contextManager: contextManager
-        )
+        let viewModel = ContextDetailViewModel(contextManager: contextManager)
 
         viewModel.presentContextCreator()
         try #require(viewModel.isCreatingOrEditing == true)
@@ -41,14 +38,10 @@ struct ContextDetailViewModelTests {
         )
 
         let contextManager = WorkspaceContextManagerSpy()
-        let viewModel = ContextDetailViewModel(
-            contextManager: contextManager
-        )
+        let viewModel = ContextDetailViewModel(contextManager: contextManager)
 
         var observedOperationID: UUID?
-        contextManager.onSwitch = {
-            observedOperationID = viewModel.operationInProgress
-        }
+        contextManager.onSwitch = { observedOperationID = viewModel.operationInProgress }
 
         await viewModel.runContext(context)
 
@@ -67,9 +60,7 @@ struct ContextDetailViewModelTests {
         )
 
         let contextManager = WorkspaceContextManagerSpy()
-        let viewModel = ContextDetailViewModel(
-            contextManager: contextManager
-        )
+        let viewModel = ContextDetailViewModel(contextManager: contextManager)
 
         await viewModel.deleteContext(context)
 
@@ -88,9 +79,7 @@ struct ContextDetailViewModelTests {
         let contextManager = WorkspaceContextManagerSpy()
         contextManager.error = SettingsContextStoreError.notConnected
 
-        let viewModel = ContextDetailViewModel(
-            contextManager: contextManager
-        )
+        let viewModel = ContextDetailViewModel(contextManager: contextManager)
 
         await viewModel.runContext(context)
 
@@ -110,16 +99,12 @@ struct ContextDetailViewModelTests {
         let contextManager = WorkspaceContextManagerSpy()
         contextManager.error = SettingsContextStoreError.timeout
 
-        let viewModel = ContextDetailViewModel(
-            contextManager: contextManager
-        )
+        let viewModel = ContextDetailViewModel(contextManager: contextManager)
 
         await viewModel.runContext(context)
-
         #expect(viewModel.error == .timeout)
 
         contextManager.error = nil
-
         await viewModel.runContext(context)
 
         #expect(viewModel.error == nil)
@@ -136,9 +121,7 @@ struct ContextDetailViewModelTests {
         let contextManager = WorkspaceContextManagerSpy()
         contextManager.error = TestError.expected
 
-        let viewModel = ContextDetailViewModel(
-            contextManager: contextManager
-        )
+        let viewModel = ContextDetailViewModel(contextManager: contextManager)
 
         await viewModel.deleteContext(context)
 
@@ -152,9 +135,7 @@ struct ContextDetailViewModelTests {
             name: "Personal",
             symbol: "person"
         )
-        let viewModel = ContextDetailViewModel(
-            contextManager: WorkspaceContextManagerSpy()
-        )
+        let viewModel = ContextDetailViewModel(contextManager: WorkspaceContextManagerSpy())
 
         viewModel.presentContextEditor(context)
 
@@ -173,9 +154,7 @@ struct ContextDetailViewModelTests {
             name: "Work",
             symbol: "briefcase"
         )
-        let viewModel = ContextDetailViewModel(
-            contextManager: WorkspaceContextManagerSpy()
-        )
+        let viewModel = ContextDetailViewModel(contextManager: WorkspaceContextManagerSpy())
 
         viewModel.presentContextEditor(context)
         viewModel.presentContextCreator()
@@ -194,25 +173,19 @@ struct ContextDetailViewModelTests {
         let contextManager = WorkspaceContextManagerSpy()
         contextManager.error = SettingsContextStoreError.notConnected
 
-        let viewModel = ContextDetailViewModel(
-            contextManager: contextManager
-        )
+        let viewModel = ContextDetailViewModel(contextManager: contextManager)
 
         await viewModel.runContext(context)
-
         #expect(viewModel.error == .notConnected)
 
         viewModel.dismissError()
-
         #expect(viewModel.error == nil)
     }
 
     @Test("Deleting the active context clears the active marker")
     func deleteClearsActiveContext() async {
         let context = WorkspaceContext(name: "Work", symbol: "briefcase")
-        let viewModel = ContextDetailViewModel(
-            contextManager: WorkspaceContextManagerSpy()
-        )
+        let viewModel = ContextDetailViewModel(contextManager: WorkspaceContextManagerSpy())
 
         await viewModel.runContext(context)
         await viewModel.deleteContext(context)
@@ -223,9 +196,7 @@ struct ContextDetailViewModelTests {
     @Test("Reconciliation clears the active context when it is removed")
     func reconcileClearsMissingActiveContext() async {
         let context = WorkspaceContext(name: "Work", symbol: "briefcase")
-        let viewModel = ContextDetailViewModel(
-            contextManager: WorkspaceContextManagerSpy()
-        )
+        let viewModel = ContextDetailViewModel(contextManager: WorkspaceContextManagerSpy())
 
         await viewModel.runContext(context)
         viewModel.reconcileActiveContext(with: [])
@@ -236,15 +207,15 @@ struct ContextDetailViewModelTests {
     @Test("Reconciliation keeps the active context while it still exists")
     func reconcileKeepsExistingActiveContext() async {
         let context = WorkspaceContext(name: "Work", symbol: "briefcase")
-        let viewModel = ContextDetailViewModel(
-            contextManager: WorkspaceContextManagerSpy()
-        )
+        let viewModel = ContextDetailViewModel(contextManager: WorkspaceContextManagerSpy())
 
         await viewModel.runContext(context)
         viewModel.reconcileActiveContext(with: [context])
 
         #expect(viewModel.activeContextID == context.id)
     }
+
+    private enum TestError: Error { case expected }
 }
 
 @MainActor
@@ -271,8 +242,4 @@ private final class WorkspaceContextManagerSpy: WorkspaceContextManaging {
             throw error
         }
     }
-}
-
-private enum TestError: Error {
-    case expected
 }

@@ -1,4 +1,3 @@
-// NEEDS REVIEW — PIN-132 (sidebar design): changed in this issue, pending organization review.
 //
 //  DawnTextStyle.swift
 //  dawn
@@ -9,11 +8,17 @@
 import SwiftUI
 
 public enum DawnTextStyle {
+    // MARK: - Context Cards
+
     public static let contextTitle: Font = .system(size: 12, weight: .bold)
     public static let contextMetadata: Font = .system(size: 9, weight: .regular)
 
+    // MARK: - Button
+
     public static let buttonLabel: Font = .system(size: 16, weight: .semibold)
     public static let buttonIcon: Font = .system(size: 14, weight: .bold)
+
+    // MARK: - Sidebar
 
     public static let sidebarLogo: Font = .system(size: 13, weight: .regular)
     public static let sidebarLogoSymbol: Font = .system(size: 14, weight: .regular)

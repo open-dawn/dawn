@@ -1,4 +1,3 @@
-// NEEDS REVIEW — PIN-132 (sidebar design): changed in this issue, pending organization review.
 //
 //  DawnColors.swift
 //  dawn
@@ -10,51 +9,42 @@ import SwiftUI
 
 public enum DawnColors {
     public static let contextCardBackground = Color.black.opacity(0.25)
-
     public static let contextCardHoveredBackground = Color.black.opacity(0.34)
-
     public static let contextCardBorder = Color.white.opacity(0.04)
-
     public static let contextCardHoveredBorder = Color.white.opacity(0.10)
 
-    public static let primaryBackground = Color(red: 0x1f/0xff, green: 0x1f/0xff, blue: 0x1f/0xff) // #1f1f1f
+    public static let primaryBackground = Color(red: 0x1F / 0xFF, green: 0x1F / 0xFF, blue: 0x1F / 0xFF) // #1f1f1f
+    public static let secondaryBackground = Color(red: 0x27 / 0xFF, green: 0x27 / 0xFF, blue: 0x27 / 0xFF) // #272727
 
-    public static let secondaryBackground = Color(red: 0x27/0xff, green: 0x27/0xff, blue: 0x27/0xff) // #272727
-
-    public static let primaryForeground = Color(red: 0xff/0xff, green: 0xff/0xff, blue: 0xff/0xff) // #ffffff
-
+    public static let primaryForeground = Color(red: 0xFF / 0xFF, green: 0xFF / 0xFF, blue: 0xFF / 0xFF) // #ffffff
     public static let dangerBackground = Color.red.opacity(0.3)
-
     public static let dangerForeground = Color.red
 
     public static let warningBackground = Color.yellow.opacity(0.3)
-
     public static let warningForeground = Color.yellow
 
+    // MARK: - Sidebar colors
+
     public static let sidebarBackground = Color(
-        red: 0x1f / 0xff,
-        green: 0x1f / 0xff,
-        blue: 0x1f / 0xff
+        red: 0x1F / 0xFF,
+        green: 0x1F / 0xFF,
+        blue: 0x1F / 0xFF
     ).opacity(0.5)
 
     public static let sidebarRowSelected = Color.black.opacity(0.25)
-
     public static let sidebarForeground = Color(
-        red: 0xf1 / 0xff,
-        green: 0xf1 / 0xff,
-        blue: 0xf1 / 0xff
+        red: 0xF1 / 0xFF,
+        green: 0xF1 / 0xFF,
+        blue: 0xF1 / 0xFF
     )
 
     public static let sidebarIcon = Color.white.opacity(0.75)
-
     public static let sidebarSecondaryForeground = Color.white.opacity(0.55)
-
     public static let sidebarTertiaryForeground = Color.white.opacity(0.25)
-
     public static let sidebarActive = Color(
-        red: 0x48 / 0xff,
-        green: 0xbc / 0xff,
-        blue: 0x59 / 0xff
+        red: 0x48 / 0xFF,
+        green: 0xBC / 0xFF,
+        blue: 0x59 / 0xFF
     )
 
     public static let sidebarWarningBackground = Color(
@@ -62,11 +52,10 @@ public enum DawnColors {
         green: 108.0 / 255.0,
         blue: 8.0 / 255.0
     ).opacity(0.15)
-
     public static let sidebarWarningForeground = Color(
-        red: 0xf3 / 0xff,
-        green: 0xbc / 0xff,
-        blue: 0x28 / 0xff
+        red: 0xF3 / 0xFF,
+        green: 0xBC / 0xFF,
+        blue: 0x28 / 0xFF
     )
 
     public static let sidebarSearchField = Color.black.opacity(0.25)

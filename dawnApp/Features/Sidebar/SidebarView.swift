@@ -1,4 +1,3 @@
-// NEEDS REVIEW — PIN-132 (sidebar design): changed in this issue, pending organization review.
 import libdawnUI
 import SwiftUI
 
@@ -20,14 +19,12 @@ struct SidebarView: View {
         onDismissError: @escaping () -> Void = {}
     ) {
         self.content = content
-        _selectedDestination = selectedDestination
         self.onCreateContext = onCreateContext
         self.onDismissError = onDismissError
+        _selectedDestination = selectedDestination
         _searchText = State(initialValue: initialSearch.text)
         _isSearchPresented = State(initialValue: initialSearch.isPresented)
-        _isArchivedSectionExpanded = State(
-            initialValue: initialSearch.isArchivedSectionExpanded
-        )
+        _isArchivedSectionExpanded = State(initialValue: initialSearch.isArchivedSectionExpanded)
     }
 
     var body: some View {
