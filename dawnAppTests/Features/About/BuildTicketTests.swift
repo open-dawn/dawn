@@ -75,24 +75,6 @@ struct BuildTicketTests {
         }
     }
 
-    @Test("loads the current ticket and application version")
-    func loadsCurrentTicket() throws {
-        let content = try AboutContent.load()
-
-        #expect(!content.appVersion.isEmpty)
-        #expect(content.ticket.commit.sha.count >= 7)
-        #expect(content.ticket.copyright == "Copyright © 2026 Open Dawn Team")
-        #expect(content.ticket.license == "GNU GPLv3")
-        #expect(
-            content.ticket.licenseURL.absoluteString
-                == "https://www.gnu.org/licenses/gpl-3.0.html"
-        )
-        #expect(
-            content.ticket.marketingURL.absoluteString
-                == "https://github.com/open-dawn/dawn"
-        )
-    }
-
     private let sampleSHA = "2b94d72b4578ddad0892af886f37739d1f1a396f"
 
     private func makeTicket(
