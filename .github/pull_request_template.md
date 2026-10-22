@@ -15,3 +15,4 @@ Short description with type `feature/fix/chore/misc`
 - [ ] I Have performed a self-review of my own code
 - [ ] I Have tested my own code and described my tests
 - [ ] I have described my issue
+- [ ] I ran `swiftlint`
