@@ -87,14 +87,6 @@ struct AboutView: View {
             
             HStack(alignment: .bottom) {
                 DButton(style: .secondary) {
-                    NSWorkspace.shared.open(content.ticket.commit.url)
-                } content: {
-                    Text("GitHub")
-                } leading: {
-                    Image(systemName: "ellipsis.curlybraces")
-                }
-
-                DButton(style: .secondary) {
                     NSWorkspace.shared.open(content.ticket.marketingURL)
                 } content: {
                     Text("Give us Feedback")
@@ -116,7 +108,7 @@ struct AboutView: View {
                             print("update now")
                         } content: {
                             Text("Update Now")
-                                .frame(maxWidth: .infinity)
+                                .frame(minWidth: 200)
                         }
                     }
                 } else {
@@ -139,13 +131,17 @@ struct AboutView: View {
                             }
                             
                             Text("Check for Updates")
-                                .frame(maxWidth: .infinity)
                         }
                         .disabled(isCheckingUpdates)
                     }
                 }
             }
+            
+            Text(content.ticket.copyright)
+                .font(DawnTextStyle.secondary)
+                .foregroundStyle(DawnColors.secondaryForeground)
         }
+        .frame(minWidth: 512, maxWidth: .infinity)
         .padding(16)
         .background {
             DawnColors.primaryBackground
