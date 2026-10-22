@@ -118,7 +118,7 @@ struct AppShellView: View {
         @ViewBuilder
         private func detail(for destination: SidebarDestination?) -> some View {
             switch destination {
-            case let .context(contextID): 
+            case let .context(contextID):
                 if let context = store.contexts.first(where: { $0.id == contextID }) {
                     ContextDetailView(
                         context: context,
@@ -138,15 +138,15 @@ struct AppShellView: View {
                     )
                 }
 
-            case .settings: 
+            case .settings:
                 SettingsView()
 
-            case .about: 
+            case .about:
                 AboutView(
                     content: AboutMetadataLoader.loadRequired()
                 )
 
-            case nil: 
+            case nil:
                 ContentUnavailableView(
                     "No context selected",
                     systemImage: "sidebar.leading",

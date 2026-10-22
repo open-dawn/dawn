@@ -90,7 +90,7 @@
     }
 
     #Preview("Sidebar / Row states") {
-        SidebarRowStateGallery()
+        sidebarRowStateGallery
             .frame(width: 300)
     }
 
@@ -166,60 +166,60 @@
         }
     }
 
-    private struct SidebarRowStateGallery: View {
-        var body: some View {
-            VStack(alignment: .leading, spacing: 12) {
-                specimen("Default", name: "Study", state: SidebarRowState())
-                specimen(
-                    "Selected",
-                    name: "Study",
-                    state: SidebarRowState(isSelected: true)
-                )
-                specimen(
-                    "Active",
-                    name: "Apple Developer Academy",
-                    state: SidebarRowState(isActive: true)
-                )
-                specimen(
-                    "Selected and active",
-                    name: "Apple Developer Academy",
-                    state: SidebarRowState(isSelected: true, isActive: true)
-                )
-                specimen(
-                    "Disabled",
-                    name: "Gaming",
-                    state: SidebarRowState(isEnabled: false)
-                )
-                specimen(
-                    "Loading",
-                    name: "Study",
-                    state: SidebarRowState(isLoading: true)
-                )
-                specimen(
-                    "Long name",
-                    name: SidebarPreviewData.longName.name,
-                    state: SidebarRowState(isSelected: true, isActive: true)
-                )
-            }
-            .padding(16)
-            .background {
-                SidebarBackground()
-            }
-            .preferredColorScheme(.dark)
+    @MainActor
+    private var sidebarRowStateGallery: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            specimen("Default", name: "Study", state: SidebarRowState())
+            specimen(
+                "Selected",
+                name: "Study",
+                state: SidebarRowState(isSelected: true)
+            )
+            specimen(
+                "Active",
+                name: "Apple Developer Academy",
+                state: SidebarRowState(isActive: true)
+            )
+            specimen(
+                "Selected and active",
+                name: "Apple Developer Academy",
+                state: SidebarRowState(isSelected: true, isActive: true)
+            )
+            specimen(
+                "Disabled",
+                name: "Gaming",
+                state: SidebarRowState(isEnabled: false)
+            )
+            specimen(
+                "Loading",
+                name: "Study",
+                state: SidebarRowState(isLoading: true)
+            )
+            specimen(
+                "Long name",
+                name: SidebarPreviewData.longName.name,
+                state: SidebarRowState(isSelected: true, isActive: true)
+            )
         }
+        .padding(16)
+        .background {
+            SidebarBackground()
+        }
+        .preferredColorScheme(.dark)
+    }
 
-        private func specimen(
-            _ title: String,
-            name: String,
-            state: SidebarRowState
-        ) -> some View {
-            VStack(alignment: .leading, spacing: 4) {
-                Text(title)
-                    .font(DawnTextStyle.sidebarSectionHeader)
-                    .foregroundStyle(DawnColors.sidebarSecondaryForeground)
+    @MainActor
+    private func specimen(
+        _ title: String,
+        name: String,
+        state: SidebarRowState
+    ) -> some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text(title)
+                .font(DawnTextStyle.sidebarSectionHeader)
+                .foregroundStyle(DawnColors.sidebarSecondaryForeground)
 
-                SidebarContextRow(name: name, symbol: "book.fill", state: state)
-            }
+            SidebarContextRow(name: name, symbol: "book.fill", state: state)
         }
     }
 

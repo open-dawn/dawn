@@ -11,7 +11,7 @@ struct SidebarQuickActions: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 4) {
-            SidebarInlineButton(
+            inlineButton(
                 title: "New context",
                 systemImage: "plus",
                 action: onCreateContext
@@ -21,7 +21,7 @@ struct SidebarQuickActions: View {
             if isSearchPresented {
                 searchField
             } else {
-                SidebarInlineButton(
+                inlineButton(
                     title: "Search",
                     systemImage: "magnifyingglass",
                     action: presentSearch
@@ -86,14 +86,12 @@ struct SidebarQuickActions: View {
     private func dismissSearch() {
         isSearchPresented = false
     }
-}
 
-private struct SidebarInlineButton: View {
-    let title: String
-    let systemImage: String
-    let action: () -> Void
-
-    var body: some View {
+    private func inlineButton(
+        title: String,
+        systemImage: String,
+        action: @escaping () -> Void
+    ) -> some View {
         Button(action: action) {
             HStack(spacing: 8) {
                 Image(systemName: systemImage)

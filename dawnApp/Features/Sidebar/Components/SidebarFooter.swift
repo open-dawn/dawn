@@ -8,20 +8,16 @@ struct SidebarFooter: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: SidebarMetrics.footerSpacing) {
-            if let errorMessage = content.errorMessage {
-                SidebarErrorNotice(message: errorMessage, onDismiss: onDismissError)
-            }
+            errorNotice
 
             if !content.isAgentRunning {
-                SidebarAgentWarning()
+                agentWarning
             }
 
-            if let update = content.update {
-                SidebarUpdateLink(update: update)
-            }
+            updateLink
 
             HStack(alignment: .center, spacing: 8) {
-                SidebarFooterButton(
+                footerButton(
                     title: "Settings",
                     systemImage: "gearshape",
                     showsTitle: true,
@@ -31,7 +27,7 @@ struct SidebarFooter: View {
 
                 Spacer(minLength: 0)
 
-                SidebarFooterButton(
+                footerButton(
                     title: "About",
                     systemImage: "info.circle",
                     showsTitle: false,
@@ -42,33 +38,30 @@ struct SidebarFooter: View {
         }
     }
 
-    private struct SidebarAgentWarning: View {
-        var body: some View {
-            HStack(spacing: 6) {
-                Image(systemName: "exclamationmark.triangle.fill")
-                    .font(DawnTextStyle.sidebarIcon)
-                    .accessibilityHidden(true)
+    private var agentWarning: some View {
+        HStack(spacing: 6) {
+            Image(systemName: "exclamationmark.triangle.fill")
+                .font(DawnTextStyle.sidebarIcon)
+                .accessibilityHidden(true)
 
-                Text("The DAWN Agent is not running")
-                    .font(DawnTextStyle.sidebarWarning)
-                    .lineLimit(1)
-            }
-            .foregroundStyle(DawnColors.sidebarWarningForeground)
-            .frame(maxWidth: .infinity)
-            .padding(.vertical, SidebarMetrics.warningVerticalPadding)
-            .background {
-                RoundedRectangle(cornerRadius: SidebarMetrics.cornerRadius, style: .continuous)
-                    .fill(DawnColors.sidebarWarningBackground)
-            }
-            .accessibilityElement(children: .ignore)
-            .accessibilityLabel("The DAWN Agent is not running")
+            Text("The DAWN Agent is not running")
+                .font(DawnTextStyle.sidebarWarning)
+                .lineLimit(1)
         }
+        .foregroundStyle(DawnColors.sidebarWarningForeground)
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, SidebarMetrics.warningVerticalPadding)
+        .background {
+            RoundedRectangle(cornerRadius: SidebarMetrics.cornerRadius, style: .continuous)
+                .fill(DawnColors.sidebarWarningBackground)
+        }
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("The DAWN Agent is not running")
     }
 
-    private struct SidebarUpdateLink: View {
-        let update: AppUpdateAvailability
-
-        var body: some View {
+    @ViewBuilder
+    private var updateLink: some View {
+        if let update = content.update {
             Link(destination: update.releaseURL) {
                 HStack(spacing: 6) {
                     Image(systemName: "arrow.down.circle")
@@ -99,49 +92,45 @@ struct SidebarFooter: View {
         }
     }
 
-    private struct SidebarFooterButton: View {
-        let title: String
-        let systemImage: String
-        let showsTitle: Bool
-        let isSelected: Bool
-        let action: () -> Void
+    private func footerButton(
+        title: String,
+        systemImage: String,
+        showsTitle: Bool,
+        isSelected: Bool,
+        action: @escaping () -> Void
+    ) -> some View {
+        Button(action: action) {
+            HStack(spacing: 8) {
+                Image(systemName: systemImage)
+                    .font(DawnTextStyle.sidebarIcon)
+                    .frame(width: SidebarMetrics.iconSize, height: SidebarMetrics.iconSize)
 
-        var body: some View {
-            Button(action: action) {
-                HStack(spacing: 8) {
-                    Image(systemName: systemImage)
-                        .font(DawnTextStyle.sidebarIcon)
-                        .frame(width: SidebarMetrics.iconSize, height: SidebarMetrics.iconSize)
-
-                    if showsTitle {
-                        Text(title)
-                            .font(DawnTextStyle.sidebarFooter)
-                            .lineLimit(1)
-                    }
+                if showsTitle {
+                    Text(title)
+                        .font(DawnTextStyle.sidebarFooter)
+                        .lineLimit(1)
                 }
-                .foregroundStyle(DawnColors.sidebarForeground)
-                .padding(.horizontal, 8)
-                .frame(minHeight: SidebarMetrics.controlHeight)
-                .background {
-                    RoundedRectangle(cornerRadius: SidebarMetrics.cornerRadius, style: .continuous)
-                        .fill(SidebarMetrics.fill(isSelected: isSelected))
-                }
-                .contentShape(
-                    RoundedRectangle(cornerRadius: SidebarMetrics.cornerRadius, style: .continuous)
-                )
             }
-            .buttonStyle(.plain)
-            .help(title)
-            .accessibilityLabel(title)
-            .accessibilityAddTraits(isSelected ? .isSelected : AccessibilityTraits())
+            .foregroundStyle(DawnColors.sidebarForeground)
+            .padding(.horizontal, 8)
+            .frame(minHeight: SidebarMetrics.controlHeight)
+            .background {
+                RoundedRectangle(cornerRadius: SidebarMetrics.cornerRadius, style: .continuous)
+                    .fill(SidebarMetrics.fill(isSelected: isSelected))
+            }
+            .contentShape(
+                RoundedRectangle(cornerRadius: SidebarMetrics.cornerRadius, style: .continuous)
+            )
         }
+        .buttonStyle(.plain)
+        .help(title)
+        .accessibilityLabel(title)
+        .accessibilityAddTraits(isSelected ? .isSelected : AccessibilityTraits())
     }
 
-    private struct SidebarErrorNotice: View {
-        let message: String
-        let onDismiss: () -> Void
-
-        var body: some View {
+    @ViewBuilder
+    private var errorNotice: some View {
+        if let message = content.errorMessage {
             HStack(spacing: 6) {
                 Image(systemName: "exclamationmark.triangle.fill")
                     .font(DawnTextStyle.sidebarIcon)
@@ -161,7 +150,7 @@ struct SidebarFooter: View {
             .accessibilityElement(children: .ignore)
             .accessibilityLabel(message)
             .onTapGesture {
-                onDismiss()
+                onDismissError()
             }
         }
     }
