@@ -1,3 +1,4 @@
+// NEEDS REVIEW — PIN-132 (sidebar design): changed in this issue, pending organization review.
 #if DEBUG
 
 import libdawn
@@ -268,7 +269,7 @@ private enum SidebarPreviewData {
             update: availableUpdate
         )
     }
-    
+
     static var empty: SidebarContent {
         SidebarContent(
             contexts: [],
