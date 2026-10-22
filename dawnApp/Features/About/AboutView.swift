@@ -49,6 +49,9 @@ struct AboutView: View {
                 Text("\(content.ticket.commit.displayName)")
                     .font(DawnTextStyle.secondary)
                     .foregroundStyle(DawnColors.secondaryForeground)
+                    .onTapGesture {
+                        NSWorkspace.shared.open(content.ticket.commit.url)
+                    }
 
             }
 
