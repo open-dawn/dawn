@@ -53,6 +53,7 @@ final class ContextDetailViewModel {
         operationInProgress = context.id
         defer { operationInProgress = nil }
 
+        // PIN-145 Fixs it in future
         do {
             try await contextManager.switchContext(id: context.id)
             activeContextID = context.id
