@@ -1,4 +1,3 @@
-// CURSOR: NEED REVIEW
 import libdawn
 
 public enum WMActionIdentifier {
@@ -6,15 +5,15 @@ public enum WMActionIdentifier {
     case openApp(WorkspaceApplication) // Open or Show target app
     case closeApp(WorkspaceApplication) // Close an target app
     case resetWindows(ActivationPolicy, keep: [WorkspaceApplication]) // Apply activation policy to non-members
-    case setFocus(focusModeName: String) // Enable macOS Focus mode if possible
+    case setFocus(String) // Enable macOS Focus mode if possible
     case terminalCommand(String) // Run a shell command
     case workspaceTransition(WorkspaceContext) // Full enter-workspace transition
 
     var action: WMAction {
         return switch self {
-        case let .hideApp(app): WMHideAppAction(app)
-        case let .openApp(app): WMOpenAppAction(app)
-        case let .closeApp(app): WMCloseAppAction(app)
+        case let .hideApp(app): WMHideAppAction(app: app)
+        case let .openApp(app): WMOpenAppAction(app: app)
+        case let .closeApp(app): WMCloseAppAction(app: app)
         case let .resetWindows(policy, keep):
             WMResetWindowsAction(activationPolicy: policy, keepApplications: keep)
         case let .setFocus(focusModeName): WMSetFocusAction(focusModeName: focusModeName)

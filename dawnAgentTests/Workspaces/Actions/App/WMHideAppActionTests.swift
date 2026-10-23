@@ -11,7 +11,7 @@ struct WMHideAppActionTests {
         let mockApp = WorkspaceApplication(bundleIdentifier: "", displayName: "", applicationURL: nil)
         let fakeAppProvider = FakeAppProvider()
 
-        let action = WMHideAppAction(mockApp, provider: fakeAppProvider)
+        let action = WMHideAppAction(app: mockApp, provider: fakeAppProvider)
         await #expect(throws: WMActionError.notRunning) {
             try await action.execute()
         }
@@ -28,7 +28,7 @@ struct WMHideAppActionTests {
         let mockAppProvider = FakeAppProvider()
         mockAppProvider.appsByBundleIdentifier = ["com.apple.Safari": [mockRunningApp]]
 
-        let action = WMHideAppAction(mockApp, provider: mockAppProvider)
+        let action = WMHideAppAction(app: mockApp, provider: mockAppProvider)
         await #expect(throws: Never.self) { try await action.execute() }
     }
 
@@ -43,7 +43,7 @@ struct WMHideAppActionTests {
         let mockAppProvider = FakeAppProvider()
         mockAppProvider.appsByBundleIdentifier = ["com.apple.Safari": [mockRunningApp]]
 
-        let action = WMHideAppAction(mockApp, provider: mockAppProvider)
+        let action = WMHideAppAction(app: mockApp, provider: mockAppProvider)
         await #expect(throws: WMActionError.noGUItoShow) { try await action.execute() }
     }
 }

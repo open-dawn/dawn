@@ -16,7 +16,7 @@ struct DefaultWorkspaceTransitionPerformer: WorkspaceTransitionPerforming {
     }
 
     func openApp(_ app: WorkspaceApplication) async throws {
-        try await WMOpenAppAction(app).execute()
+        try await WMOpenAppAction(app: app).execute()
     }
 
     func setFocus(focusModeName: String) async throws {

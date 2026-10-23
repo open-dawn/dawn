@@ -41,7 +41,7 @@ struct WMOpenAppAction: WMAppAction {
         }
     }
 
-    init(_ app: WorkspaceApplication, workspace: WorkspaceOpener = NSWorkspace.shared) {
+    init(app: WorkspaceApplication, workspace: WorkspaceOpener = NSWorkspace.shared) {
         self.app = app
         self.workspace = workspace
     }

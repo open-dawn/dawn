@@ -11,7 +11,7 @@ struct WMCloseAppActionTests {
         let mockApp = WorkspaceApplication(bundleIdentifier: "", displayName: "", applicationURL: nil)
         let fakeAppProvider = FakeAppProvider()
 
-        let action = WMCloseAppAction(mockApp, provider: fakeAppProvider)
+        let action = WMCloseAppAction(app: mockApp, provider: fakeAppProvider)
         #expect(throws: WMActionError.notRunning) {
             try action.execute()
         }
@@ -28,7 +28,7 @@ struct WMCloseAppActionTests {
         let mockAppProvider = FakeAppProvider()
         mockAppProvider.appsByBundleIdentifier = ["com.apple.Safari": [mockRunningApp]]
 
-        let action = WMCloseAppAction(mockApp, provider: mockAppProvider)
+        let action = WMCloseAppAction(app: mockApp, provider: mockAppProvider)
         #expect(throws: Never.self) { try action.execute() }
     }
 
@@ -43,7 +43,7 @@ struct WMCloseAppActionTests {
         let mockAppProvider = FakeAppProvider()
         mockAppProvider.appsByBundleIdentifier = ["com.apple.Safari": [mockRunningApp]]
 
-        let action = WMCloseAppAction(mockApp, provider: mockAppProvider)
+        let action = WMCloseAppAction(app: mockApp, provider: mockAppProvider)
         #expect(throws: WMActionError.permissionDenied) { try action.execute() }
     }
 }
