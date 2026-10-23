@@ -157,23 +157,6 @@ jobs:
           echo "$TOOLS_DIRECTORY/xcodegen/bin" >> "$GITHUB_PATH"
           echo "$TOOLS_DIRECTORY/xcbeautify" >> "$GITHUB_PATH"
 
-      - name: Generate release metadata
-        shell: bash
-        env:
-          REPOSITORY_URL: ${{ github.server_url }}/${{ github.repository }}
-        run: |
-          set -euo pipefail
-
-          python3 Scripts/generate_about_metadata.py \
-            --sha "$GITHUB_SHA" \
-            --reference "$RELEASE_TAG" \
-            --repository_url "$REPOSITORY_URL" \
-            --output dawnApp/Features/About/AboutMetadata.json
-
-          python3 -m json.tool \
-            dawnApp/Features/About/AboutMetadata.json \
-            > /dev/null
-
       - name: Generate Xcode project
         shell: bash
         run: xcodegen generate

@@ -154,3 +154,6 @@ run.sh
 
 # AI
 .cursor
+
+# Generated at build time by Scripts/generate_build_ticket.sh
+Generated/

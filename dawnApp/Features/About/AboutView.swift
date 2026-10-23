@@ -1,66 +1,150 @@
+import AppKit
 import SwiftUI
+import libdawnUI
 
 struct AboutView: View {
-    @Environment(SettingsEventBusService.self) private var eventBusService
-
     let content: AboutContent
+    @State private var needsUpdate: Bool = false
+    @State private var isCheckingUpdates: Bool = false
 
-    var body: some View {
-        VStack(spacing: 24) {
-            HStack {
-                if eventBusService.connectionState == .connecting {
-                    ProgressView()
+    private func checkUpdates() {
+        // PIN-144: This is a mock update system
+        Task {
+            DispatchQueue.main.async {
+                withAnimation(.snappy) {
+                    isCheckingUpdates = true
                 }
-
-                Text(connectionLabel)
-                    .foregroundStyle(.secondary)
             }
 
-            HStack(spacing: 0) {
-                Text("Copyright: ")
-                Text(verbatim: content.metadata.copyright)
-                    .bold()
-            }
+            try? await Task.sleep(for: .seconds(3))
 
-            HStack(spacing: 0) {
-                Text("License: ")
-                Text(verbatim: content.metadata.license)
-                    .bold()
-            }
-
-            HStack(spacing: 0) {
-                Text("Version: ")
-                Text(verbatim: content.appVersion)
-                    .bold()
-                Text(" - ")
-                Link(
-                    content.metadata.commit.displayName,
-                    destination: content.metadata.commit.url
-                )
-            }
-
-            HStack(spacing: 0) {
-                Link(
-                    "Privacy Policy",
-                    destination: content.metadata.privacyPolicyURL
-                )
-                Text(" - ")
-                Link(
-                    "Terms of Use",
-                    destination: content.metadata.termsOfUseURL
-                )
+            DispatchQueue.main.async {
+                withAnimation(.snappy) {
+                    isCheckingUpdates = false
+                    needsUpdate = true
+                }
             }
         }
     }
 
-    private var connectionLabel: String {
-        switch eventBusService.connectionState {
-        case .disconnected:
-            "Not Connected"
-        case .connecting:
-            "Connecting..."
-        case .connected:
-            "Connected"
+    var body: some View {
+        VStack(spacing: 24) {
+
+            Spacer()
+
+            VStack(spacing: 0) {
+                Image(systemName: "sun.horizon")
+                    .font(.system(size: 64))
+                Text("dawn")
+                    .font(.system(size: 32))
+            }
+
+            VStack(spacing: 4) {
+                Text("Version \(content.appVersion)")
+                    .font(DawnTextStyle.secondary)
+                    .foregroundStyle(DawnColors.secondaryForeground)
+                Text("\(content.ticket.commit.displayName)")
+                    .font(DawnTextStyle.secondary)
+                    .foregroundStyle(DawnColors.secondaryForeground)
+                    .onTapGesture {
+                        NSWorkspace.shared.open(content.ticket.commit.url)
+                    }
+
+            }
+
+            VStack(spacing: 4) {
+                HStack(spacing: 4) {
+                    Text("Dawn is designed by")
+                        .font(DawnTextStyle.secondary)
+                        .foregroundStyle(DawnColors.secondaryForeground)
+
+                    DButton(style: .linkSecondary) {
+                        NSWorkspace.shared.open(content.ticket.marketingURL)
+                    } content: {
+                        Text("OpenDawn")
+                    }
+                }
+
+                HStack(spacing: 4) {
+                    Text("and is open source, under the")
+                        .font(DawnTextStyle.secondary)
+                        .foregroundStyle(DawnColors.secondaryForeground)
+
+                    DButton(style: .linkSecondary) {
+                        NSWorkspace.shared.open(content.ticket.licenseURL)
+                    } content: {
+                        Text(verbatim: content.ticket.license)
+                    }
+
+                    Text("license.")
+                        .font(DawnTextStyle.secondary)
+                        .foregroundStyle(DawnColors.secondaryForeground)
+                }
+            }
+
+            Spacer()
+
+            HStack(alignment: .bottom) {
+                DButton(style: .secondary) {
+                    NSWorkspace.shared.open(content.ticket.marketingURL)
+                } content: {
+                    Text("Give us Feedback")
+                } leading: {
+                    Image(systemName: "bubble.left.and.bubble.right")
+                }
+
+                if needsUpdate {
+                    VStack {
+                        DButton(style: .link) {
+                            print("changelog")
+                        } content: {
+                            Text("What's new in 0.1.1")
+                        } trailing: {
+                            Image(systemName: "arrow.up.forward.square")
+                        }
+
+                        DButton(style: .primary) {
+                            print("update now")
+                        } content: {
+                            Text("Update Now")
+                                .frame(minWidth: 200)
+                        }
+                    }
+                } else {
+                    VStack {
+
+                        /// this empty button is here to take enough
+                        /// space so the layout doesn't shift when
+                        /// an actual changelog button is shown
+                        DButton(style: .link) {
+                        } content: {
+                            Text(" ")
+                        }
+
+                        DButton(style: .secondary) {
+                            checkUpdates()
+                        } content: {
+                            if isCheckingUpdates {
+                                ProgressView()
+                                    .controlSize(.small)
+                            }
+
+                            Text("Check for Updates")
+                        }
+                        .disabled(isCheckingUpdates)
+                    }
+                }
+            }
+
+            Text(content.ticket.copyright)
+                .font(DawnTextStyle.secondary)
+                .foregroundStyle(DawnColors.secondaryForeground)
         }
+        .frame(minWidth: 512, maxWidth: .infinity)
+        .padding(16)
+        .background {
+            DawnColors.primaryBackground
+        }
+
     }
 }

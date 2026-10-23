@@ -22,6 +22,8 @@ public enum DawnColors {
 
     public static let primaryForeground = Color(red: 0xff/0xff, green: 0xff/0xff, blue: 0xff/0xff) // #ffffff
 
+    public static let secondaryForeground = Color(red: 0x70/0xff, green: 0x70/0xff, blue: 0x70/0xff) // #707070
+
     public static let dangerBackground = Color.red.opacity(0.3)
 
     public static let dangerForeground = Color.red
