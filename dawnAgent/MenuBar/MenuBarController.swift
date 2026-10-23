@@ -19,18 +19,21 @@ final class MenuBarController: NSObject, MenuBarControlling {
     private let statusItem: NSStatusItem
     private let popover: NSPopover
     private var isClosing = false
+    private let appOpener: any DawnAppOpening
 
     private var isStopped = false
 
     init(
         workspace: WorkspaceRuntime,
-        statusBar: NSStatusBar = .system
+        statusBar: NSStatusBar = .system,
+        appOpener: any DawnAppOpening = DawnAppOpener()
     ) {
         self.statusBar = statusBar
         self.statusItem = statusBar.statusItem(
             withLength: NSStatusItem.squareLength
         )
         self.popover = NSPopover()
+        self.appOpener = appOpener
 
         super.init()
 
@@ -95,7 +98,15 @@ final class MenuBarController: NSObject, MenuBarControlling {
 
         popover.contentViewController = NSHostingController(
             rootView: MenuBarRootView(
-                workspace: workspace
+                workspace: workspace,
+                openApp: { [weak self] route in
+                    guard let self else {
+                        return
+                    }
+
+                    try await appOpener.open(route)
+                    closePopover()
+                }
             )
         )
     }
@@ -127,7 +138,7 @@ final class MenuBarController: NSObject, MenuBarControlling {
         guard !popover.isShown else {
             popover.contentViewController?.view.window?.makeFirstResponder(nil)
 
-            popover.performClose(sender)
+            closePopover()
             return
         }
 
@@ -145,6 +156,16 @@ final class MenuBarController: NSObject, MenuBarControlling {
         )
 
         popover.contentViewController?.view.window?.makeKey()
+    }
+
+    private func closePopover(_ sender: Any? = nil) {
+        guard popover.isShown else {
+            return
+        }
+
+        popover.contentViewController?.view.window?.makeFirstResponder(nil)
+
+        popover.performClose(sender)
     }
 
     private lazy var contextMenu: NSMenu = {
@@ -177,7 +198,7 @@ final class MenuBarController: NSObject, MenuBarControlling {
         if popover.isShown {
             popover.contentViewController?.view.window?.makeFirstResponder(nil)
 
-            popover.performClose(sender)
+            closePopover()
         }
 
         sender.highlight(true)
