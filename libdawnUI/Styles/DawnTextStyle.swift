@@ -8,6 +8,9 @@
 import SwiftUI
 
 public enum DawnTextStyle {
+    public static let primary: Font = .system(size: 16, weight: .regular)
+    public static let secondary: Font = .system(size: 16, weight: .regular)
+
     // MARK: - Context Cards
 
     public static let contextTitle: Font = .system(size: 12, weight: .bold)
