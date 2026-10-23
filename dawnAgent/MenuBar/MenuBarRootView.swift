@@ -7,6 +7,7 @@
 
 import AppKit
 import SwiftUI
+import UniformTypeIdentifiers
 import libdawn
 import libdawnUI
 
@@ -36,47 +37,52 @@ struct MenuBarRootView: View {
     private var contextList: some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack(spacing: 5) {
-                Image(systemName: "sun.horizon")
-                    .font(.system(size: 24))
-
-                Text("dawn")
-                    .font(.system(size: 24))
+                DawnBrand()
 
                 Spacer()
 
-                Button {
-                    route = .contextCreation
-                } label: {
-                    Image(systemName: "plus")
-                        .font(.system(size: 20, weight: .light))
-                }
-                .buttonStyle(.plain)
+                DButton(
+                    style: .icon,
+                    action: {
+                        route = .contextCreation
+                    },
+                    content: {
+                        Image(systemName: "plus")
+                            .font(DawnTextStyle.actionIcon)
+                    }
+                )
+                .accessibilityLabel("Create a context")
 
-                Button {
-                    // PIN-122: Open dawnApp in general settings view
-                } label: {
-                    Image(systemName: "gearshape")
-                        .font(.system(size: 20, weight: .light))
-                }
-                .buttonStyle(.plain)
+                DButton(
+                    style: .icon,
+                    action: {
+                        // PIN-122: Open dawnApp in general settings view
+                    },
+                    content: {
+                        Image(systemName: "gearshape")
+                            .font(DawnTextStyle.actionIcon)
+                    }
+                )
+                .accessibilityLabel("Open DAWN settings")
             }
 
             // PIN-122: If there is a active context, it should appear here above the list
 
             HStack(alignment: .center) {
                 Text("Contexts")
-                    .font(.system(size: 12, weight: .light))
+                    .font(DawnTextStyle.sectionLabel)
 
                 Spacer()
 
-                Button {
-                    // PIN-122: Open dawnApp in current/latest context settings
-                } label: {
-                    Text("view in app")
-                        .font(.system(size: 12, weight: .light))
-                        .underline()
-                }
-                .buttonStyle(.plain)
+                DButton(
+                    style: .compactLink,
+                    action: {
+                        // PIN-122: Open dawnApp in current/latest context settings
+                    },
+                    content: {
+                        Text("view in app")
+                    }
+                )
             }
 
             if workspace.contexts.isEmpty {
@@ -124,7 +130,9 @@ struct MenuBarRootView: View {
             onAction: { action in
                 handle(action, for: context)
             }
-        ).disabled(activatingContextID != nil && activatingContextID != context.id)
+        ).disabled(
+            activatingContextID != nil && activatingContextID != context.id
+        )
     }
 
     private func contextCardModel(for context: WorkspaceContext) -> ContextCardModel {
@@ -157,11 +165,9 @@ struct MenuBarRootView: View {
 
         let icon =
             applicationURL.map {
-                NSWorkspace.shared.icon(forFile: $0.path)
-            } ?? NSImage(
-                systemSymbolName: "app",
-                accessibilityDescription: application.displayName
-            ) ?? NSImage(size: NSSize(width: 18, height: 18))
+                NSWorkspace.shared.icon(forFile: $0.path(percentEncoded: false))
+            }
+            ?? NSWorkspace.shared.icon(for: .application)
 
         return ContextCardModel.Application(
             id: application.id,

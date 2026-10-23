@@ -124,7 +124,7 @@ final class MenuBarController: NSObject, MenuBarControlling {
     private func togglePopover(
         _ sender: NSStatusBarButton
     ) {
-        if popover.isShown {
+        guard !popover.isShown else {
             popover.contentViewController?.view.window?.makeFirstResponder(nil)
 
             popover.performClose(sender)
@@ -206,11 +206,11 @@ final class MenuBarController: NSObject, MenuBarControlling {
         Because DAWN Agent is a login item, it will start again the next time you sign in.
         """
 
-        alert.addButton(withTitle: "Quit")
-        alert.addButton(withTitle: "Cancel")
+        let quitButton = alert.addButton(withTitle: "Quit")
+        quitButton.hasDestructiveAction = true
 
-        alert.buttons.first?.hasDestructiveAction = true
-        alert.buttons.last?.keyEquivalent = "\u{1b}"
+        let cancelButton = alert.addButton(withTitle: "Cancel")
+        cancelButton.keyEquivalent = "\u{1b}"
 
         guard alert.runModal() == .alertFirstButtonReturn else {
             return

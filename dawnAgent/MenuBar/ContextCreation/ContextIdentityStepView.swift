@@ -36,15 +36,10 @@ struct ContextIdentityStepView: View {
 
     var body: some View {
         VStack(spacing: 32) {
-            VStack(spacing: 6) {
-                Text("Name your workspace")
-                    .font(.system(size: 21, weight: .bold))
-
-                Text("Choose a name and symbol for your workspace.")
-                    .font(.system(size: 14))
-                    .foregroundStyle(.secondary)
-            }
-            .multilineTextAlignment(.center)
+            ContextCreationStepHeader(
+                title: "Name your workspace",
+                subtitle: "Choose a name and symbol for your workspace.",
+            )
 
             VStack(alignment: .leading, spacing: 20) {
                 nameField
@@ -63,12 +58,12 @@ struct ContextIdentityStepView: View {
     private var nameField: some View {
         VStack(alignment: .leading, spacing: 7) {
             Text("Name")
-                .font(.system(size: 14, weight: .light))
+                .font(DawnTextStyle.fieldLabel)
 
             TextField("Context name", text: $name)
                 .textFieldStyle(.plain)
                 .padding(11)
-                .background(Color.black.opacity(0.25))
+                .background(DawnColors.inputBackground)
                 .clipShape(RoundedRectangle(cornerRadius: 7))
         }
     }
@@ -76,7 +71,7 @@ struct ContextIdentityStepView: View {
     private var symbolPicker: some View {
         VStack(alignment: .leading, spacing: 7) {
             Text("Symbol")
-                .font(.system(size: 14, weight: .light))
+                .font(DawnTextStyle.fieldLabel)
 
             LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 4), count: 5)) {
                 ForEach(Self.symbols, id: \.self) { symbolName in
@@ -89,17 +84,28 @@ struct ContextIdentityStepView: View {
     private func symbolButton(_ symbolName: String) -> some View {
         let isSelected = selectedSymbolName == symbolName
 
-        return Button {
-            selectedSymbolName = symbolName
-        } label: {
-            Image(systemName: symbolName)
-                .font(.system(size: 25))
-                .foregroundStyle(isSelected ? .black : .white)
-                .frame(maxWidth: .infinity, minHeight: 53)
-                .background(isSelected ? Color.white : Color.clear)
-                .clipShape(RoundedRectangle(cornerRadius: 7))
-        }
-        .buttonStyle(.plain)
+        return DButton(
+            style: .plain,
+            action: {
+                selectedSymbolName = symbolName
+            },
+            content: {
+                Image(systemName: symbolName)
+                    .font(DawnTextStyle.symbolPickerIcon)
+                    .foregroundStyle(
+                        isSelected
+                            ? DawnColors.selectionForeground
+                            : DawnColors.primaryForeground
+                    )
+                    .frame(maxWidth: .infinity, minHeight: 53)
+                    .background(
+                        isSelected
+                            ? DawnColors.selectionBackground
+                            : Color.clear
+                    )
+                    .clipShape(RoundedRectangle(cornerRadius: 7))
+            }
+        )
         .accessibilityLabel(symbolName)
         .accessibilityAddTraits(isSelected ? .isSelected : [])
     }

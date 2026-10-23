@@ -14,14 +14,10 @@ struct ContextCreationConfirmationView: View {
 
     var body: some View {
         VStack(spacing: 42) {
-            VStack(spacing: 6) {
-                Text("Congrats!")
-                    .font(.system(size: 21, weight: .bold))
-
-                Text("Your workspace has been created!")
-                    .font(.system(size: 14))
-            }
-            .multilineTextAlignment(.center)
+            ContextCreationStepHeader(
+                title: "Congrats!",
+                subtitle: "Your workspace has been created."
+            )
 
             Text("🎉")
                 .font(.system(size: 96))

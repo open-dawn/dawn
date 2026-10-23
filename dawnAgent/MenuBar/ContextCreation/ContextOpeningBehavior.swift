@@ -5,14 +5,10 @@
 //  Created by Rafael Venetikides on 21/10/26.
 //
 
-enum ContextOpeningBehavior: CaseIterable, Hashable, Identifiable {
+enum ContextOpeningBehavior: CaseIterable, Hashable {
     case onlyOpen
     case hideOthers
     case closeOthers
-
-    var id: Self {
-        self
-    }
 
     var title: String {
         switch self {

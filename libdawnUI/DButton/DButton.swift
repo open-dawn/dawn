@@ -46,7 +46,7 @@ public struct DButton<Leading: View, Content: View, Trailing: View>: View {
             }
             .padding(.vertical, style.verticalPadding)
             .padding(.horizontal, style.horizontalPadding)
-            .lineLimit(1)
+            .lineLimit(style.lineLimit)
             .foregroundStyle(style.fgStyle)
             .underline(style.underlined, color: style.fgStyle)
             .background {

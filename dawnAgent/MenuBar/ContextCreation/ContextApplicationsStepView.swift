@@ -42,7 +42,7 @@ struct ContextApplicationsStepView: View {
     var body: some View {
         VStack(spacing: 28) {
             Text("Choose your apps")
-                .font(.system(size: 21, weight: .bold))
+                .font(DawnTextStyle.screenTitle)
 
             selectionSummary
             searchBar
@@ -58,7 +58,7 @@ struct ContextApplicationsStepView: View {
     private var selectionSummary: some View {
         VStack(spacing: 7) {
             Text(selectionSummaryText)
-                .font(.system(size: 14))
+                .font(DawnTextStyle.body)
 
             if !selectedApplications.isEmpty {
                 HStack(spacing: -12) {
@@ -68,7 +68,7 @@ struct ContextApplicationsStepView: View {
 
                     if selectedApplications.count > 4 {
                         Text("+\(selectedApplications.count - 4)")
-                            .font(.system(size: 11))
+                            .font(DawnTextStyle.caption)
                             .padding(.leading, 16)
                     }
                 }
@@ -81,30 +81,32 @@ struct ContextApplicationsStepView: View {
         HStack(spacing: 8) {
             HStack(spacing: 8) {
                 Image(systemName: "magnifyingglass")
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(DawnColors.menuItemSecondaryForeground)
 
                 TextField("App", text: $searchQuery)
                     .textFieldStyle(.plain)
 
                 if !searchQuery.isEmpty {
-                    Button {
-                        searchQuery = ""
-                    } label: {
-                        Image(systemName: "xmark")
-                    }
-                    .buttonStyle(.plain)
+                    DButton(
+                        style: .compactIcon,
+                        action: {
+                            searchQuery = ""
+                        },
+                        content: {
+                            Image(systemName: "xmark")
+                        }
+                    )
                     .accessibilityLabel("Clear search")
                 }
             }
             .padding(10)
-            .background(Color.black.opacity(0.25))
+            .background(DawnColors.inputBackground)
             .clipShape(RoundedRectangle(cornerRadius: 7))
 
-            Button(action: onChooseApplication) {
+            DButton(style: .icon, action: onChooseApplication) {
                 Image(systemName: "folder.badge.plus")
                     .frame(width: 24, height: 24)
             }
-            .buttonStyle(.plain)
             .accessibilityLabel("Choose an application")
         }
     }
@@ -138,41 +140,46 @@ struct ContextApplicationsStepView: View {
     private func applicationButton(_ application: ContextCreationApplication) -> some View {
         let isSelected = selectedApplicationIDs.contains(application.id)
 
-        return Button {
-            toggleSelection(of: application.id)
-        } label: {
-            VStack(spacing: 3) {
-                Image(nsImage: application.icon)
-                    .resizable()
-                    .scaledToFit()
-                    .frame(width: 43, height: 43)
+        return DButton(
+            style: .plain,
+            action: {
+                toggleSelection(of: application.id)
+            },
+            content: {
+                VStack(spacing: 3) {
+                    Image(nsImage: application.icon)
+                        .resizable()
+                        .scaledToFit()
+                        .frame(width: 43, height: 43)
 
-                Text(application.name)
-                    .font(.system(size: 11, weight: .light))
-                    .lineLimit(1)
-                    .frame(maxWidth: .infinity)
+                    Text(application.name)
+                        .font(DawnTextStyle.secondaryCaption)
+                        .lineLimit(1)
+                        .frame(maxWidth: .infinity)
+                }
+                .grayscale(isSelected ? 0 : 1)
+                .opacity(isSelected ? 1 : 0.5)
             }
-            .grayscale(isSelected ? 0 : 1)
-            .opacity(isSelected ? 1 : 0.5)
-        }
-        .buttonStyle(.plain)
+        )
         .accessibilityLabel(application.name)
         .accessibilityAddTraits(isSelected ? .isSelected : [])
     }
 
     private func selectedApplicationButton(_ application: ContextCreationApplication) -> some View {
-        Button {
-            selectedApplicationIDs.removeAll {
-                $0 == application.id
+        DButton(
+            style: .plain,
+            action: {
+                selectedApplicationIDs.removeAll {
+                    $0 == application.id
+                }
+            },
+            content: {
+                Image(nsImage: application.icon)
+                    .resizable()
+                    .scaledToFit()
+                    .frame(width: 42, height: 42)
             }
-        } label: {
-            Image(nsImage: application.icon)
-                .resizable()
-                .scaledToFit()
-                .frame(width: 42, height: 42)
-                .contentShape(Rectangle())
-        }
-        .buttonStyle(.plain)
+        )
         .help("Remove \(application.name)")
         .accessibilityLabel("Remove \(application.name) from selected applications")
     }

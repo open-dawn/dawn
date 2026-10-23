@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import libdawnUI
 
 struct ContextCreationFlowView: View {
     private enum Step: Equatable {
@@ -36,18 +37,22 @@ struct ContextCreationFlowView: View {
         } else {
             ZStack {
                 HStack {
-                    Button(action: goBack) {
+                    DButton(
+                        style: .compactIcon,
+                        action: goBack
+                    ) {
                         Image(systemName: "chevron.left")
                     }
-                    .buttonStyle(.plain)
                     .accessibilityLabel("Back")
 
                     Spacer()
 
-                    Button(action: onExit) {
+                    DButton(
+                        style: .compactIcon,
+                        action: onExit
+                    ) {
                         Image(systemName: "xmark")
                     }
-                    .buttonStyle(.plain)
                     .accessibilityLabel("Cancel context creation")
                 }
 
@@ -57,11 +62,7 @@ struct ContextCreationFlowView: View {
     }
 
     private var brand: some View {
-        HStack(spacing: 4) {
-            Image(systemName: "sun.horizon")
-            Text("dawn")
-        }
-        .font(.system(size: 20))
+        DawnBrand(style: .compact)
     }
 
     @ViewBuilder
