@@ -7,13 +7,14 @@ final class ContextDetailViewModel {
     private let contextManager: any WorkspaceContextManaging
 
     private(set) var operationInProgress: UUID?
+    private(set) var activeContextID: UUID?
     private(set) var error: SettingsContextStoreError?
-
     private(set) var contextBeingEdited: WorkspaceContext?
-    var isCreatingOrEditing = false
+    var isCreatingOrEditing: Bool
 
     init(contextManager: any WorkspaceContextManaging) {
         self.contextManager = contextManager
+        isCreatingOrEditing = false
     }
 
     func presentContextCreator() {
@@ -35,14 +36,27 @@ final class ContextDetailViewModel {
         error = nil
     }
 
+    func reconcileActiveContext(with contexts: [WorkspaceContext]) {
+        guard let activeContextID else {
+            return
+        }
+
+        let stillExists = contexts.contains { $0.id == activeContextID }
+        if !stillExists {
+            self.activeContextID = nil
+        }
+    }
+
     func runContext(_ context: WorkspaceContext) async {
         guard operationInProgress == nil else { return }
 
         operationInProgress = context.id
         defer { operationInProgress = nil }
 
+        // PIN-145 Fixs it in future
         do {
             try await contextManager.switchContext(id: context.id)
+            activeContextID = context.id
             error = nil
         } catch let error as SettingsContextStoreError {
             self.error = error
@@ -59,6 +73,9 @@ final class ContextDetailViewModel {
 
         do {
             try await contextManager.deleteContext(id: context.id)
+            if activeContextID == context.id {
+                activeContextID = nil
+            }
             error = nil
         } catch let error as SettingsContextStoreError {
             self.error = error

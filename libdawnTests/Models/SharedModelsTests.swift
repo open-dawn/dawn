@@ -38,7 +38,7 @@ struct SharedModelsTests {
 
     @Test("General settings disable launch at login by default")
     func generalSettingsDefaultValue() async throws {
-        let settings = GeneralSettings()
+        let settings = Settings()
 
         #expect(settings.launchAtLogin == false)
     }
