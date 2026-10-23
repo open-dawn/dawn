@@ -10,7 +10,6 @@ struct WMCloseAppActionTests {
     func notRunningError() {
         let mockApp = WorkspaceApplication(bundleIdentifier: "", displayName: "", applicationURL: nil)
         let fakeAppProvider = FakeAppProvider()
-        fakeAppProvider.apps = []
 
         let action = WMCloseAppAction(mockApp, provider: fakeAppProvider)
         #expect(throws: WMActionError.notRunning) {
@@ -23,11 +22,11 @@ struct WMCloseAppActionTests {
         let mockApp = WorkspaceApplication(bundleIdentifier: "com.apple.Safari",
                                            displayName: "Safari",
                                            applicationURL: URL(filePath: "Applications/Safari.app"))
-        let mockRunningApp = FakeRunningApp()
+        let mockRunningApp = FakeRunningApp(bundleIdentifier: "com.apple.Safari")
         mockRunningApp.terminateResult = true
 
         let mockAppProvider = FakeAppProvider()
-        mockAppProvider.apps = [mockRunningApp]
+        mockAppProvider.appsByBundleIdentifier = ["com.apple.Safari": [mockRunningApp]]
 
         let action = WMCloseAppAction(mockApp, provider: mockAppProvider)
         #expect(throws: Never.self) { try action.execute() }
@@ -38,11 +37,11 @@ struct WMCloseAppActionTests {
         let mockApp = WorkspaceApplication(bundleIdentifier: "com.apple.Safari",
                                            displayName: "Safari",
                                            applicationURL: URL(filePath: "Applications/Safari.app"))
-        let mockRunningApp = FakeRunningApp()
+        let mockRunningApp = FakeRunningApp(bundleIdentifier: "com.apple.Safari")
         mockRunningApp.terminateResult = false
 
         let mockAppProvider = FakeAppProvider()
-        mockAppProvider.apps = [mockRunningApp]
+        mockAppProvider.appsByBundleIdentifier = ["com.apple.Safari": [mockRunningApp]]
 
         let action = WMCloseAppAction(mockApp, provider: mockAppProvider)
         #expect(throws: WMActionError.permissionDenied) { try action.execute() }

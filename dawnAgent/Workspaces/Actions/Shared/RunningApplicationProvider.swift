@@ -1,6 +1,9 @@
+// CURSOR: NEED REVIEW
 import AppKit
 
 public protocol RunningApplicationControlling {
+    var bundleIdentifier: String? { get }
+
     @discardableResult
     func activate(options: NSApplication.ActivationOptions) -> Bool
 

@@ -1,3 +1,4 @@
+// CURSOR: NEED REVIEW
 import libdawn
 import dawnLogging
 
@@ -9,29 +10,15 @@ protocol ContextSwitching {
 @MainActor
 struct DefaultContextSwitching: ContextSwitching {
     func switchToContext(to context: WorkspaceContext) {
-        let appsList: [WorkspaceApplication] = context.applications
-
         Task { @MainActor in
             do {
-                try await WMActionIdentifier.resetWindows.action.execute()
+                try await WMActionIdentifier.workspaceTransition(context).action.execute()
             } catch {
                 #log(
-                    "Error reseting windows: \(error.localizedDescription)",
+                    "Error running workspace transition: \(error.localizedDescription)",
                     level: .error,
                     category: .general
                 )
-            }
-
-            for app in appsList {
-                do {
-                    try await WMActionIdentifier.openApp(app).action.execute()
-                } catch {
-                    #log(
-                        "Error opening app \(app.bundleIdentifier) (\(error))",
-                        level: .error,
-                        category: .general
-                    )
-                }
             }
         }
     }

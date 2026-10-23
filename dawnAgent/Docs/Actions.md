@@ -42,8 +42,11 @@ public enum WMActionIdentifier {
 |------|---------------|--------|
 | `hideApp(app)` | `WMHideAppAction` | Hide all windows of the target app |
 | `openApp(app)` | `WMOpenAppAction` | Open or show the target app |
-| `resetWindows` | `WMResetWindowsAction` | Hide other apps / reset window visibility |
 | `closeApp(app)` | `WMCloseAppAction` | Close the target app |
+| `resetWindows(policy, keep:)` | `WMResetWindowsAction` | Apply `ActivationPolicy` to non-member apps (`hide` / `merge` / `close`) |
+| `setFocus(focusModeName:)` | `WMSetFocusAction` | Enable a macOS Focus mode if possible (via Shortcuts) |
+| `terminalCommand(command)` | `WMTerminalCommandAction` | Run a shell command via `/bin/zsh -lc` |
+| `workspaceTransition(context)` | `WMWorkspaceTransitionAction` | Full enter-workspace flow from `WorkspaceTransition` |
 
 ```swift
 let id = WMActionIdentifier.openApp(safari)
@@ -61,6 +64,26 @@ Under `Workspaces/Actions/App/`. All conform to `WMAppAction`.
 | `WMOpenAppAction` | Opens the app via `NSWorkspace` (`activates`, respects `createNewInstance`) | `invalidURL`, `notFound`, `permissionDenied`, `corruptedFile`, `unknown` |
 | `WMHideAppAction` | Finds a running instance by bundle id, activates, then hides | `notRunning` |
 | `WMCloseAppAction` | Finds a running instance, activates, then terminates | `notRunning`, `permissionDenied` |
+
+## System Actions
+
+| Type | Behavior | Typical errors |
+|------|----------|----------------|
+| `WMSetFocusAction` | Best-effort enable of a macOS Focus mode (e.g. Do Not Disturb) via `shortcuts run` | `unknown` |
+
+macOS has no public API to set Focus. `setFocus` is the Focus mode / Shortcuts name: create a Shortcut with that name whose action is **Set Focus**, then dawn runs it. Failure is soft (logged, switch continues).
+
+## Workspace Transition
+
+`WorkspaceTransition` (libdawn) on each `WorkspaceContext` drives enter-workspace side effects:
+
+| Field | Behavior |
+|-------|----------|
+| `activationPolicy` | `hide` (default): hide non-members; `merge`: leave others alone and only open missing members; `close`: terminate non-members |
+| `setFocus` | Optional macOS Focus mode name (soft-fail) |
+| `terminalCommand` | Optional shell command after opens (soft-fail) |
+
+`WMWorkspaceTransitionAction` orchestrates reset → open → focus → terminal. Protected system apps (Finder, Dock, dawn itself, …) are never hidden/closed by reset.
 
 To add a case and map it in `.action` see [How to Add an Action](#how-to-add-an-action).
 

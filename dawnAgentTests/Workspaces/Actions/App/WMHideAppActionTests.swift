@@ -10,7 +10,6 @@ struct WMHideAppActionTests {
     func notRunningError() async {
         let mockApp = WorkspaceApplication(bundleIdentifier: "", displayName: "", applicationURL: nil)
         let fakeAppProvider = FakeAppProvider()
-        fakeAppProvider.apps = []
 
         let action = WMHideAppAction(mockApp, provider: fakeAppProvider)
         await #expect(throws: WMActionError.notRunning) {
@@ -23,11 +22,11 @@ struct WMHideAppActionTests {
         let mockApp = WorkspaceApplication(bundleIdentifier: "com.apple.Safari",
                                            displayName: "Safari",
                                            applicationURL: URL(filePath: "Applications/Safari.app"))
-        let mockRunningApp = FakeRunningApp()
+        let mockRunningApp = FakeRunningApp(bundleIdentifier: "com.apple.Safari")
         mockRunningApp.hideResult = true
 
         let mockAppProvider = FakeAppProvider()
-        mockAppProvider.apps = [mockRunningApp]
+        mockAppProvider.appsByBundleIdentifier = ["com.apple.Safari": [mockRunningApp]]
 
         let action = WMHideAppAction(mockApp, provider: mockAppProvider)
         await #expect(throws: Never.self) { try await action.execute() }
@@ -38,11 +37,11 @@ struct WMHideAppActionTests {
         let mockApp = WorkspaceApplication(bundleIdentifier: "com.apple.Safari",
                                            displayName: "Safari",
                                            applicationURL: URL(filePath: "Applications/Safari.app"))
-        let mockRunningApp = FakeRunningApp()
+        let mockRunningApp = FakeRunningApp(bundleIdentifier: "com.apple.Safari")
         mockRunningApp.hideResult = false
 
         let mockAppProvider = FakeAppProvider()
-        mockAppProvider.apps = [mockRunningApp]
+        mockAppProvider.appsByBundleIdentifier = ["com.apple.Safari": [mockRunningApp]]
 
         let action = WMHideAppAction(mockApp, provider: mockAppProvider)
         await #expect(throws: WMActionError.noGUItoShow) { try await action.execute() }
