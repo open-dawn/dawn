@@ -86,7 +86,6 @@ struct SidebarFooter: View {
             }
             .buttonStyle(.plain)
             .help("Update to version \(update.version)")
-            .accessibilityLabel("Update Now")
             .accessibilityValue("Version \(update.version)")
             .accessibilityHint("Opens the release page in the browser")
         }
@@ -149,6 +148,9 @@ struct SidebarFooter: View {
             }
             .accessibilityElement(children: .ignore)
             .accessibilityLabel(message)
+            .accessibilityAction {
+                onDismissError()
+            }
             .onTapGesture {
                 onDismissError()
             }
