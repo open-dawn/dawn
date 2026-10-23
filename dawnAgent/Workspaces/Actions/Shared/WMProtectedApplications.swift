@@ -1,9 +1,8 @@
-// CURSOR: NEED REVIEW
 import Foundation
 
 enum WMProtectedApplications {
     static var bundleIdentifiers: Set<String> {
-        var identifiers: Set<String> = [
+        var identifiers: Set = [
             "com.apple.finder",
             "com.apple.dock",
             "com.apple.systemuiserver",

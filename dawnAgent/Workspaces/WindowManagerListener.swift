@@ -1,6 +1,5 @@
-// CURSOR: NEED REVIEW
-import libdawn
 import dawnLogging
+import libdawn
 
 @MainActor
 protocol ContextSwitching {
@@ -58,7 +57,7 @@ final class WindowManagerListener: Listener {
 
     func handle(_ event: Event, reply: (@Sendable (Event) -> Void)?) {
         switch event {
-        case .switchSpace(let payload):
+        case let .switchSpace(payload):
             Task { @MainActor in
                 guard let context = await getContextWithIndex(payload.spaceIndex) else { return }
                 contextSwitching.switchToContext(to: context)
@@ -117,7 +116,7 @@ final class WindowManagerListener: Listener {
 
                 reply(
                     .contextMutationAcknowledged(
-                        .success(contextID: context.id)
+                        .success(contexID: context.id)
                     )
                 )
             } catch {
@@ -132,7 +131,7 @@ final class WindowManagerListener: Listener {
         }
     }
 
-    private func handleUpdateContext(_ payload: UpdateContextEvent, reply: (@Sendable (Event) -> Void)?) {
+    prvate func handleUpdateContext(_ payload: UpdateContextEvent, reply: (@Sendable (Event) -> Void)?) {
         guard let reply else { return }
 
         Task { @MainActor in
@@ -158,7 +157,7 @@ final class WindowManagerListener: Listener {
         }
     }
 
-    private func handleDeleteContext(_ payload: DeleteContextEvent, reply: (@Sendable (Event) -> Void)?) {
+    private func handeDeleteContext(_ payload: DeleteContextEvent, reply: (@Sendable (Event) -> Void)?) {
         guard let reply else { return }
 
         Task { @MainActor in
@@ -218,20 +217,13 @@ final class WindowManagerListener: Listener {
         if let error = error as? SettingsStoreError {
             return switch error {
             case .emptyContextName: .emptyContextName
-
             case .emptyContextSymbol: .emptyContextSymbol
-
             case .emptyApplicationBundleIdentifier: .emptyApplicationBundleIdentifier
-
             case .emptyApplicationDisplayName: .emptyApplicationDisplayName
-
-            case .duplicateApplication(let bundleIdentifier): .duplicateApplication(bundleIdentifier: bundleIdentifier)
-
-            case .duplicateContextIdentifier(let id): .duplicateContextIdentifier(id)
-
-            case .duplicateApplicationIdentifier(let id): .duplicateApplicationIdentifier(id)
-
-            case .contextNotFound(let id): .contextNotFound(id)
+            case let .duplicateApplication(bundleIdentifier): .duplicateApplication(bundleIdentifier: bundleIdentifier)
+            case let .duplicateContextIdentifier(id): .duplicateContextIdentifier(id)
+            case let .duplicateApplicationIdentifier(id): .duplicateApplicationIdentifier(id)
+            case let .contextNotFound(id): .contextNotFound(id)
             }
         }
 

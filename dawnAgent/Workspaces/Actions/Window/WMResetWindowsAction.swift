@@ -1,9 +1,7 @@
-// CURSOR: NEED REVIEW
 import AppKit
 import Foundation
 import libdawn
 
-/// Applies `activationPolicy` to running apps that are not members of the target workspace.
 struct WMResetWindowsAction: WMAction {
     let activationPolicy: ActivationPolicy
     let keepBundleIdentifiers: Set<String>

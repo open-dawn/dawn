@@ -1,4 +1,3 @@
-// CURSOR: NEED REVIEW
 import AppKit
 
 protocol ApplicationProvider {

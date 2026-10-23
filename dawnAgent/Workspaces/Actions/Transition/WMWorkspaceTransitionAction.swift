@@ -1,7 +1,6 @@
-// CURSOR: NEED REVIEW
+import dawnLogging
 import Foundation
 import libdawn
-import dawnLogging
 
 protocol WorkspaceTransitionPerforming {
     func resetWindows(policy: ActivationPolicy, keepApplications: [WorkspaceApplication]) async throws
@@ -28,7 +27,6 @@ struct DefaultWorkspaceTransitionPerformer: WorkspaceTransitionPerforming {
     }
 }
 
-/// Runs the full enter-workspace sequence for a context's `WorkspaceTransition`.
 struct WMWorkspaceTransitionAction: WMAction {
     let context: WorkspaceContext
     private let provider: ApplicationProvider
@@ -62,7 +60,7 @@ struct WMWorkspaceTransitionAction: WMAction {
             )
         }
 
-        for app in applicationsToOpen(applications, policy: transition.activationPolicy) {
+        for app in applications {
             do {
                 try await performer.openApp(app)
             } catch {
@@ -95,20 +93,6 @@ struct WMWorkspaceTransitionAction: WMAction {
                     level: .warning,
                     category: .general
                 )
-            }
-        }
-    }
-
-    private func applicationsToOpen(
-        _ applications: [WorkspaceApplication],
-        policy: ActivationPolicy
-    ) -> [WorkspaceApplication] {
-        switch policy {
-        case .hide, .close:
-            return applications
-        case .merge:
-            return applications.filter { app in
-                provider.runningApplications(withBundleIdentifier: app.bundleIdentifier).isEmpty
             }
         }
     }

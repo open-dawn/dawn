@@ -1,16 +1,9 @@
-// CURSOR: NEED REVIEW
 import Foundation
 
 protocol FocusModeApplying {
-    /// Enables the given macOS Focus mode when the system allows it.
     func applyFocusMode(named name: String) throws
 }
 
-/// Applies Focus by running a Shortcuts shortcut with the same name as the Focus mode.
-///
-/// There is no public API to set Focus directly. Create a Shortcut named e.g.
-/// "Do Not Disturb" whose action is **Set Focus → Do Not Disturb**, then pass
-/// that same name in `WorkspaceTransition.setFocus`.
 struct ShortcutsFocusModeApplicator: FocusModeApplying {
     private let executableURL: URL
 

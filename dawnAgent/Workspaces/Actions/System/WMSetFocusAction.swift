@@ -1,7 +1,5 @@
-// CURSOR: NEED REVIEW
 import Foundation
 
-/// Best-effort enable of a macOS Focus mode (e.g. Do Not Disturb).
 struct WMSetFocusAction: WMAction {
     let focusModeName: String
     private let applicator: FocusModeApplying

@@ -1,4 +1,3 @@
-// CURSOR: NEED REVIEW
 import Foundation
 
 protocol TerminalCommandRunning {
