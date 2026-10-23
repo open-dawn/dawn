@@ -11,7 +11,7 @@ public struct WorkspaceTransition: Codable, Sendable, Equatable {
     public var setFocus: String?
     public var terminalCommand: String?
 
-    public static let default = WorkspaceTransition()
+    public static let `default` = WorkspaceTransition()
 
     public init(
         activationPolicy: ActivationPolicy = .hide,

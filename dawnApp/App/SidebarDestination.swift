@@ -5,11 +5,19 @@ enum SidebarDestination: Hashable {
     case context(UUID)
     case settings
     case about
+    #if DEBUG
+    case debug
+    #endif
 
     var contextID: UUID? {
         switch self {
         case let .context(id): id
-        case .settings, .about: nil
+        case .settings, .about:
+            nil
+        #if DEBUG
+        case .debug:
+            nil
+        #endif
         }
     }
 

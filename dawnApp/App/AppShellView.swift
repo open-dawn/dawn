@@ -143,6 +143,11 @@ private struct AppShellContent: View {
             }
 
             Section {
+                #if DEBUG
+                Label("Debug", systemImage: "ladybug")
+                    .tag(SidebarDestination.debug)
+                #endif
+
                 Label("Settings", systemImage: "gearshape")
                     .tag(SidebarDestination.settings)
 
@@ -221,6 +226,11 @@ private struct AppShellContent: View {
             AboutView(
                 content: AboutContent.loadRequired()
             )
+
+        #if DEBUG
+        case .debug:
+            WorkspaceTransitionDebugView()
+        #endif
 
         case nil:
             ContentUnavailableView(

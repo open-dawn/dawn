@@ -116,7 +116,7 @@ final class WindowManagerListener: Listener {
 
                 reply(
                     .contextMutationAcknowledged(
-                        .success(contexID: context.id)
+                        .success(contextID: context.id)
                     )
                 )
             } catch {
@@ -131,7 +131,7 @@ final class WindowManagerListener: Listener {
         }
     }
 
-    prvate func handleUpdateContext(_ payload: UpdateContextEvent, reply: (@Sendable (Event) -> Void)?) {
+    private func handleUpdateContext(_ payload: UpdateContextEvent, reply: (@Sendable (Event) -> Void)?) {
         guard let reply else { return }
 
         Task { @MainActor in
@@ -157,7 +157,7 @@ final class WindowManagerListener: Listener {
         }
     }
 
-    private func handeDeleteContext(_ payload: DeleteContextEvent, reply: (@Sendable (Event) -> Void)?) {
+    private func handleDeleteContext(_ payload: DeleteContextEvent, reply: (@Sendable (Event) -> Void)?) {
         guard let reply else { return }
 
         Task { @MainActor in
