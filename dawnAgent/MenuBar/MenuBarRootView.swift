@@ -18,10 +18,16 @@ struct MenuBarRootView: View {
     }
 
     let workspace: WorkspaceRuntime
+    let openApp: (DawnAppRoute) async throws -> Void
 
     @State private var activatingContextID: UUID?
     @State private var activationError: String?
     @State private var route: MenuBarRoute = .contextList
+    @State private var openingRoute: DawnAppRoute?
+
+    private var isPerformingOperation: Bool {
+        activatingContextID != nil || openingRoute != nil
+    }
 
     var body: some View {
         switch route {
@@ -56,14 +62,16 @@ struct MenuBarRootView: View {
                 DButton(
                     style: .icon,
                     action: {
-                        // PIN-122: Open dawnApp in general settings view
+                        openInApp(.settings)
                     },
                     content: {
                         Image(systemName: "gearshape")
                             .font(DawnTextStyle.actionIcon)
                     }
                 )
+                .disabled(isPerformingOperation)
                 .accessibilityLabel("Open DAWN settings")
+                .help("Open DAWN settings")
             }
 
             // PIN-122: If there is a active context, it should appear here above the list
@@ -105,7 +113,7 @@ struct MenuBarRootView: View {
         .padding(16)
         .frame(width: 320)
         .alert(
-            "Couldn't Switch Context",
+            "Couldn't Complete Action",
             isPresented: isShowingActivationError
         ) {
             Button("OK") {
@@ -117,9 +125,11 @@ struct MenuBarRootView: View {
     }
 
     private func contextCard(for context: WorkspaceContext) -> some View {
-        ContextCard(
+        let contextRoute = DawnAppRoute.context(context.id)
+
+        return ContextCard(
             model: contextCardModel(for: context),
-            isLoading: activatingContextID == context.id,
+            isLoading: activatingContextID == context.id || openingRoute == contextRoute,
             onSelect: {
                 guard workspace.lastRequestedContextID != context.id else {
                     return
@@ -130,9 +140,7 @@ struct MenuBarRootView: View {
             onAction: { action in
                 handle(action, for: context)
             }
-        ).disabled(
-            activatingContextID != nil && activatingContextID != context.id
-        )
+        ).disabled(isPerformingOperation)
     }
 
     private func contextCardModel(for context: WorkspaceContext) -> ContextCardModel {
@@ -180,14 +188,18 @@ struct MenuBarRootView: View {
         switch action {
         case .activate:
             activate(context)
-        case .stop, .openInApp, .delete:
+
+        case .openInApp:
+            openInApp(.context(context.id))
+
+        case .stop, .delete:
             // PIN-122: Implement these actions in the functionality issue.
             break
         }
     }
 
     private func activate(_ context: WorkspaceContext) {
-        guard activatingContextID == nil else {
+        guard !isPerformingOperation else {
             return
         }
 
@@ -218,5 +230,26 @@ struct MenuBarRootView: View {
                 }
             }
         )
+    }
+
+    private func openInApp(_ route: DawnAppRoute) {
+        guard !isPerformingOperation else {
+            return
+        }
+
+        openingRoute = route
+        activationError = nil
+
+        Task {
+            defer {
+                openingRoute = nil
+            }
+
+            do {
+                try await openApp(route)
+            } catch {
+                activationError = error.localizedDescription
+            }
+        }
     }
 }

@@ -9,13 +9,10 @@ struct MainApp: App {
             AppShellView()
                 .environment(appDelegate.eventBusService)
                 .environment(appDelegate.contextStore)
-                .task(id: appDelegate.eventBusService.isConnected) {
-                    guard appDelegate.eventBusService.isConnected else {
-                        return
-                    }
-
-                    await appDelegate.contextStore.refresh()
-                }
+                .handlesExternalEvents(
+                    preferring: ["*"],
+                    allowing: ["*"]
+                )
         }
         .defaultSize(width: 1080, height: 680)
         .windowStyle(.hiddenTitleBar)

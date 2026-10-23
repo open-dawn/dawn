@@ -28,7 +28,10 @@ private struct MenuBarRootPreview: View {
     }
 
     var body: some View {
-        MenuBarRootView(workspace: workspace)
+        MenuBarRootView(
+            workspace: workspace,
+            openApp: { _ in }
+        )
             .background(.regularMaterial)
             .preferredColorScheme(.dark)
             .task {
