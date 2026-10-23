@@ -8,10 +8,7 @@ struct AboutView: View {
     @State private var isCheckingUpdates: Bool = false
 
     private func checkUpdates() {
-
-        /// This View does not have a working implementation.
-        /// This is a Mock that does a simple animation to preview future function.
-
+        // PIN-144: This is a mock update system
         Task {
             DispatchQueue.main.async {
                 withAnimation(.snappy) {
