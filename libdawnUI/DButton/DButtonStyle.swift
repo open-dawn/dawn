@@ -13,6 +13,7 @@ public enum DButtonStyle: CaseIterable {
     case danger
     case warning
     case link
+    case linkSecondary
 
     var fgStyle: Color {
         switch self {
@@ -21,6 +22,7 @@ public enum DButtonStyle: CaseIterable {
         case .danger: return DawnColors.dangerForeground
         case .warning: return DawnColors.warningForeground
         case .link: return DawnColors.primaryForeground
+        case .linkSecondary: return DawnColors.secondaryForeground
         }
     }
 
@@ -31,6 +33,7 @@ public enum DButtonStyle: CaseIterable {
         case .danger: return DawnColors.dangerBackground
         case .warning: return DawnColors.warningBackground
         case .link: return .clear
+        case .linkSecondary: return .clear
         }
     }
 
@@ -41,6 +44,7 @@ public enum DButtonStyle: CaseIterable {
         case .danger: return 8
         case .warning: return 8
         case .link: return 8
+        case .linkSecondary: return 8
         }
     }
 
@@ -51,6 +55,7 @@ public enum DButtonStyle: CaseIterable {
         case .danger: return 12
         case .warning: return 12
         case .link: return 6
+        case .linkSecondary: return 0
         }
     }
 
@@ -61,6 +66,7 @@ public enum DButtonStyle: CaseIterable {
         case .danger: return 16
         case .warning: return 16
         case .link: return 0
+        case .linkSecondary: return 0
         }
     }
 
@@ -71,6 +77,7 @@ public enum DButtonStyle: CaseIterable {
         case .danger: return 8
         case .warning: return 8
         case .link: return 8
+        case .linkSecondary: return 8
         }
     }
 
@@ -81,6 +88,7 @@ public enum DButtonStyle: CaseIterable {
         case .danger: return false
         case .warning: return false
         case .link: return true
+        case .linkSecondary: return true
         }
     }
 
@@ -91,6 +99,7 @@ public enum DButtonStyle: CaseIterable {
         case .danger: return DawnTextStyle.buttonLabel
         case .warning: return DawnTextStyle.buttonLabel
         case .link: return DawnTextStyle.buttonLabel
+        case .linkSecondary: return DawnTextStyle.buttonLabel
         }
     }
 
@@ -101,6 +110,7 @@ public enum DButtonStyle: CaseIterable {
         case .danger: return DawnTextStyle.buttonIcon
         case .warning: return DawnTextStyle.buttonIcon
         case .link: return DawnTextStyle.buttonIcon
+        case .linkSecondary: return DawnTextStyle.buttonIcon
         }
     }
 }

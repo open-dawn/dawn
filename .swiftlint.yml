@@ -1,6 +1,8 @@
 excluded:
   - .build
   - "**/.build"
+  - Generated
+  - "**/Generated"
 
 disabled_rules:
   - comma
