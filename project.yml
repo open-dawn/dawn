@@ -114,6 +114,7 @@ targets:
           ENABLE_TESTABILITY: YES
     dependencies:
       - target: libdawn
+      - target: libdawnUI
       - package: dawnLogging
     postCompileScripts:
       - *swiftlint
