@@ -16,7 +16,18 @@ struct SidebarFooter: View {
 
             updateLink
 
+            #if DEBUG
+            footerButton(
+                title: "Debug",
+                systemImage: "ladybug",
+                showsTitle: true,
+                isSelected: selectedDestination == .debug,
+                action: { selectedDestination = .debug }
+            )
+            #endif
+
             HStack(alignment: .center, spacing: 8) {
+
                 footerButton(
                     title: "Settings",
                     systemImage: "gearshape",

@@ -155,6 +155,8 @@
                 "About"
             case let .context(identifier):
                 contextName(identifier) ?? "Context"
+            case .debug:
+                "Debug"
             case nil:
                 "No context selected"
             }
