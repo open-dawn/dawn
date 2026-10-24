@@ -174,10 +174,11 @@ final class MenuBarController: NSObject, MenuBarControlling {
 
         let openAppItem = NSMenuItem(
             title: "Open DAWN",
-            action: nil,
+            action: #selector(openDawnApp),
             keyEquivalent: ""
         )
-        openAppItem.isEnabled = false
+        openAppItem.target = self
+        openAppItem.isEnabled = true
 
         let quitItem = NSMenuItem(
             title: "Quit DAWN Agent...",
@@ -193,6 +194,28 @@ final class MenuBarController: NSObject, MenuBarControlling {
 
         return menu
     }()
+
+    @objc
+    private func openDawnApp() {
+        Task {
+            do {
+                try await appOpener.open(.application)
+            } catch {
+                presentOpenAppError(error)
+            }
+        }
+    }
+
+    private func presentOpenAppError(_ error: Error) {
+        NSApp.activate()
+
+        let alert = NSAlert()
+        alert.alertStyle = .warning
+        alert.messageText = "Couldn't Open DAWN"
+        alert.informativeText = error.localizedDescription
+        alert.addButton(withTitle: "OK")
+        alert.runModal()
+    }
 
     private func showContextMenu(relativeTo sender: NSStatusBarButton) {
         if popover.isShown {

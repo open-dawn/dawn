@@ -10,6 +10,7 @@ import Foundation
 public enum DawnAppRoute: Hashable, Sendable {
     public static let scheme = "opendawn"
 
+    case application
     case settings
     case context(UUID)
 
@@ -18,6 +19,8 @@ public enum DawnAppRoute: Hashable, Sendable {
         components.scheme = Self.scheme
 
         switch self {
+        case .application:
+            components.host = "app"
         case .settings:
             components.host = "settings"
 
@@ -51,6 +54,13 @@ public enum DawnAppRoute: Hashable, Sendable {
         )
 
         switch components.host?.lowercased() {
+        case "app":
+            guard pathComponents.isEmpty else {
+                return nil
+            }
+
+            self = .application
+
         case "settings":
             guard pathComponents.isEmpty else {
                 return nil

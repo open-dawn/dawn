@@ -37,6 +37,9 @@ final class AppNavigationModel {
         error = nil
 
         switch route {
+        case .application:
+            return false
+
         case .settings:
             selectedDestination = .settings
             return false

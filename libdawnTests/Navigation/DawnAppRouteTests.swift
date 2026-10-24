@@ -29,6 +29,14 @@ struct DawnAppRouteTests {
         #expect(DawnAppRoute(url: route.url) == route)
     }
 
+    @Test("encodes and decodes the app route")
+    func appRouteRoundTrip() async throws {
+        let route = DawnAppRoute.application
+
+        #expect(route.url.absoluteString == "opendawn://app")
+        #expect(DawnAppRoute(url: route.url) == route)
+    }
+
     @Test("rejects unsopported URLs")
     func rejectsUnsupportedURLs() throws {
         let invalidURLs = [
