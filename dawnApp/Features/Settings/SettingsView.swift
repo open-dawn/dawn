@@ -1,7 +1,7 @@
 import SwiftUI
 
-struct GeneralSettingsView: View {
-    @State private var viewModel = GeneralSettingsViewModel()
+struct SettingsView: View {
+    @State private var viewModel = SettingsViewModel()
 
     var body: some View {
         VStack {
@@ -15,6 +15,7 @@ struct GeneralSettingsView: View {
                 }
             }
             .formStyle(.grouped)
+            .scrollContentBackground(.hidden)
 
             Spacer()
 
@@ -33,11 +34,10 @@ struct GeneralSettingsView: View {
         }
     }
 
-    @ViewBuilder
-    private func settingRow(_ setting: SettingItem<GeneralSettingsViewModel>) -> some View {
+    private func settingRow(_ setting: SettingItem<SettingsViewModel>) -> some View {
         HStack {
             switch setting.inputType {
-            case .toggle(let keyPath):
+            case let .toggle(keyPath):
                 Toggle(setting.title, isOn: Binding(
                     get: { viewModel[keyPath: keyPath] },
                     set: { viewModel[keyPath: keyPath] = $0 }
@@ -49,7 +49,7 @@ struct GeneralSettingsView: View {
                 .labelStyle(.iconOnly)
                 .disabled(viewModel[keyPath: keyPath] == setting.defaultValue as? Bool)
 
-            case .textField(let keyPath):
+            case let .textField(keyPath):
                 TextField(setting.title, text: Binding(
                     get: { viewModel[keyPath: keyPath] },
                     set: { viewModel[keyPath: keyPath] = $0 }

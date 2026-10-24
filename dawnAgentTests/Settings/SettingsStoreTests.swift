@@ -43,7 +43,7 @@ struct SettingsStoreTests {
         let storedDocument = SettingsDocument(
             schemaVersion: SettingsDocument.currentSchemaVersion,
             contexts: [context],
-            generalSettings: GeneralSettings(launchAtLogin: true)
+            generalSettings: Settings(launchAtLogin: true)
         )
 
         let repository = SettingsRepositorySpy(storedDocument: storedDocument)
@@ -90,7 +90,7 @@ struct SettingsStoreTests {
         let invalidDocument = SettingsDocument(
             schemaVersion: SettingsDocument.currentSchemaVersion,
             contexts: [firstContext, secondContext],
-            generalSettings: GeneralSettings()
+            generalSettings: Settings()
         )
 
         let repository = SettingsRepositorySpy(
@@ -672,7 +672,7 @@ struct SettingsStoreTests {
         SettingsDocument(
             schemaVersion: SettingsDocument.currentSchemaVersion,
             contexts: contexts,
-            generalSettings: GeneralSettings()
+            generalSettings: Settings()
         )
     }
 

@@ -1,11 +1,11 @@
 @testable import dawnApp
 import Testing
 
-@Suite("GeneralSettings ViewModel")
-struct GeneralSettingsViewModelTests {
+@Suite("Settings ViewModel")
+struct SettingsViewModelTests {
     @Test("starts a view model with no error")
     func initialState() {
-        let viewModel = GeneralSettingsViewModel()
+        let viewModel = SettingsViewModel()
         #expect(viewModel.error == nil)
         #expect(viewModel.errorMessage == nil)
         #expect(viewModel.isLoading == false)
@@ -14,15 +14,15 @@ struct GeneralSettingsViewModelTests {
 
     @Test("reset all settings to default value")
     func resetSettingsToDefault() {
-        let viewModel = GeneralSettingsViewModel()
+        let viewModel = SettingsViewModel()
         // Change values to random
         for section in viewModel.sectionsWithSettings {
             for setting in section.settings {
                 let anyKeyPath = setting.inputType.getKeyPath(viewModel)
-                if let boolPath = anyKeyPath as? ReferenceWritableKeyPath<GeneralSettingsViewModel, Bool> {
+                if let boolPath = anyKeyPath as? ReferenceWritableKeyPath<SettingsViewModel, Bool> {
                     viewModel[keyPath: boolPath].toggle()
                 } else if let stringPath = anyKeyPath
-                    as? ReferenceWritableKeyPath<GeneralSettingsViewModel, String>
+                    as? ReferenceWritableKeyPath<SettingsViewModel, String>
                 {
                     viewModel[keyPath: stringPath] += "__"
                 }
@@ -48,7 +48,7 @@ struct GeneralSettingsViewModelTests {
 
     @Test("resetSettingToDefault sets error when default type mismatches")
     func resetSettingToDefaultSetsErrorWhenTypeMismatches() {
-        let viewModel = GeneralSettingsViewModel()
+        let viewModel = SettingsViewModel()
         let toggle = viewModel.sectionsWithSettings[0].settings[0]
         let invalid = SettingItem("Invalid item", desc: "Invalid description",
                                   type: toggle.inputType,

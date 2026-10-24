@@ -17,5 +17,8 @@ struct MainApp: App {
                     await appDelegate.contextStore.refresh()
                 }
         }
+        .defaultSize(width: 1080, height: 680)
+        .windowStyle(.hiddenTitleBar)
+        .windowResizability(.contentMinSize)
     }
 }
