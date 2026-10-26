@@ -1,6 +1,10 @@
+import libdawnUI
 import SwiftUI
 
 struct SettingsView: View {
+    @Environment(AccessibilityPermissionService.self)
+    private var accessibilityPermissionService
+
     @State private var viewModel = SettingsViewModel()
 
     var body: some View {
@@ -12,6 +16,10 @@ struct SettingsView: View {
                             settingRow(setting)
                         }
                     }
+                }
+
+                Section("Permissions") {
+                    accessibilityPermissionRow
                 }
             }
             .formStyle(.grouped)
@@ -31,6 +39,47 @@ struct SettingsView: View {
                 }
                 .tint(.green)
             }
+        }
+    }
+
+    private var accessibilityPermissionRow: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Accessibility")
+                    Text(accessibilityStatusDescription)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+
+                Spacer()
+
+                DButton(style: .secondary) {
+                    Task {
+                        await accessibilityPermissionService.promptTrust()
+                    }
+                } content: {
+                    Text(accessibilityPermissionService.isTrusted == true ? "Recheck" : "Grant Access")
+                }
+                .disabled(accessibilityPermissionService.isLoading)
+            }
+
+            if let message = accessibilityPermissionService.error?.errorDescription {
+                Text(message)
+                    .font(.caption)
+                    .foregroundStyle(DawnColors.dangerForeground)
+            }
+        }
+    }
+
+    private var accessibilityStatusDescription: String {
+        switch accessibilityPermissionService.isTrusted {
+        case true:
+            "DAWN Agent can control windows and apps."
+        case false:
+            "DAWN Agent needs Accessibility permission to manage windows."
+        case nil:
+            "Connect to DAWN Agent to check Accessibility permission."
         }
     }
 

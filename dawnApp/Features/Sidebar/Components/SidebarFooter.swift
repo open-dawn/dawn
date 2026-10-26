@@ -12,6 +12,8 @@ struct SidebarFooter: View {
 
             if !content.isAgentRunning {
                 agentWarning
+            } else if content.needsAccessibilityPermission {
+                accessibilityError
             }
 
             updateLink
@@ -68,6 +70,33 @@ struct SidebarFooter: View {
         }
         .accessibilityElement(children: .ignore)
         .accessibilityLabel("The DAWN Agent is not running")
+    }
+
+    private var accessibilityError: some View {
+        Button {
+            selectedDestination = .settings
+        } label: {
+            HStack(spacing: 6) {
+                Image(systemName: "exclamationmark.triangle.fill")
+                    .font(DawnTextStyle.sidebarIcon)
+                    .accessibilityHidden(true)
+
+                Text("Accessibility permission required")
+                    .font(DawnTextStyle.sidebarWarning)
+                    .lineLimit(2)
+            }
+            .foregroundStyle(DawnColors.dangerForeground)
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, SidebarMetrics.warningVerticalPadding)
+            .background {
+                RoundedRectangle(cornerRadius: SidebarMetrics.cornerRadius, style: .continuous)
+                    .fill(DawnColors.dangerForeground.opacity(0.15))
+            }
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("Accessibility permission required")
+        .accessibilityHint("Opens Settings to grant Accessibility permission")
     }
 
     @ViewBuilder

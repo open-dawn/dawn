@@ -112,6 +112,7 @@ enum WMActionError: LocalizedError, Equatable {
     case invalidURL
     case notRunning
     case noGUItoShow
+    case accessibilityNotTrusted
     case unknown(reason: String?)
 }
 ```
@@ -124,6 +125,7 @@ enum WMActionError: LocalizedError, Equatable {
 | `invalidURL` | `WorkspaceApplication.applicationURL` is `nil` |
 | `notRunning` | No process for that bundle id |
 | `noGUItoShow` | Hide attempted on a non-GUI app |
+| `accessibilityNotTrusted` | dawnAgent lacks Accessibility (AX) trust |
 | `unknown` | Unmapped underlying error |
 
 ## How to Add an Action

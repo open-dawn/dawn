@@ -31,6 +31,9 @@ struct AppShellView: View {
         @Environment(SettingsEventBusService.self)
         private var eventBusService
 
+        @Environment(AccessibilityPermissionService.self)
+        private var accessibilityPermissionService
+
         @State private var viewModel: ContextDetailViewModel
         @State private var navigation: AppNavigationModel
 
@@ -70,9 +73,10 @@ struct AppShellView: View {
                         busyContextID: viewModel.operationInProgress,
                         isLoading: store.isLoading,
                         isAgentRunning: eventBusService.isConnected,
+                        needsAccessibilityPermission: accessibilityPermissionService.isTrusted == false,
                         interactionsDisabled: interactionsDisabled,
                         update: availableUpdate,
-                        errorMessage: (viewModel.error ?? store.error)?.localizedDescription
+                        errorMessage: sidebarErrorMessage
                     ),
                     selectedDestination: $navigation.selectedDestination,
                     onCreateContext: { viewModel.presentContextCreator() },
@@ -141,9 +145,18 @@ struct AppShellView: View {
             }
         }
 
+        private var sidebarErrorMessage: String? {
+            if let message = (viewModel.error ?? store.error)?.localizedDescription {
+                return message
+            }
+
+            return accessibilityPermissionService.error?.errorDescription
+        }
+
         private func dismissSidebarError() {
             viewModel.dismissError()
             store.dismissError()
+            accessibilityPermissionService.dismissError()
         }
 
         @ViewBuilder
