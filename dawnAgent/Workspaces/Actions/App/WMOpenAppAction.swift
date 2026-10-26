@@ -68,7 +68,7 @@ struct WMOpenAppAction: WMAppAction {
             throw WMActionError.noGUItoShow
         }
 
-        runningApp.activate(options: .activateIgnoringOtherApps)
+        runningApp.activate(options: .activateAllWindows)
     }
 
     private func map(workspaceError error: Error, filePath: String) -> WMActionError {
