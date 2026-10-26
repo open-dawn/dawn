@@ -36,7 +36,6 @@ final class WindowManagerListener: Listener {
             self,
             kinds: [
                 .initialized,
-                .switchSpace,
                 .getContexts,
                 .createContext,
                 .updateContext,
@@ -48,13 +47,6 @@ final class WindowManagerListener: Listener {
 
     func handle(_ event: Event, reply: (@Sendable (Event) -> Void)?) {
         switch event {
-        case let .switchSpace(payload):
-            Task { @MainActor in
-                guard let context = await getContextWithIndex(payload.spaceIndex) else { return }
-
-                try? await workspace.activateContext(id: context.id)
-            }
-
         case .getContexts:
             Task { @MainActor in
                 let contexts = await getAllContexts()
@@ -83,12 +75,6 @@ final class WindowManagerListener: Listener {
         default:
             return
         }
-    }
-
-    func getContextWithIndex(_ index: Int) async -> WorkspaceContext? {
-        let allContexts = await getAllContexts()
-        guard index >= 0, index < allContexts.count else { return nil }
-        return allContexts[index]
     }
 
     func getAllContexts() async -> [WorkspaceContext] {
@@ -206,9 +192,11 @@ final class WindowManagerListener: Listener {
             case .emptyContextSymbol: .emptyContextSymbol
             case .emptyApplicationBundleIdentifier: .emptyApplicationBundleIdentifier
             case .emptyApplicationDisplayName: .emptyApplicationDisplayName
+              
             case let .duplicateApplication(bundleIdentifier): .duplicateApplication(bundleIdentifier: bundleIdentifier)
             case let .duplicateContextIdentifier(id): .duplicateContextIdentifier(id)
             case let .duplicateApplicationIdentifier(id): .duplicateApplicationIdentifier(id)
+              
             case let .contextNotFound(id): .contextNotFound(id)
             }
         }

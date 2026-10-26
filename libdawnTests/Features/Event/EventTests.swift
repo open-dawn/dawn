@@ -10,7 +10,6 @@ struct EventTests {
         arguments: [
             (event: Event.debugPing(DebugPingEvent()), kind: EventKind.debugPing),
             (event: Event.debugPong(DebugPongEvent()), kind: EventKind.debugPong),
-            (event: Event.switchSpace(SwitchSpaceEvent(spaceIndex: 2)), kind: EventKind.switchSpace),
             (event: Event.initialized(InitializedEvent()), kind: EventKind.initialized),
             (event: Event.getContexts(GetContextsEvent()), kind: EventKind.getContexts),
             (event: Event.contextsFetched(ContextsFetchedEvent(contexts: [])), kind: EventKind.contextsFetched),
@@ -52,7 +51,6 @@ struct EventTests {
         arguments: [
             Event.debugPing(DebugPingEvent()),
             .debugPong(DebugPongEvent(message: "hello")),
-            .switchSpace(SwitchSpaceEvent(spaceIndex: 3)),
             .initialized(InitializedEvent()),
             .getContexts(GetContextsEvent()),
             .contextsFetched(ContextsFetchedEvent(contexts: [])),

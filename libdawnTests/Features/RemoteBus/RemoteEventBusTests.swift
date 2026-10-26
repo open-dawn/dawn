@@ -18,7 +18,7 @@ struct RemoteEventBusTests {
             let listener = RecordingListener()
             remoteBus.addListener(listener, kinds: [.debugPing])
 
-            hostBus.publish(.switchSpace(SwitchSpaceEvent(spaceIndex: 1)))
+            hostBus.publish(.initialized(InitializedEvent()))
             try await Task.sleep(for: .milliseconds(200))
 
             #expect(listener.events.isEmpty)
@@ -38,13 +38,13 @@ struct RemoteEventBusTests {
             let listener = RecordingListener()
             remoteBus.addListener(listener)
 
-            let space = Event.switchSpace(SwitchSpaceEvent(spaceIndex: 1))
+            let initialized = Event.initialized(InitializedEvent())
             let ping = Event.debugPing(DebugPingEvent())
-            hostBus.publish(space)
+            hostBus.publish(initialized)
             hostBus.publish(ping)
             try await Task.sleep(for: .milliseconds(200))
 
-            #expect(listener.events == [space, ping])
+            #expect(listener.events == [initialized, ping])
 
             remoteBus.disconnect()
             eventServer.stop()
@@ -59,9 +59,9 @@ struct RemoteEventBusTests {
 
             let remoteBus = RemoteEventBus(transport: link.client)
             let listener = RecordingListener()
-            remoteBus.addListener(listener, kinds: [.switchSpace])
+            remoteBus.addListener(listener, kinds: [.initialized])
 
-            let event = Event.switchSpace(SwitchSpaceEvent(spaceIndex: 1))
+            let event = Event.initialized(InitializedEvent())
             hostBus.publish(event)
             try await Task.sleep(for: .milliseconds(200))
 
@@ -80,16 +80,16 @@ struct RemoteEventBusTests {
 
             let remoteBus = RemoteEventBus(transport: link.client)
             let listener = RecordingListener()
-            remoteBus.addListener(listener, kinds: [.switchSpace])
+            remoteBus.addListener(listener, kinds: [.initialized])
 
-            let event = Event.switchSpace(SwitchSpaceEvent(spaceIndex: 1))
+            let event = Event.initialized(InitializedEvent())
             hostBus.publish(event)
             try await Task.sleep(for: .milliseconds(200))
 
             #expect(listener.events == [event])
 
             remoteBus.removeListener(listener)
-            hostBus.publish(.switchSpace(SwitchSpaceEvent(spaceIndex: 2)))
+            hostBus.publish(.initialized(InitializedEvent()))
             try await Task.sleep(for: .milliseconds(200))
 
             #expect(listener.events == [event])
@@ -162,7 +162,7 @@ struct RemoteEventBusTests {
 
             let remoteBus = RemoteEventBus(transport: link.client)
             remoteBus.disconnect()
-            remoteBus.publish(.switchSpace(SwitchSpaceEvent(spaceIndex: 1)))
+            remoteBus.publish(.initialized(InitializedEvent()))
 
             try await Task.sleep(for: .milliseconds(200))
 
