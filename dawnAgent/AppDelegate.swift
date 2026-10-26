@@ -1,13 +1,18 @@
 import AppKit
-import libdawn
 import dawnLogging
+import libdawn
 
-typealias WindowManagerListenerFactory = @MainActor (EventBus) async throws -> WindowManagerListener
+typealias WorkspaceRuntimeFactory = @MainActor (EventBus) async throws -> WorkspaceRuntime
+typealias MenuBarControllerFactory = @MainActor (WorkspaceRuntime) -> any MenuBarControlling
 
 @MainActor
 final class AppDelegate: NSObject, NSApplicationDelegate {
     private let eventBusService: any EventBusServicing
-    private let makeWindowManagerListener: WindowManagerListenerFactory
+    private let makeMenuBarController: MenuBarControllerFactory
+    private let makeWorkspaceRuntime: WorkspaceRuntimeFactory
+
+    private var menuBarController: (any MenuBarControlling)?
+    private var workspaceRuntime: WorkspaceRuntime?
     private var windowManagerListener: WindowManagerListener?
     private var debugPingListener: DebugPingListener?
     private var startupTask: Task<Void, Never>?
@@ -15,12 +20,23 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     init(
         eventBusService: any EventBusServicing = EventBusService(),
-        makeWindowManagerListener: @escaping WindowManagerListenerFactory = { bus in
-            try await WindowManagerListener(bus: bus)
+        makeMenuBarController: @escaping MenuBarControllerFactory = {
+            MenuBarController(workspace: $0)
+        },
+        makeWorkspaceRuntime: @escaping WorkspaceRuntimeFactory = { bus in
+            let publisher = EventBusContextSnapshotPublisher(bus: bus)
+
+            let contextManager = try await ContextManager(snapshotPublisher: publisher)
+
+            return WorkspaceRuntime(
+                contextManager: contextManager,
+            )
         }
     ) {
         self.eventBusService = eventBusService
-        self.makeWindowManagerListener = makeWindowManagerListener
+        self.makeMenuBarController = makeMenuBarController
+        self.makeWorkspaceRuntime = makeWorkspaceRuntime
+
         super.init()
     }
 
@@ -53,10 +69,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         startupTask?.cancel()
         startupTask = nil
 
+        menuBarController?.stop()
+        menuBarController = nil
+
         eventBusService.stop()
 
         windowManagerListener = nil
         debugPingListener = nil
+        workspaceRuntime = nil
     }
 
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {
@@ -69,27 +89,36 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         do {
             #log(
-                "Creating WindowManager listener",
+                "Creating workspace runtime",
                 level: .info,
                 category: .appLifecycle
             )
 
-            let windowManagerListener = try await makeWindowManagerListener(
-                eventBusService.bus
-            )
+            let workspaceRuntime = try await makeWorkspaceRuntime(eventBusService.bus)
+
+            await workspaceRuntime.refresh()
 
             try Task.checkCancellation()
 
             #log(
-                "WindowManager listener created",
+                "Workspace runtime created",
                 level: .info,
                 category: .appLifecycle
             )
 
-            self.windowManagerListener = windowManagerListener
-            self.debugPingListener = DebugPingListener(
-                bus: eventBusService.bus
+            let windowManagerListener = WindowManagerListener(
+                bus: eventBusService.bus,
+                workspace: workspaceRuntime
             )
+
+            let debugPingListener = DebugPingListener(bus: eventBusService.bus)
+
+            let menuBarController = makeMenuBarController(workspaceRuntime)
+
+            self.workspaceRuntime = workspaceRuntime
+            self.windowManagerListener = windowManagerListener
+            self.debugPingListener = debugPingListener
+            self.menuBarController = menuBarController
 
             #log(
                 "Starting dawnAgent event bus",
