@@ -5,7 +5,6 @@ public enum WMActionIdentifier {
     case openApp(WorkspaceApplication) // Open or Show target app
     case closeApp(WorkspaceApplication) // Close an target app
     case resetWindows(ActivationPolicy, keep: [WorkspaceApplication]) // Apply activation policy to non-members
-    case setFocus(String) // Enable macOS Focus mode if possible
     case terminalCommand(String) // Run a shell command
     case workspaceTransition(WorkspaceContext) // Full enter-workspace transition
 
@@ -16,7 +15,6 @@ public enum WMActionIdentifier {
         case let .closeApp(app): WMCloseAppAction(app: app)
         case let .resetWindows(policy, keep):
             WMResetWindowsAction(activationPolicy: policy, keepApplications: keep)
-        case let .setFocus(focusModeName): WMSetFocusAction(focusModeName: focusModeName)
         case let .terminalCommand(command): WMTerminalCommandAction(command: command)
         case let .workspaceTransition(context): WMWorkspaceTransitionAction(context: context)
         }

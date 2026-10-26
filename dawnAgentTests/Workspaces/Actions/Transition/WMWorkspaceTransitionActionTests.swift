@@ -6,8 +6,8 @@ import Testing
 
 @Suite("WMWorkspaceTransitionAction Testing")
 struct WMWorkspaceTransitionActionTests {
-    @Test("hide policy resets then opens all apps, then focus and terminal")
-    func hideOpensAllThenFocusAndTerminal() async throws {
+    @Test("hide policy resets then opens all apps, then terminal")
+    func hideOpensAllThenTerminal() async throws {
         let safari = WorkspaceApplication(
             bundleIdentifier: "com.apple.Safari",
             displayName: "Safari",
@@ -19,7 +19,6 @@ struct WMWorkspaceTransitionActionTests {
             applications: [safari],
             transition: WorkspaceTransition(
                 activationPolicy: .hide,
-                setFocus: "Do Not Disturb",
                 terminalCommand: "echo dawn"
             )
         )
@@ -36,7 +35,6 @@ struct WMWorkspaceTransitionActionTests {
 
         #expect(performer.resetPolicies == [.hide])
         #expect(performer.openedApps.map(\.bundleIdentifier) == ["com.apple.Safari"])
-        #expect(performer.focusModeNames == ["Do Not Disturb"])
         #expect(performer.terminalCommands == ["echo dawn"])
     }
 
@@ -74,25 +72,22 @@ struct WMWorkspaceTransitionActionTests {
 
         #expect(performer.resetPolicies == [.merge])
         #expect(performer.openedApps.map(\.bundleIdentifier) == ["com.apple.Notes"])
-        #expect(performer.focusModeNames.isEmpty)
         #expect(performer.terminalCommands.isEmpty)
     }
 
-    @Test("continues when optional focus and terminal steps fail")
-    func softFailsOptionalSteps() async throws {
+    @Test("continues when optional terminal step fails")
+    func softFailsOptionalTerminalStep() async throws {
         let context = WorkspaceContext(
             name: "Soft",
             symbol: "circle",
             applications: [],
             transition: WorkspaceTransition(
                 activationPolicy: .close,
-                setFocus: "Do Not Disturb",
                 terminalCommand: "false"
             )
         )
 
         let performer = FakeWorkspaceTransitionPerformer()
-        performer.focusError = WMActionError.unknown(reason: "unavailable")
         performer.terminalError = WMActionError.unknown(reason: "failed")
 
         let action = WMWorkspaceTransitionAction(
@@ -106,7 +101,6 @@ struct WMWorkspaceTransitionActionTests {
         }
 
         #expect(performer.resetPolicies == [.close])
-        #expect(performer.focusModeNames == ["Do Not Disturb"])
         #expect(performer.terminalCommands == ["false"])
     }
 }
@@ -114,10 +108,8 @@ struct WMWorkspaceTransitionActionTests {
 final class FakeWorkspaceTransitionPerformer: WorkspaceTransitionPerforming {
     private(set) var resetPolicies: [ActivationPolicy] = []
     private(set) var openedApps: [WorkspaceApplication] = []
-    private(set) var focusModeNames: [String] = []
     private(set) var terminalCommands: [String] = []
 
-    var focusError: Error?
     var terminalError: Error?
 
     func resetWindows(policy: ActivationPolicy, keepApplications _: [WorkspaceApplication]) async throws {
@@ -126,13 +118,6 @@ final class FakeWorkspaceTransitionPerformer: WorkspaceTransitionPerforming {
 
     func openApp(_ app: WorkspaceApplication) async throws {
         openedApps.append(app)
-    }
-
-    func setFocus(focusModeName: String) async throws {
-        focusModeNames.append(focusModeName)
-        if let focusError {
-            throw focusError
-        }
     }
 
     func runTerminalCommand(_ command: String) async throws {

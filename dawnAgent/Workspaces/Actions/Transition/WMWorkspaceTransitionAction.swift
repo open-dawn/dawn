@@ -5,7 +5,6 @@ import libdawn
 protocol WorkspaceTransitionPerforming {
     func resetWindows(policy: ActivationPolicy, keepApplications: [WorkspaceApplication]) async throws
     func openApp(_ app: WorkspaceApplication) async throws
-    func setFocus(focusModeName: String) async throws
     func runTerminalCommand(_ command: String) async throws
 }
 
@@ -16,10 +15,6 @@ struct DefaultWorkspaceTransitionPerformer: WorkspaceTransitionPerforming {
 
     func openApp(_ app: WorkspaceApplication) async throws {
         try await WMOpenAppAction(app: app).execute()
-    }
-
-    func setFocus(focusModeName: String) async throws {
-        try WMSetFocusAction(focusModeName: focusModeName).execute()
     }
 
     func runTerminalCommand(_ command: String) async throws {
@@ -60,25 +55,13 @@ struct WMWorkspaceTransitionAction: WMAction {
             )
         }
 
-        for app in applications {
+        for app in applicationsToOpen(applications, policy: transition.activationPolicy) {
             do {
                 try await performer.openApp(app)
             } catch {
                 #log(
                     "Error opening app \(app.bundleIdentifier) (\(error))",
                     level: .error,
-                    category: .general
-                )
-            }
-        }
-
-        if let focusModeName = transition.setFocus, !focusModeName.isEmpty {
-            do {
-                try await performer.setFocus(focusModeName: focusModeName)
-            } catch {
-                #log(
-                    "Unable to enable Focus mode \(focusModeName): \(error.localizedDescription)",
-                    level: .warning,
                     category: .general
                 )
             }
@@ -93,6 +76,20 @@ struct WMWorkspaceTransitionAction: WMAction {
                     level: .warning,
                     category: .general
                 )
+            }
+        }
+    }
+
+    private func applicationsToOpen(
+        _ applications: [WorkspaceApplication],
+        policy: ActivationPolicy
+    ) -> [WorkspaceApplication] {
+        switch policy {
+        case .hide, .close:
+            return applications
+        case .merge:
+            return applications.filter { app in
+                provider.runningApplications(withBundleIdentifier: app.bundleIdentifier).isEmpty
             }
         }
     }

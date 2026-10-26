@@ -27,7 +27,6 @@ struct SharedModelsTests {
             applications: [application],
             transition: WorkspaceTransition(
                 activationPolicy: .merge,
-                setFocus: "Do Not Disturb",
                 terminalCommand: "echo study"
             )
         )
