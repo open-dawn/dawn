@@ -192,11 +192,11 @@ final class WindowManagerListener: Listener {
             case .emptyContextSymbol: .emptyContextSymbol
             case .emptyApplicationBundleIdentifier: .emptyApplicationBundleIdentifier
             case .emptyApplicationDisplayName: .emptyApplicationDisplayName
-              
+
             case let .duplicateApplication(bundleIdentifier): .duplicateApplication(bundleIdentifier: bundleIdentifier)
             case let .duplicateContextIdentifier(id): .duplicateContextIdentifier(id)
             case let .duplicateApplicationIdentifier(id): .duplicateApplicationIdentifier(id)
-              
+
             case let .contextNotFound(id): .contextNotFound(id)
             }
         }
