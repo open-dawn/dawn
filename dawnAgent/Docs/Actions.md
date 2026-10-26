@@ -63,7 +63,7 @@ Under `Workspaces/Actions/App/`. All conform to `WMAppAction`.
 
 | Type | Behavior | Typical errors |
 |------|----------|----------------|
-| `WMOpenAppAction` | Opens the app via `NSWorkspace` (`activates`, respects `createNewInstance`) | `invalidURL`, `notFound`, `permissionDenied`, `corruptedFile`, `unknown` |
+| `WMOpenAppAction` | Opens via `NSWorkspace.OpenConfiguration` from launch fields; if substitution is allowed and a running instance exists (and not creating a new instance), unhides/activates instead of relaunching | `invalidURL`, `notFound`, `permissionDenied`, `corruptedFile`, `noGUItoShow`, `unknown` |
 | `WMHideAppAction` | Finds a running instance by bundle id, activates, then hides | `notRunning`, `noGUItoShow` |
 | `WMCloseAppAction` | Finds a running instance, activates, then terminates | `notRunning`, `permissionDenied` |
 
