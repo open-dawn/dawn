@@ -10,17 +10,19 @@ import libdawn
 
 struct SettingsDocument: Codable, Equatable, Sendable {
 
-    static let currentSchemaVersion = 1
+    static let currentSchemaVersion = 2
 
     let schemaVersion: Int
     var contexts: [WorkspaceContext]
     var generalSettings: Settings
+    var workspaceActivity: WorkspaceActivityState = .empty
 
     static var empty: SettingsDocument {
         SettingsDocument(
             schemaVersion: currentSchemaVersion,
             contexts: [],
-            generalSettings: Settings()
+            generalSettings: Settings(),
+            workspaceActivity: .empty
         )
     }
 }

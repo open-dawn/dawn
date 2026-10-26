@@ -15,9 +15,22 @@ actor SettingsStore {
     private var mutationWaiters: [CheckedContinuation<Void, Never>] = []
 
     init(repository: any SettingsRepository) async throws {
-        let document = try await repository.load() ?? .empty
+        var document = try await repository.load() ?? .empty
+        let loadedDocument = document
+
+        document.workspaceActivity.reconcile(
+            validContextIDs: Set(
+                document.contexts.map(
+                    \.id
+                )
+            )
+        )
 
         try Self.validate(document)
+
+        if document != loadedDocument {
+            try await repository.save(document)
+        }
 
         self.repository = repository
         self.document = document
@@ -48,9 +61,11 @@ actor SettingsStore {
         _ updatedContext: WorkspaceContext
     ) async throws {
         try await mutate { candidate in
-            guard let contextIndex = candidate.contexts.firstIndex(
-                where: { $0.id == updatedContext.id }
-            ) else {
+            guard
+                let contextIndex = candidate.contexts.firstIndex(
+                    where: { $0.id == updatedContext.id }
+                )
+            else {
                 throw SettingsStoreError.contextNotFound(
                     updatedContext.id
                 )
@@ -64,15 +79,18 @@ actor SettingsStore {
         id: UUID
     ) async throws {
         try await mutate { candidate in
-            guard let contextIndex = candidate.contexts.firstIndex(
-                where: { $0.id == id }
-            ) else {
+            guard
+                let contextIndex = candidate.contexts.firstIndex(
+                    where: { $0.id == id }
+                )
+            else {
                 throw SettingsStoreError.contextNotFound(
                     id
                 )
             }
 
             candidate.contexts.remove(at: contextIndex)
+            candidate.workspaceActivity.removeContext(id: id)
         }
     }
 
@@ -102,6 +120,28 @@ actor SettingsStore {
         }
 
         mutationWaiters.removeFirst().resume()
+    }
+
+    func recordContextActivation(
+        contextID: UUID,
+        at date: Date
+    ) async throws {
+        try await mutate { candidate in
+            guard candidate.contexts.contains(where: { $0.id == contextID }) else {
+                throw SettingsStoreError.contextNotFound(contextID)
+            }
+
+            candidate.workspaceActivity.activate(
+                contextID: contextID,
+                at: date
+            )
+        }
+    }
+
+    func stopActiveContext(at date: Date) async throws {
+        try await mutate { candidate in
+            candidate.workspaceActivity.stop(at: date)
+        }
     }
 
     private func mutate<Result: Sendable>(
