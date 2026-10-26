@@ -148,7 +148,7 @@ struct WMOpenAppActionTests {
 
         #expect(runningApp.didUnhide)
         #expect(runningApp.didActivate)
-        #expect(runningApp.lastActivationOptions == .activateIgnoringOtherApps)
+        #expect(runningApp.lastActivationOptions == .activateAllWindows)
         #expect(!fakeWorkspace.didCallOpenApplication)
     }
 
