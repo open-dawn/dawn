@@ -9,7 +9,7 @@ struct EventCodecTests {
         let events: [Event] = [
             .debugPing(DebugPingEvent()),
             .debugPong(DebugPongEvent(message: "hello")),
-            .switchSpace(SwitchSpaceEvent(spaceIndex: 3))
+            .initialized(InitializedEvent()),
         ]
 
         for event in events {

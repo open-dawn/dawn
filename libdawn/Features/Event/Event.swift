@@ -1,8 +1,6 @@
 public enum Event: Codable, Sendable, Equatable {
     case debugPing(DebugPingEvent)
     case debugPong(DebugPongEvent)
-    @available(*, deprecated, message: "use .switchContext instead.")
-    case switchSpace(SwitchSpaceEvent)
     case initialized(InitializedEvent)
     case getContexts(GetContextsEvent)
     case createContext(CreateContextEvent)
@@ -19,7 +17,6 @@ public enum Event: Codable, Sendable, Equatable {
         switch self {
         case .debugPing: .debugPing
         case .debugPong: .debugPong
-        case .switchSpace: .switchSpace
         case .initialized: .initialized
         case .getContexts: .getContexts
         case .contextsFetched: .contextsFetched

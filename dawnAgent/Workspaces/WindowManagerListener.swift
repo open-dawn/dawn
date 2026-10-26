@@ -32,7 +32,6 @@ final class WindowManagerListener: Listener {
             self,
             kinds: [
                 .initialized,
-                .switchSpace,
                 .getContexts,
                 .createContext,
                 .updateContext,
@@ -44,13 +43,6 @@ final class WindowManagerListener: Listener {
 
     func handle(_ event: Event, reply: (@Sendable (Event) -> Void)?) {
         switch event {
-        case .switchSpace(let payload):
-            Task { @MainActor in
-                guard let context = await getContextWithIndex(payload.spaceIndex) else { return }
-
-                try? await workspace.activateContext(id: context.id)
-            }
-
         case .getContexts:
             Task { @MainActor in
                 let contexts = await getAllContexts()
@@ -64,27 +56,21 @@ final class WindowManagerListener: Listener {
                 category: .appLifecycle
             )
 
-        case .createContext(let payload):
+        case let .createContext(payload):
             handleCreateContext(payload, reply: reply)
 
-        case .updateContext(let payload):
+        case let .updateContext(payload):
             handleUpdateContext(payload, reply: reply)
 
-        case .deleteContext(let payload):
+        case let .deleteContext(payload):
             handleDeleteContext(payload, reply: reply)
 
-        case .switchContext(let payload):
+        case let .switchContext(payload):
             handleSwitchContext(payload, reply: reply)
 
         default:
             return
         }
-    }
-
-    func getContextWithIndex(_ index: Int) async -> WorkspaceContext? {
-        let allContexts = await getAllContexts()
-        guard index >= 0, index < allContexts.count else { return nil }
-        return allContexts[index]
     }
 
     func getAllContexts() async -> [WorkspaceContext] {
@@ -206,13 +192,13 @@ final class WindowManagerListener: Listener {
 
             case .emptyApplicationDisplayName: .emptyApplicationDisplayName
 
-            case .duplicateApplication(let bundleIdentifier): .duplicateApplication(bundleIdentifier: bundleIdentifier)
+            case let .duplicateApplication(bundleIdentifier): .duplicateApplication(bundleIdentifier: bundleIdentifier)
 
-            case .duplicateContextIdentifier(let id): .duplicateContextIdentifier(id)
+            case let .duplicateContextIdentifier(id): .duplicateContextIdentifier(id)
 
-            case .duplicateApplicationIdentifier(let id): .duplicateApplicationIdentifier(id)
+            case let .duplicateApplicationIdentifier(id): .duplicateApplicationIdentifier(id)
 
-            case .contextNotFound(let id): .contextNotFound(id)
+            case let .contextNotFound(id): .contextNotFound(id)
             }
         }
 
