@@ -20,14 +20,14 @@ struct WMOpenAppAction: WMAppAction {
 
         let configuration = NSWorkspace.OpenConfiguration()
         configuration.activates = true
-        configuration.createsNewApplicationInstance = app.createNewInstance
         configuration.hides = false
         configuration.hidesOthers = false
-        configuration.promptsUserIfNeeded = false // Future setting
-        // configuration.appleEvent = nil
-        // configuration.arguments = []
-        // configuration.environment = [:]
-        // configuration.architecture = x86_64
+        configuration.requiresUniversalLinks = false
+        configuration.allowsRunningApplicationSubstitution = app.allowsRunningApplicationSubstitution
+        configuration.createsNewApplicationInstance = app.createsNewApplicationInstance
+        configuration.arguments = app.arguments
+        configuration.environment = app.environment
+        configuration.promptsUserIfNeeded = app.promptsUserIfNeeded
 
         do {
             try await workspace.openApplication(at: appUrl, configuration: configuration)

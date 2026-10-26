@@ -99,7 +99,7 @@ private struct ContextCreatorContent: View {
 
             Toggle(
                 "New instance",
-                isOn: app.createNewInstance
+                isOn: app.createsNewApplicationInstance
             )
             .toggleStyle(.checkbox)
 
