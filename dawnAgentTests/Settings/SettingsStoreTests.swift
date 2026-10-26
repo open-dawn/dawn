@@ -783,7 +783,7 @@ struct SettingsStoreTests {
     func failedPersistenceLeavesCacheUnchanged() async throws {
         let context = WorkspaceContext(
             name: "Work",
-            symbol: "brifcase"
+            symbol: "briefcase"
         )
 
         let initialDocument = makeDocument(
@@ -854,65 +854,65 @@ struct SettingsStoreTests {
     @Test("startup removes orphaned activity")
     func startupRemovesOrphanedActivity() async throws {
         let retainedContext = WorkspaceContext(
-                name: "Work",
-                symbol: "briefcase"
-            )
-            let orphanedContextID = UUID()
-            let retainedLastActiveAt = Date(
-                timeIntervalSince1970: 100
-            )
-            let orphanedLastActiveAt = Date(
-                timeIntervalSince1970: 200
-            )
+            name: "Work",
+            symbol: "briefcase"
+        )
+        let orphanedContextID = UUID()
+        let retainedLastActiveAt = Date(
+            timeIntervalSince1970: 100
+        )
+        let orphanedLastActiveAt = Date(
+            timeIntervalSince1970: 200
+        )
 
-            var document = makeDocument(
-                contexts: [retainedContext]
-            )
-            document.workspaceActivity = WorkspaceActivityState(
-                activeSession: .init(
-                    contextID: orphanedContextID,
-                    startedAt: Date(
-                        timeIntervalSince1970: 300
-                    )
-                ),
-                lastActiveAtByContextID: [
-                    retainedContext.id: retainedLastActiveAt,
-                    orphanedContextID: orphanedLastActiveAt,
-                ]
-            )
+        var document = makeDocument(
+            contexts: [retainedContext]
+        )
+        document.workspaceActivity = WorkspaceActivityState(
+            activeSession: .init(
+                contextID: orphanedContextID,
+                startedAt: Date(
+                    timeIntervalSince1970: 300
+                )
+            ),
+            lastActiveAtByContextID: [
+                retainedContext.id: retainedLastActiveAt,
+                orphanedContextID: orphanedLastActiveAt,
+            ]
+        )
 
-            let repository = SettingsRepositorySpy(
-                storedDocument: document
-            )
-            let store = try await SettingsStore(
-                repository: repository
-            )
+        let repository = SettingsRepositorySpy(
+            storedDocument: document
+        )
+        let store = try await SettingsStore(
+            repository: repository
+        )
 
-            let snapshot = await store.snapshot()
+        let snapshot = await store.snapshot()
 
-            #expect(
-                snapshot.workspaceActivity.activeContextID == nil
-            )
-            #expect(
-                snapshot.workspaceActivity.activeSince == nil
-            )
-            #expect(
-                snapshot.workspaceActivity.lastActiveAt(
-                    for: retainedContext.id
-                ) == retainedLastActiveAt
-            )
-            #expect(
-                snapshot.workspaceActivity.lastActiveAt(
-                    for: orphanedContextID
-                ) == nil
-            )
+        #expect(
+            snapshot.workspaceActivity.activeContextID == nil
+        )
+        #expect(
+            snapshot.workspaceActivity.activeSince == nil
+        )
+        #expect(
+            snapshot.workspaceActivity.lastActiveAt(
+                for: retainedContext.id
+            ) == retainedLastActiveAt
+        )
+        #expect(
+            snapshot.workspaceActivity.lastActiveAt(
+                for: orphanedContextID
+            ) == nil
+        )
 
-            #expect(
-                await repository.savedDocuments == [snapshot]
-            )
-            #expect(
-                await repository.storedDocument == snapshot
-            )
+        #expect(
+            await repository.savedDocuments == [snapshot]
+        )
+        #expect(
+            await repository.storedDocument == snapshot
+        )
     }
 
     private func makeDocument(

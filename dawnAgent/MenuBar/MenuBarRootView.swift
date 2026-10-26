@@ -131,7 +131,7 @@ struct MenuBarRootView: View {
             model: contextCardModel(for: context),
             isLoading: activatingContextID == context.id || openingRoute == contextRoute,
             onSelect: {
-                guard workspace.lastRequestedContextID != context.id else {
+                guard workspace.activeContextID != context.id else {
                     return
                 }
 
@@ -146,7 +146,7 @@ struct MenuBarRootView: View {
     private func contextCardModel(for context: WorkspaceContext) -> ContextCardModel {
         let status: ContextCardModel.Status
 
-        if workspace.lastRequestedContextID == context.id {
+        if workspace.activeContextID == context.id {
             status = .active(activityText: "In use")
         } else {
             status = .inactive(lastUsedText: nil)

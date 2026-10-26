@@ -1,5 +1,5 @@
 //
-//  WorkspaceActivityState.swift.swift
+//  WorkspaceActivityState.swift
 //  dawn
 //
 //  Created by Rafael Venetikides on 26/10/26.

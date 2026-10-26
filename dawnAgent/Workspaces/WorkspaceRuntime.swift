@@ -12,44 +12,58 @@ import libdawn
 @MainActor
 protocol WorkspaceCoordinating: ContextProviding {
     var contexts: [WorkspaceContext] { get }
-    var lastRequestedContextID: UUID? { get }
+    var workspaceActivity: WorkspaceActivityState { get }
+    var activeContextID: UUID? { get }
+    var activeSince: Date? { get }
 
     func refresh() async
     func activateContext(id: UUID) async throws
+    func stopActiveContext() async throws
 }
 
 @Observable
 @MainActor
 final class WorkspaceRuntime: WorkspaceCoordinating {
-    private let contextManager: any ContextProviding
+    private let contextManager: any WorkspaceManaging
     private let contextSwitching: any ContextSwitching
+    private let clock: any WorkspaceClock
 
     @ObservationIgnored
     private var refreshGeneration: UInt = 0
 
     private(set) var contexts: [WorkspaceContext] = []
-    private(set) var lastRequestedContextID: UUID?
+    private(set) var workspaceActivity: WorkspaceActivityState = .empty
 
-    init(contextManager: any ContextProviding, contextSwitching: any ContextSwitching = DefaultContextSwitching()) {
+    var activeContextID: UUID? {
+        workspaceActivity.activeContextID
+    }
+
+    var activeSince: Date? {
+        workspaceActivity.activeSince
+    }
+
+    init(
+        contextManager: any WorkspaceManaging,
+        contextSwitching: any ContextSwitching = DefaultContextSwitching(),
+        clock: any WorkspaceClock = SystemWorkspaceClock()
+    ) {
         self.contextManager = contextManager
         self.contextSwitching = contextSwitching
+        self.clock = clock
     }
 
     func refresh() async {
         refreshGeneration &+= 1
         let generation = refreshGeneration
 
-        let snapshot = await contextManager.getAvailableContexts()
+        let snapshot = await contextManager.getWorkspaceSnapshot()
 
         guard generation == refreshGeneration else {
             return
         }
 
-        contexts = snapshot
-
-        if let lastRequestedContextID, !snapshot.contains(where: { $0.id == lastRequestedContextID }) {
-            self.lastRequestedContextID = nil
-        }
+        contexts = snapshot.contexts
+        workspaceActivity = snapshot.activity
     }
 
     func getAvailableContexts() async -> [WorkspaceContext] {
@@ -88,6 +102,18 @@ final class WorkspaceRuntime: WorkspaceCoordinating {
         }
 
         try await contextSwitching.switchToContext(to: context)
-        lastRequestedContextID = context.id
+
+        workspaceActivity = try await contextManager.recordContextActivation(
+            contextID: context.id,
+            at: clock.now
+        )
+    }
+
+    func stopActiveContext() async throws {
+        workspaceActivity = try await contextManager.stopActiveContext(at: clock.now)
+    }
+
+    func lastActiveAt(for contextID: UUID) -> Date? {
+        workspaceActivity.lastActiveAt(for: contextID)
     }
 }

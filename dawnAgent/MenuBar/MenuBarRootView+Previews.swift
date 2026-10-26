@@ -49,8 +49,9 @@ private struct MenuBarRootPreview: View {
 }
 
 @MainActor
-private final class PreviewContextProvider: ContextProviding {
+private final class PreviewContextProvider: WorkspaceManaging {
     private var contexts: [WorkspaceContext]
+    var workspaceActivity: WorkspaceActivityState = .empty
 
     init(contexts: [WorkspaceContext]) {
         self.contexts = contexts
@@ -58,6 +59,35 @@ private final class PreviewContextProvider: ContextProviding {
 
     func getAvailableContexts() async -> [WorkspaceContext] {
         contexts
+    }
+
+    func getWorkspaceActivity() async -> libdawn.WorkspaceActivityState {
+        workspaceActivity
+    }
+
+    func getWorkspaceSnapshot() async -> WorkspaceSnapshot {
+        return WorkspaceSnapshot(
+            contexts: contexts,
+            activity: workspaceActivity
+        )
+    }
+
+    func recordContextActivation(contextID: UUID, at date: Date) async throws -> WorkspaceActivityState {
+        guard contexts.contains(where: { $0.id == contextID }) else {
+            throw SettingsStoreError.contextNotFound(contextID)
+        }
+
+        workspaceActivity.activate(
+            contextID: contextID,
+            at: date
+        )
+
+        return workspaceActivity
+    }
+
+    func stopActiveContext(at date: Date) async throws -> WorkspaceActivityState {
+        workspaceActivity.stop(at: date)
+        return workspaceActivity
     }
 
     func getContext(id: UUID) async -> WorkspaceContext? {
@@ -94,6 +124,8 @@ private final class PreviewContextProvider: ContextProviding {
     }
 
     func deleteContext(id: UUID) async throws {
+        workspaceActivity.removeContext(id: id)
+
         contexts.removeAll {
             $0.id == id
         }

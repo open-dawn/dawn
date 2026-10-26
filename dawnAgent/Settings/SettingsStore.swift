@@ -122,10 +122,11 @@ actor SettingsStore {
         mutationWaiters.removeFirst().resume()
     }
 
+    @discardableResult
     func recordContextActivation(
         contextID: UUID,
         at date: Date
-    ) async throws {
+    ) async throws -> WorkspaceActivityState {
         try await mutate { candidate in
             guard candidate.contexts.contains(where: { $0.id == contextID }) else {
                 throw SettingsStoreError.contextNotFound(contextID)
@@ -135,12 +136,16 @@ actor SettingsStore {
                 contextID: contextID,
                 at: date
             )
+
+            return candidate.workspaceActivity
         }
     }
 
-    func stopActiveContext(at date: Date) async throws {
+    @discardableResult
+    func stopActiveContext(at date: Date) async throws -> WorkspaceActivityState {
         try await mutate { candidate in
             candidate.workspaceActivity.stop(at: date)
+            return candidate.workspaceActivity
         }
     }
 

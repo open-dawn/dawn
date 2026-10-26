@@ -1,6 +1,6 @@
 import Foundation
-import libdawn
 import Testing
+import libdawn
 
 @testable import dawnAgent
 
@@ -264,6 +264,111 @@ struct ContextManagerTests {
         #expect(publisher.publishedSnapshots.count == mutationCount)
         #expect(publicationsAreMonotonic)
         #expect(snapshotSizes.last == mutationCount)
+    }
+
+    @Test("returns persisted workspace activity")
+    func returnsWorkspaceActivity() async throws {
+        let context = WorkspaceContext(
+            name: "Work",
+            symbol: "briefcase"
+        )
+        let activeSince = Date(
+            timeIntervalSince1970: 100
+        )
+
+        var document = SettingsDocument.empty
+        document.contexts = [context]
+        document.workspaceActivity.activate(
+            contextID: context.id,
+            at: activeSince
+        )
+
+        let repository = MockSettingsRepository(
+            document: document
+        )
+        let manager = try await ContextManager(
+            repository: repository,
+            snapshotPublisher: SnapshotPublisherSpy()
+        )
+
+        let activity = await manager.getWorkspaceActivity()
+
+        #expect(activity.activeContextID == context.id)
+        #expect(activity.activeSince == activeSince)
+    }
+
+    @Test("recording activation returns and persists activity")
+    func recordsWorkspaceActivity() async throws {
+        let context = WorkspaceContext(
+            name: "Work",
+            symbol: "briefcase"
+        )
+        let activatedAt = Date(
+            timeIntervalSince1970: 100
+        )
+
+        var document = SettingsDocument.empty
+        document.contexts = [context]
+
+        let repository = MockSettingsRepository(
+            document: document
+        )
+        let manager = try await ContextManager(
+            repository: repository,
+            snapshotPublisher: SnapshotPublisherSpy()
+        )
+
+        let activity = try await manager.recordContextActivation(
+            contextID: context.id,
+            at: activatedAt
+        )
+
+        #expect(activity.activeContextID == context.id)
+        #expect(activity.activeSince == activatedAt)
+        #expect(
+            await repository.document?.workspaceActivity
+                == activity
+        )
+    }
+
+    @Test("stopping returns and persists inactive activity")
+    func stopsWorkspaceActivity() async throws {
+        let context = WorkspaceContext(
+            name: "Work",
+            symbol: "briefcase"
+        )
+        let stoppedAt = Date(
+            timeIntervalSince1970: 200
+        )
+
+        var document = SettingsDocument.empty
+        document.contexts = [context]
+        document.workspaceActivity.activate(
+            contextID: context.id,
+            at: Date(timeIntervalSince1970: 100)
+        )
+
+        let repository = MockSettingsRepository(
+            document: document
+        )
+        let manager = try await ContextManager(
+            repository: repository,
+            snapshotPublisher: SnapshotPublisherSpy()
+        )
+
+        let activity = try await manager.stopActiveContext(
+            at: stoppedAt
+        )
+
+        #expect(activity.activeContextID == nil)
+        #expect(
+            activity.lastActiveAt(for: context.id)
+                == stoppedAt
+        )
+        #expect(
+            await repository.document?.workspaceActivity
+                == activity
+        )
     }
 }
 

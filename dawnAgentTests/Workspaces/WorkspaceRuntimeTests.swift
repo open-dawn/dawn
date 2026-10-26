@@ -78,7 +78,7 @@ struct WorkspaceRuntimeTests {
         try await runtime.activateContext(id: context.id)
 
         #expect(switcher.switchedContexts == [context])
-        #expect(runtime.lastRequestedContextID == context.id)
+        #expect(runtime.activeContextID == context.id)
     }
 
     @Test("Activating a missing context fails")
@@ -96,7 +96,7 @@ struct WorkspaceRuntimeTests {
             try await runtime.activateContext(id: missingID)
         }
 
-        #expect(runtime.lastRequestedContextID == nil)
+        #expect(runtime.activeContextID == nil)
     }
 
     @Test("Deleting the active context clears its active state")
@@ -118,7 +118,7 @@ struct WorkspaceRuntimeTests {
         try await runtime.deleteContext(id: context.id)
 
         #expect(runtime.contexts.isEmpty)
-        #expect(runtime.lastRequestedContextID == nil)
+        #expect(runtime.activeContextID == nil)
     }
 
     @Test("Older refresh cannot overwrite a newer snapshot")
@@ -196,7 +196,7 @@ struct WorkspaceRuntimeTests {
             try await runtime.activateContext(id: failingContext.id)
         }
 
-        #expect(runtime.lastRequestedContextID == initiallyActiveContext.id)
+        #expect(runtime.activeContextID == initiallyActiveContext.id)
 
         #expect(switcher.switchedContexts == [initiallyActiveContext])
     }
@@ -236,21 +236,111 @@ struct WorkspaceRuntimeTests {
                 .failure(failure: .unexpected)
             )
         )
-        #expect(workspace.lastRequestedContextID == nil)
+        #expect(workspace.activeContextID == nil)
 
         _ = listener
+    }
+
+    @Test("Activating a context records persisted activity")
+    func activateRecordsActivity() async throws {
+        let context = WorkspaceContext(
+            name: "Work",
+            symbol: "briefcase"
+        )
+
+        let activatedAt = Date(timeIntervalSince1970: 100)
+
+        let contextManager = FakeContextManager()
+        contextManager.contexts = [context]
+
+        let switcher = ContextSwitchingSpy()
+        let clock = TestWorkspaceClock(
+            now: activatedAt
+        )
+
+        let runtime = WorkspaceRuntime(
+            contextManager: contextManager,
+            contextSwitching: switcher,
+            clock: clock
+        )
+
+        try await runtime.activateContext(id: context.id)
+
+        #expect(switcher.switchedContexts == [context])
+        #expect(runtime.activeContextID == context.id)
+        #expect(runtime.activeSince == activatedAt)
+        #expect(contextManager.workspaceActivity == runtime.workspaceActivity)
+    }
+
+    @Test("Refresh loads persisted workspace activity")
+    func refreshLoadsActivity() async {
+        let context = WorkspaceContext(
+            name: "Work",
+            symbol: "briefcase"
+        )
+
+        let activeSince = Date(timeIntervalSince1970: 100)
+
+        let contextManager = FakeContextManager()
+        contextManager.contexts = [context]
+        contextManager.workspaceActivity.activate(
+            contextID: context.id,
+            at: activeSince
+        )
+
+        let runtime = WorkspaceRuntime(
+            contextManager: contextManager,
+            contextSwitching: ContextSwitchingSpy()
+        )
+
+        await runtime.refresh()
+
+        #expect(runtime.activeContextID == context.id)
+        #expect(runtime.activeSince == activeSince)
+    }
+
+    @Test("Stopping clears active state using the injected clock")
+    func stopClearsActiveState() async throws {
+        let context = WorkspaceContext(
+            name: "Work",
+            symbol: "briefcase"
+        )
+        let clock = TestWorkspaceClock(
+            now: Date(timeIntervalSince1970: 100)
+        )
+
+        let contextManager = FakeContextManager()
+        contextManager.contexts = [context]
+
+        let runtime = WorkspaceRuntime(
+            contextManager: contextManager,
+            contextSwitching: ContextSwitchingSpy(),
+            clock: clock
+        )
+
+        try await runtime.activateContext(id: context.id)
+
+        let stoppedAt = Date(timeIntervalSince1970: 200)
+        clock.now = stoppedAt
+
+        try await runtime.stopActiveContext()
+
+        #expect(runtime.activeContextID == nil)
+        #expect(runtime.activeSince == nil)
+        #expect(runtime.lastActiveAt(for: context.id) == stoppedAt)
     }
 }
 
 @MainActor
-private final class OutOfOrderContextProvider: ContextProviding {
+private final class OutOfOrderContextProvider: WorkspaceManaging {
     var contexts: [WorkspaceContext]
+    var workspaceActivity: WorkspaceActivityState = .empty
 
     private var requestCount = 0
 
-    private var firstRequestSnapshot: [WorkspaceContext]?
+    private var firstRequestSnapshot: WorkspaceSnapshot?
     private var firstRequestContinuation:
-        CheckedContinuation<[WorkspaceContext], Never>?
+    CheckedContinuation<WorkspaceSnapshot, Never>?
 
     private var firstRequestWaiter:
         CheckedContinuation<Void, Never>?
@@ -260,21 +350,7 @@ private final class OutOfOrderContextProvider: ContextProviding {
     }
 
     func getAvailableContexts() async -> [WorkspaceContext] {
-        requestCount += 1
-        let snapshot = contexts
-
-        guard requestCount == 1 else {
-            return snapshot
-        }
-
-        firstRequestSnapshot = snapshot
-
-        return await withCheckedContinuation { continuation in
-            firstRequestContinuation = continuation
-
-            firstRequestWaiter?.resume()
-            firstRequestWaiter = nil
-        }
+        contexts
     }
 
     func waitUntilFirstRequest() async {
@@ -319,6 +395,59 @@ private final class OutOfOrderContextProvider: ContextProviding {
 
     func deleteContext(id: UUID) async throws {
         fatalError("Not used by this test")
+    }
+
+    func getWorkspaceActivity() async -> WorkspaceActivityState {
+        workspaceActivity
+    }
+
+    func recordContextActivation(contextID: UUID, at date: Date) async throws -> WorkspaceActivityState {
+        guard contexts.contains(where: { $0.id == contextID }) else {
+            throw SettingsStoreError.contextNotFound(contextID)
+        }
+
+        workspaceActivity.activate(
+            contextID: contextID,
+            at: date
+        )
+
+        return workspaceActivity
+    }
+
+    func stopActiveContext(at date: Date) async throws -> WorkspaceActivityState {
+        workspaceActivity.stop(at: date)
+        return workspaceActivity
+    }
+
+    func getWorkspaceSnapshot() async -> WorkspaceSnapshot {
+        requestCount += 1
+
+        let snapshot = WorkspaceSnapshot(
+            contexts: contexts,
+            activity: workspaceActivity
+        )
+
+        guard requestCount == 1 else {
+            return snapshot
+        }
+
+        firstRequestSnapshot = snapshot
+
+        return await withCheckedContinuation { continuation in
+            firstRequestContinuation = continuation
+
+            firstRequestWaiter?.resume()
+            firstRequestWaiter = nil
+        }
+    }
+}
+
+@MainActor
+private final class TestWorkspaceClock: WorkspaceClock {
+    var now: Date
+
+    init(now: Date) {
+        self.now = now
     }
 }
 

@@ -2,7 +2,7 @@ import Foundation
 import libdawn
 import dawnLogging
 
-final class ContextManager: ContextProviding {
+final class ContextManager: WorkspaceManaging {
     private let store: SettingsStore
     private let snapshotPublisher: ContextSnapshotPublishing
 
@@ -26,6 +26,15 @@ final class ContextManager: ContextProviding {
     func getAvailableContexts() async -> [WorkspaceContext] {
         let storeSnapshot = await store.snapshot()
         return storeSnapshot.contexts
+    }
+
+    func getWorkspaceSnapshot() async -> WorkspaceSnapshot {
+        let document = await store.snapshot()
+
+        return WorkspaceSnapshot(
+            contexts: document.contexts,
+            activity: document.workspaceActivity
+        )
     }
 
     func createContext(name: String, symbol: String, applications: [WorkspaceApplication]) async throws
@@ -55,6 +64,22 @@ final class ContextManager: ContextProviding {
     private func publishAvailableContexts() async {
         let snapshot = await store.snapshot()
         snapshotPublisher.publishAvailableContexts(snapshot.contexts)
+    }
+
+    func getWorkspaceActivity() async -> WorkspaceActivityState {
+        let snapshot = await store.snapshot()
+
+        return snapshot.workspaceActivity
+    }
+
+    @discardableResult
+    func recordContextActivation(contextID: UUID, at date: Date) async throws -> WorkspaceActivityState {
+        try await store.recordContextActivation(contextID: contextID, at: date)
+    }
+
+    @discardableResult
+    func stopActiveContext(at date: Date) async throws -> WorkspaceActivityState {
+        try await store.stopActiveContext(at: date)
     }
 }
 

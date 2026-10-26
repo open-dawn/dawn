@@ -271,7 +271,7 @@ struct AppDelegateTests {
 
         try await delegate.start()
 
-        #expect(provider.getAvailableContextsCallCount == 1)
+        #expect(provider.getWorkspaceSnapshotCallCount == 1)
         #expect(runtime.contexts == expectedContexts)
     }
 
@@ -334,8 +334,12 @@ private final class EventBusServiceSpy: EventBusServicing {
 }
 
 @MainActor
-private final class ContextProviderStub: ContextProviding {
-    private(set) var getAvailableContextsCallCount = 0
+private final class ContextProviderStub: WorkspaceManaging {
+    private(set) var getWorkspaceSnapshotCallCount = 0
+
+    private let contexts: [WorkspaceContext]
+
+    var workspaceActivity: WorkspaceActivityState = .empty
 
     func createContext(
         name: String,
@@ -355,15 +359,43 @@ private final class ContextProviderStub: ContextProviding {
         WorkspaceContext(id: id, name: "Placeholder", symbol: "book")
     }
 
-    private let contexts: [WorkspaceContext]
-
     init(contexts: [WorkspaceContext] = []) {
         self.contexts = contexts
     }
 
     func getAvailableContexts() async -> [WorkspaceContext] {
-        getAvailableContextsCallCount += 1
         return contexts
+    }
+
+    func getWorkspaceActivity() async -> WorkspaceActivityState {
+        workspaceActivity
+    }
+
+    func recordContextActivation(contextID: UUID, at date: Date) async throws -> WorkspaceActivityState {
+        guard contexts.contains(where: { $0.id == contextID }) else {
+            throw SettingsStoreError.contextNotFound(contextID)
+        }
+
+        workspaceActivity.activate(
+            contextID: contextID,
+            at: date
+        )
+
+        return workspaceActivity
+    }
+
+    func stopActiveContext(at date: Date) async throws -> WorkspaceActivityState {
+        workspaceActivity.stop(at: date)
+        return workspaceActivity
+    }
+
+    func getWorkspaceSnapshot() async -> WorkspaceSnapshot {
+        getWorkspaceSnapshotCallCount += 1
+
+        return WorkspaceSnapshot(
+            contexts: contexts,
+            activity: workspaceActivity
+        )
     }
 }
 
