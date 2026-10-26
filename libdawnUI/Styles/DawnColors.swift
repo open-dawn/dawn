@@ -8,6 +8,20 @@
 import SwiftUI
 
 public enum DawnColors {
+    // MARK: Text and icons
+
+    public static let menuItemSecondaryForeground = Color.secondary
+
+    // MARK: Inputs
+
+    public static let inputBackground = Color.black.opacity(0.25)
+
+    // MARK: Selection
+
+    public static let selectionBackground = Color.white
+
+    public static let selectionForeground = Color.black
+
     public static let contextCardBackground = Color.black.opacity(0.25)
     public static let contextCardHoveredBackground = Color.black.opacity(0.34)
     public static let contextCardBorder = Color.white.opacity(0.04)

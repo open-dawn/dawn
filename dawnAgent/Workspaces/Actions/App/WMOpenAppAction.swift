@@ -1,5 +1,6 @@
 import AppKit
 import Foundation
+import dawnLogging
 import libdawn
 
 struct WMOpenAppAction: WMAppAction {
@@ -7,7 +8,15 @@ struct WMOpenAppAction: WMAppAction {
     private(set) var workspace: WorkspaceOpener
 
     func execute() async throws(WMActionError) {
-        guard let appUrl: URL = app.applicationURL else { throw WMActionError.invalidURL }
+        guard let appUrl: URL = app.applicationURL else {
+            #log(
+                "Unable to open \(app.bundleIdentifier): missing application URL",
+                level: .error,
+                category: .general
+            )
+
+            throw WMActionError.invalidURL
+        }
 
         let configuration = NSWorkspace.OpenConfiguration()
         configuration.activates = true
@@ -23,7 +32,17 @@ struct WMOpenAppAction: WMAppAction {
         do {
             try await workspace.openApplication(at: appUrl, configuration: configuration)
         } catch {
-            throw map(workspaceError: error, filePath: appUrl.path())
+            let actionError = map(workspaceError: error, filePath: appUrl.path())
+
+            let description = actionError.localizedDescription ?? "Unknown window-management error"
+
+            #log(
+                "Failed to open \(app.bundleIdentifier): \(description)",
+                level: .error,
+                category: .general
+            )
+
+            throw actionError
         }
     }
 

@@ -6,8 +6,8 @@
 //
 
 import AppKit
-import libdawn
 import Testing
+import libdawn
 
 @testable import dawnAgent
 
@@ -18,15 +18,19 @@ struct AppDelegateTests {
     func startRegistersListenersBeforeService() async throws {
         let service = EventBusServiceSpy()
         let provider = ContextProviderStub()
+        let menuBarController = MenuBarControllerSpy()
 
         let delegate = AppDelegate(
-            eventBusService: service
-        ) { bus in
-            WindowManagerListener(
-                bus: bus,
-                contextManager: provider
-            )
-        }
+            eventBusService: service,
+            makeMenuBarController: { _ in
+                menuBarController
+            },
+            makeWorkspaceRuntime: { _ in
+                WorkspaceRuntime(
+                    contextManager: provider
+                )
+            }
+        )
 
         try await delegate.start()
 
@@ -48,15 +52,19 @@ struct AppDelegateTests {
 
         let service = EventBusServiceSpy()
         let provider = ContextProviderStub(contexts: expectedContext)
+        let menuBarController = MenuBarControllerSpy()
 
         let delegate = AppDelegate(
-            eventBusService: service
-        ) { bus in
-            WindowManagerListener(
-                bus: bus,
-                contextManager: provider
-            )
-        }
+            eventBusService: service,
+            makeMenuBarController: { _ in
+                menuBarController
+            },
+            makeWorkspaceRuntime: { _ in
+                WorkspaceRuntime(
+                    contextManager: provider
+                )
+            }
+        )
 
         try await delegate.start()
 
@@ -76,12 +84,17 @@ struct AppDelegateTests {
     @Test("Startup failure does not start event bus service")
     func startupFailureDoesNotStartService() async {
         let service = EventBusServiceSpy()
+        let menuBarController = MenuBarControllerSpy()
 
         let delegate = AppDelegate(
-            eventBusService: service
-        ) { _ in
-            throw StartupError.expected
-        }
+            eventBusService: service,
+            makeMenuBarController: { _ in
+                menuBarController
+            },
+            makeWorkspaceRuntime: { _ in
+                throw StartupError.expected
+            }
+        )
 
         await #expect(throws: StartupError.expected) {
             try await delegate.start()
@@ -95,15 +108,19 @@ struct AppDelegateTests {
     func terminationStopsServiceAndReleasesListeners() async throws {
         let service = EventBusServiceSpy()
         let provider = ContextProviderStub()
+        let menuBarController = MenuBarControllerSpy()
 
         let delegate = AppDelegate(
-            eventBusService: service
-        ) { bus in
-            WindowManagerListener(
-                bus: bus,
-                contextManager: provider
-            )
-        }
+            eventBusService: service,
+            makeMenuBarController: { _ in
+                menuBarController
+            },
+            makeWorkspaceRuntime: { _ in
+                WorkspaceRuntime(
+                    contextManager: provider
+                )
+            }
+        )
 
         try await delegate.start()
 
@@ -116,6 +133,7 @@ struct AppDelegateTests {
         #expect(service.stopCallCount == 1)
         #expect(!service.bus.hasListeners(for: .getContexts(GetContextsEvent())))
         #expect(!service.bus.hasListeners(for: .debugPing(DebugPingEvent())))
+        #expect(menuBarController.stopCallCount == 1)
     }
 
     @Test("Repeated starts initialize only once")
@@ -123,15 +141,21 @@ struct AppDelegateTests {
         let service = EventBusServiceSpy()
         let provider = ContextProviderStub()
         var factoryCallCount = 0
+        let menuBarController = MenuBarControllerSpy()
 
-        let delegate = AppDelegate(eventBusService: service) { bus in
-            factoryCallCount += 1
+        let delegate = AppDelegate(
+            eventBusService: service,
+            makeMenuBarController: { _ in
+                menuBarController
+            },
+            makeWorkspaceRuntime: { _ in
+                factoryCallCount += 1
 
-            return WindowManagerListener(
-                bus: bus,
-                contextManager: provider
-            )
-        }
+                return WorkspaceRuntime(
+                    contextManager: provider
+                )
+            }
+        )
 
         try await delegate.start()
         try await delegate.start()
@@ -144,13 +168,18 @@ struct AppDelegateTests {
     func overlappingStartsInitializeOnlyOnce() async throws {
         let service = EventBusServiceSpy()
         let provider = ContextProviderStub()
-        let factory = PausingListenerFactory(provider: provider)
+        let factory = PausingWorkspaceRuntimeFactory(provider: provider)
+        let menuBarController = MenuBarControllerSpy()
 
         let delegate = AppDelegate(
-            eventBusService: service
-        ) { bus in
-            await factory.makeListener(bus: bus)
-        }
+            eventBusService: service,
+            makeMenuBarController: { _ in
+                menuBarController
+            },
+            makeWorkspaceRuntime: { _ in
+                await factory.makeRuntime()
+            }
+        )
 
         let firstStart = Task { @MainActor in
             try await delegate.start()
@@ -179,21 +208,25 @@ struct AppDelegateTests {
         let service = EventBusServiceSpy()
         let provider = ContextProviderStub()
         var attemptCount = 0
+        let menuBarController = MenuBarControllerSpy()
 
         let delegate = AppDelegate(
-            eventBusService: service
-        ) { bus in
-            attemptCount += 1
+            eventBusService: service,
+            makeMenuBarController: { _ in
+                menuBarController
+            },
+            makeWorkspaceRuntime: { _ in
+                attemptCount += 1
 
-            if attemptCount == 1 {
-                throw StartupError.expected
+                if attemptCount == 1 {
+                    throw StartupError.expected
+                }
+
+                return WorkspaceRuntime(
+                    contextManager: provider
+                )
             }
-
-            return WindowManagerListener(
-                bus: bus,
-                contextManager: provider
-            )
-        }
+        )
 
         await #expect(throws: StartupError.expected) {
             try await delegate.start()
@@ -203,6 +236,77 @@ struct AppDelegateTests {
 
         #expect(attemptCount == 2)
         #expect(service.startCallCount == 1)
+    }
+
+    @Test("Start loads initial workspace snapshot")
+    func startLoadsInitialWorkspaceSnapshot() async throws {
+        let service = EventBusServiceSpy()
+
+        let expectedContexts = [
+            WorkspaceContext(
+                name: "Study",
+                symbol: "book"
+            )
+        ]
+
+        let provider = ContextProviderStub(
+            contexts: expectedContexts
+        )
+
+        let runtime = WorkspaceRuntime(
+            contextManager: provider
+        )
+
+        let menuBarController = MenuBarControllerSpy()
+
+        let delegate = AppDelegate(
+            eventBusService: service,
+            makeMenuBarController: { _ in
+                menuBarController
+            },
+            makeWorkspaceRuntime: { _ in
+                runtime
+            }
+        )
+
+        try await delegate.start()
+
+        #expect(provider.getAvailableContextsCallCount == 1)
+        #expect(runtime.contexts == expectedContexts)
+    }
+
+    @Test("Start creates menu controller with shared runtime once")
+    func startCreatesMenuControllerOnce() async throws {
+        let service = EventBusService()
+        let provider = ContextProviderStub()
+
+        let runtime = WorkspaceRuntime(
+            contextManager: provider
+        )
+
+        let menuBarController = MenuBarControllerSpy()
+
+        var factoryCallCount = 0
+        var receivedWorkspace: WorkspaceRuntime?
+
+        let delegate = AppDelegate(
+            eventBusService: service,
+            makeMenuBarController: { workspace in
+                factoryCallCount += 1
+                receivedWorkspace = workspace
+                return menuBarController
+            },
+            makeWorkspaceRuntime: { _ in
+                runtime
+            }
+        )
+
+        try await delegate.start()
+
+        let injectedWorkspace = try #require(receivedWorkspace)
+
+        #expect(factoryCallCount == 1)
+        #expect(injectedWorkspace === runtime)
     }
 }
 
@@ -231,6 +335,8 @@ private final class EventBusServiceSpy: EventBusServicing {
 
 @MainActor
 private final class ContextProviderStub: ContextProviding {
+    private(set) var getAvailableContextsCallCount = 0
+
     func createContext(
         name: String,
         symbol: String,
@@ -256,12 +362,13 @@ private final class ContextProviderStub: ContextProviding {
     }
 
     func getAvailableContexts() async -> [WorkspaceContext] {
-        contexts
+        getAvailableContextsCallCount += 1
+        return contexts
     }
 }
 
 @MainActor
-private final class PausingListenerFactory {
+private final class PausingWorkspaceRuntimeFactory {
     private let provider: ContextProviderStub
     private var callWaiter: CheckedContinuation<Void, Never>?
     private var factoryContinuation: CheckedContinuation<Void, Never>?
@@ -272,33 +379,43 @@ private final class PausingListenerFactory {
         self.provider = provider
     }
 
-    func makeListener(bus: EventBus) async -> WindowManagerListener {
+    func makeRuntime() async -> WorkspaceRuntime {
         callCount += 1
 
         callWaiter?.resume()
         callWaiter = nil
 
-        await withCheckedContinuation { continuation in
-            factoryContinuation = continuation
+        await withCheckedContinuation {
+            factoryContinuation = $0
         }
 
-        return WindowManagerListener(
-            bus: bus,
+        return WorkspaceRuntime(
             contextManager: provider
         )
     }
 
     func waitUntilCalled() async {
-        guard callCount == 0 else { return }
+        guard callCount == 0 else {
+            return
+        }
 
-        await withCheckedContinuation { continuation in
-            callWaiter = continuation
+        await withCheckedContinuation {
+            callWaiter = $0
         }
     }
 
     func resume() {
         factoryContinuation?.resume()
         factoryContinuation = nil
+    }
+}
+
+@MainActor
+private final class MenuBarControllerSpy: MenuBarControlling {
+    private(set) var stopCallCount = 0
+
+    func stop() {
+        stopCallCount += 1
     }
 }
 
