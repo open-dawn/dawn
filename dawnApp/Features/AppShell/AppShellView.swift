@@ -49,7 +49,7 @@ struct AppShellView: View {
         }
 
         var body: some View {
-            HSplitView {
+            HStack(spacing: 0) {
                 SidebarView(
                     content: SidebarContent(
                         contexts: store.contexts,
