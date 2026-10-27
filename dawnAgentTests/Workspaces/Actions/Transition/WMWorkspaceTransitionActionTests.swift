@@ -24,16 +24,20 @@ struct WMWorkspaceTransitionActionTests {
 
         let performer = FakeWorkspaceTransitionPerformer()
         let provider = FakeAppProvider()
+        let trust = FakeAccessibilityTrustChecker()
+        trust.isTrusted = true
         let action = WMWorkspaceTransitionAction(
             context: context,
             provider: provider,
-            performer: performer
+            performer: performer,
+            trustChecker: trust
         )
 
         try await action.execute()
 
         #expect(performer.resetPolicies == [.hide])
         #expect(performer.openedApps.map(\.bundleIdentifier) == ["com.apple.Safari"])
+        #expect(performer.laidOutApps.map(\.bundleIdentifier) == ["com.apple.Safari"])
         #expect(performer.terminalCommands == ["echo dawn"])
     }
 
@@ -61,17 +65,51 @@ struct WMWorkspaceTransitionActionTests {
         provider.appsByBundleIdentifier = ["com.apple.Safari": [runningSafari]]
 
         let performer = FakeWorkspaceTransitionPerformer()
+        let trust = FakeAccessibilityTrustChecker()
+        trust.isTrusted = true
         let action = WMWorkspaceTransitionAction(
             context: context,
             provider: provider,
-            performer: performer
+            performer: performer,
+            trustChecker: trust
         )
 
         try await action.execute()
 
         #expect(performer.resetPolicies == [.merge])
         #expect(performer.openedApps.map(\.bundleIdentifier) == ["com.apple.Notes"])
+        #expect(performer.laidOutApps.map(\.bundleIdentifier) == ["com.apple.Safari", "com.apple.Notes"])
         #expect(performer.terminalCommands.isEmpty)
+    }
+
+    @Test("skips window layout when Accessibility is not trusted")
+    func skipsLayoutWhenUntrusted() async throws {
+        let safari = WorkspaceApplication(
+            bundleIdentifier: "com.apple.Safari",
+            displayName: "Safari",
+            applicationURL: URL(fileURLWithPath: "/Applications/Safari.app")
+        )
+        let context = WorkspaceContext(
+            name: "NoAX",
+            symbol: "lock",
+            applications: [safari],
+            transition: WorkspaceTransition(activationPolicy: .hide)
+        )
+
+        let performer = FakeWorkspaceTransitionPerformer()
+        let trust = FakeAccessibilityTrustChecker()
+        trust.isTrusted = false
+        let action = WMWorkspaceTransitionAction(
+            context: context,
+            provider: FakeAppProvider(),
+            performer: performer,
+            trustChecker: trust
+        )
+
+        try await action.execute()
+
+        #expect(performer.openedApps.map(\.bundleIdentifier) == ["com.apple.Safari"])
+        #expect(performer.laidOutApps.isEmpty)
     }
 
     @Test("continues when optional terminal step fails")
@@ -92,7 +130,8 @@ struct WMWorkspaceTransitionActionTests {
         let action = WMWorkspaceTransitionAction(
             context: context,
             provider: FakeAppProvider(),
-            performer: performer
+            performer: performer,
+            trustChecker: FakeAccessibilityTrustChecker()
         )
 
         await #expect(throws: Never.self) {
@@ -107,6 +146,7 @@ struct WMWorkspaceTransitionActionTests {
 final class FakeWorkspaceTransitionPerformer: WorkspaceTransitionPerforming {
     private(set) var resetPolicies: [WorkspaceActivationPolicy] = []
     private(set) var openedApps: [WorkspaceApplication] = []
+    private(set) var laidOutApps: [WorkspaceApplication] = []
     private(set) var terminalCommands: [String] = []
 
     var terminalError: Error?
@@ -117,6 +157,10 @@ final class FakeWorkspaceTransitionPerformer: WorkspaceTransitionPerforming {
 
     func openApp(_ app: WorkspaceApplication) async throws {
         openedApps.append(app)
+    }
+
+    func applyWindowLayout(_ app: WorkspaceApplication) async throws {
+        laidOutApps.append(app)
     }
 
     func runTerminalCommand(_ command: String) async throws {

@@ -10,6 +10,7 @@ public struct WorkspaceApplication: Identifiable, Sendable, Codable, Equatable {
     public var arguments: [String]
     public var environment: [String: String]
     public var promptsUserIfNeeded: Bool
+    public var windowLayout: WorkspaceWindowLayout
 
     public init(
         id: UUID = UUID(),
@@ -20,7 +21,8 @@ public struct WorkspaceApplication: Identifiable, Sendable, Codable, Equatable {
         createsNewApplicationInstance: Bool = false,
         arguments: [String] = [],
         environment: [String: String] = [:],
-        promptsUserIfNeeded: Bool = false
+        promptsUserIfNeeded: Bool = false,
+        windowLayout: WorkspaceWindowLayout = .window
     ) {
         self.id = id
         self.bundleIdentifier = bundleIdentifier
@@ -31,5 +33,6 @@ public struct WorkspaceApplication: Identifiable, Sendable, Codable, Equatable {
         self.arguments = arguments
         self.environment = environment
         self.promptsUserIfNeeded = promptsUserIfNeeded
+        self.windowLayout = windowLayout
     }
 }
