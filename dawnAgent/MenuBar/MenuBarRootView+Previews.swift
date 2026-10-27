@@ -14,9 +14,13 @@ import libdawn
 private struct MenuBarRootPreview: View {
     @State private var workspace: WorkspaceRuntime
 
-    init(contexts: [WorkspaceContext]) {
+    init(
+        contexts: [WorkspaceContext],
+        activity: WorkspaceActivityState = .empty
+    ) {
         let contextProvider = PreviewContextProvider(
-            contexts: contexts
+            contexts: contexts,
+            workspaceActivity: activity
         )
 
         _workspace = State(
@@ -36,14 +40,6 @@ private struct MenuBarRootPreview: View {
             .preferredColorScheme(.dark)
             .task {
                 await workspace.refresh()
-
-                guard let firstContext = workspace.contexts.first else {
-                    return
-                }
-
-                try? await workspace.activateContext(
-                    id: firstContext.id
-                )
             }
     }
 }
@@ -51,10 +47,14 @@ private struct MenuBarRootPreview: View {
 @MainActor
 private final class PreviewContextProvider: WorkspaceManaging {
     private var contexts: [WorkspaceContext]
-    var workspaceActivity: WorkspaceActivityState = .empty
+    var workspaceActivity: WorkspaceActivityState
 
-    init(contexts: [WorkspaceContext]) {
+    init(
+        contexts: [WorkspaceContext],
+        workspaceActivity: WorkspaceActivityState = .empty
+    ) {
         self.contexts = contexts
+        self.workspaceActivity = workspaceActivity
     }
 
     func getAvailableContexts() async -> [WorkspaceContext] {
@@ -185,9 +185,47 @@ private enum MenuBarRootPreviewFixtures {
             ]
         ),
     ]
+
+    static func activity(
+        relativeTo now: Date
+    ) -> WorkspaceActivityState {
+        var activity = WorkspaceActivityState.empty
+
+        let work = contexts[0]
+        let personal = contexts[1]
+
+        activity.activate(
+            contextID: personal.id,
+            at: now.addingTimeInterval(-2 * 24 * 60 * 60)
+        )
+
+        activity.stop(
+            at: now.addingTimeInterval(-24 * 60 * 60)
+        )
+
+        activity.activate(
+            contextID: work.id,
+            at: now.addingTimeInterval(
+                -(5 * 60 + 12) * 60
+            )
+        )
+
+        return activity
+    }
 }
 
-#Preview("Root — Contexts") {
+#Preview("Root — Activity States") {
+    let now = Date.now
+
+    MenuBarRootPreview(
+        contexts: MenuBarRootPreviewFixtures.contexts,
+        activity: MenuBarRootPreviewFixtures.activity(
+            relativeTo: now
+        )
+    )
+}
+
+#Preview("Root — Inactive Contexts") {
     MenuBarRootPreview(
         contexts: MenuBarRootPreviewFixtures.contexts
     )

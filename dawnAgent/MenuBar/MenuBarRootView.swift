@@ -20,6 +20,8 @@ struct MenuBarRootView: View {
     let workspace: WorkspaceRuntime
     let openApp: (DawnAppRoute) async throws -> Void
 
+    private let activityTextFormatter = WorkspaceActivityTextFormatter()
+
     @State private var activatingContextID: UUID?
     @State private var activationError: String?
     @State private var route: MenuBarRoute = .contextList
@@ -32,7 +34,9 @@ struct MenuBarRootView: View {
     var body: some View {
         switch route {
         case .contextList:
-            contextList
+            TimelineView(.periodic(from: .now, by: 60)) { timeline in
+                contextList(relativeTo: timeline.date)
+            }
         case .contextCreation:
             ContextCreationFlowView {
                 route = .contextList
@@ -40,75 +44,11 @@ struct MenuBarRootView: View {
         }
     }
 
-    private var contextList: some View {
+    private func contextList(relativeTo now: Date) -> some View {
         VStack(alignment: .leading, spacing: 12) {
-            HStack(spacing: 5) {
-                DawnBrand()
-
-                Spacer()
-
-                DButton(
-                    style: .icon,
-                    action: {
-                        route = .contextCreation
-                    },
-                    content: {
-                        Image(systemName: "plus")
-                            .font(DawnTextStyle.actionIcon)
-                    }
-                )
-                .accessibilityLabel("Create a context")
-
-                DButton(
-                    style: .icon,
-                    action: {
-                        openInApp(.settings)
-                    },
-                    content: {
-                        Image(systemName: "gearshape")
-                            .font(DawnTextStyle.actionIcon)
-                    }
-                )
-                .disabled(isPerformingOperation)
-                .accessibilityLabel("Open DAWN settings")
-                .help("Open DAWN settings")
-            }
-
-            // PIN-122: If there is a active context, it should appear here above the list
-
-            HStack(alignment: .center) {
-                Text("Contexts")
-                    .font(DawnTextStyle.sectionLabel)
-
-                Spacer()
-
-                DButton(
-                    style: .compactLink,
-                    action: {
-                        // PIN-122: Open dawnApp in current/latest context settings
-                    },
-                    content: {
-                        Text("view in app")
-                    }
-                )
-            }
-
-            if workspace.contexts.isEmpty {
-                ContentUnavailableView(
-                    "No Contexts",
-                    systemImage: "square.stack",
-                    description: Text("Create a context to see it here.")
-                )
-            } else {
-                ScrollView {
-                    LazyVStack(spacing: 4) {
-                        ForEach(workspace.contexts) { context in
-                            contextCard(for: context)
-                        }
-                    }
-                }
-                .frame(maxHeight: 280)
-            }
+            menuHeader
+            contextsHeader
+            contextsContent(relativeTo: now)
         }
         .padding(16)
         .frame(width: 320)
@@ -124,11 +64,86 @@ struct MenuBarRootView: View {
         }
     }
 
-    private func contextCard(for context: WorkspaceContext) -> some View {
+    private var menuHeader: some View {
+        HStack(spacing: 5) {
+            DawnBrand()
+
+            Spacer()
+
+            DButton(
+                style: .icon,
+                action: {
+                    route = .contextCreation
+                },
+                content: {
+                    Image(systemName: "plus")
+                        .font(DawnTextStyle.actionIcon)
+                }
+            )
+            .accessibilityLabel("Create a context")
+
+            DButton(
+                style: .icon,
+                action: {
+                    openInApp(.settings)
+                },
+                content: {
+                    Image(systemName: "gearshape")
+                        .font(DawnTextStyle.actionIcon)
+                }
+            )
+            .disabled(isPerformingOperation)
+            .accessibilityLabel("Open DAWN settings")
+            .help("Open DAWN settings")
+        }
+    }
+
+    private var contextsHeader: some View {
+        // PIN-122: If there is a active context, it should appear here above the list
+
+        HStack(alignment: .center) {
+            Text("Contexts")
+                .font(DawnTextStyle.sectionLabel)
+
+            Spacer()
+
+            DButton(
+                style: .compactLink,
+                action: {
+                    // PIN-122: Open dawnApp in current/latest context settings
+                },
+                content: {
+                    Text("view in app")
+                }
+            )
+        }
+    }
+
+    @ViewBuilder
+    private func contextsContent(relativeTo now: Date) -> some View {
+        if workspace.contexts.isEmpty {
+            ContentUnavailableView(
+                "No Contexts",
+                systemImage: "square.stack",
+                description: Text("Create a context to see it here.")
+            )
+        } else {
+            ScrollView {
+                LazyVStack(spacing: 4) {
+                    ForEach(workspace.contexts) { context in
+                        contextCard(for: context, relativeTo: now)
+                    }
+                }
+            }
+            .frame(maxHeight: 280)
+        }
+    }
+
+    private func contextCard(for context: WorkspaceContext, relativeTo now: Date) -> some View {
         let contextRoute = DawnAppRoute.context(context.id)
 
         return ContextCard(
-            model: contextCardModel(for: context),
+            model: contextCardModel(for: context, relativeTo: now),
             isLoading: activatingContextID == context.id || openingRoute == contextRoute,
             onSelect: {
                 guard workspace.activeContextID != context.id else {
@@ -143,13 +158,27 @@ struct MenuBarRootView: View {
         ).disabled(isPerformingOperation)
     }
 
-    private func contextCardModel(for context: WorkspaceContext) -> ContextCardModel {
+    private func contextCardModel(for context: WorkspaceContext, relativeTo now: Date) -> ContextCardModel {
         let status: ContextCardModel.Status
 
         if workspace.activeContextID == context.id {
-            status = .active(activityText: "In use")
+            let activityText = workspace.activeSince.map {
+                activityTextFormatter.activeText(
+                    since: $0,
+                    relativeTo: now
+                )
+            } ?? "In use"
+
+            status = .active(activityText: activityText)
         } else {
-            status = .inactive(lastUsedText: nil)
+            let lastUsedText = workspace.lastActiveAt(for: context.id).map {
+                activityTextFormatter.lastUsedText(
+                    at: $0,
+                    relativeTo: now
+                )
+            }
+
+            status = .inactive(lastUsedText: lastUsedText)
         }
 
         return ContextCardModel(
