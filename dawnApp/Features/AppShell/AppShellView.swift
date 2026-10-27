@@ -49,7 +49,7 @@ struct AppShellView: View {
         }
 
         var body: some View {
-            HStack(spacing: 0) {
+            HSplitView {
                 SidebarView(
                     content: SidebarContent(
                         contexts: store.contexts,
@@ -65,6 +65,9 @@ struct AppShellView: View {
                     onCreateContext: { viewModel.presentContextCreator() },
                     onDismissError: dismissSidebarError
                 )
+                .background {
+                    SplitViewDividerFix()
+                }
 
                 detail(for: selectedDestination)
                     .padding(24)

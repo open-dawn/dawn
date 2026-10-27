@@ -115,7 +115,7 @@
         }
 
         var body: some View {
-            HStack(spacing: 0) {
+            HSplitView {
                 SidebarView(
                     content: content,
                     selectedDestination: $selectedDestination,
@@ -123,6 +123,9 @@
                     onCreateContext: {},
                     onDismissError: {}
                 )
+                .background {
+                    SplitViewDividerFix()
+                }
 
                 previewDetail
             }
