@@ -43,3 +43,5 @@ Inject fakes conforming to `AccessibilityWindowServing` or `AccessibilityElement
 - **No maximize.** macOS Accessibility has no reliable maximize attribute; zoom/green-button behavior is app-specific.
 
 Prefer these helpers for **normal / minimized** presentation. Treat **fullscreen** as optional and verify per target app when building layout actions.
+
+Dawn wiring: `WMWindowLayoutAction` (dawnAgent) reads `WorkspaceApplication.windowLayout` and calls this service after open during context switches when the agent is Accessibility-trusted.

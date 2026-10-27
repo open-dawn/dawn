@@ -2,6 +2,7 @@ import AppKit
 @testable import dawnAgent
 
 final class FakeRunningApp: RunningApplicationControlling {
+    var processIdentifier: pid_t = 1234
     var bundleIdentifier: String?
     var activationPolicy: NSApplication.ActivationPolicy = .regular
     var isHidden = false
@@ -18,8 +19,9 @@ final class FakeRunningApp: RunningApplicationControlling {
     private(set) var terminateCallCount = 0
     private(set) var hideCallCount = 0
 
-    init(bundleIdentifier: String? = nil) {
+    init(bundleIdentifier: String? = nil, processIdentifier: pid_t = 1234) {
         self.bundleIdentifier = bundleIdentifier
+        self.processIdentifier = processIdentifier
     }
 
     @discardableResult

@@ -1,6 +1,6 @@
 # Actions
 
-Workspace actions in dawnAgent. They perform concrete side effects (open, hide, close apps; reset windows; run a shell command; enter a workspace) for workspace switching and related flows.
+Workspace actions in dawnAgent. They perform concrete side effects (open, hide, close apps; reset windows; apply layouts; run a shell command; enter a workspace) for workspace switching and related flows.
 
 Shared models such as `WorkspaceApplication`, `WorkspaceContext`, `WorkspaceTransition`, and `WorkspaceActivationPolicy` live in **libdawn**. Actions themselves live only in dawnAgent under `Workspaces/Actions/`.
 
@@ -33,6 +33,7 @@ public enum WMActionIdentifier {
     case hideApp(WorkspaceApplication)
     case openApp(WorkspaceApplication)
     case closeApp(WorkspaceApplication)
+    case windowLayout(WorkspaceApplication)
     case resetWindows(WorkspaceActivationPolicy, keep: [WorkspaceApplication])
     case terminalCommand(String)
     case workspaceTransition(WorkspaceContext)
@@ -46,6 +47,7 @@ public enum WMActionIdentifier {
 | `hideApp(app)` | `WMHideAppAction` | Hide all windows of the target app |
 | `openApp(app)` | `WMOpenAppAction` | Open or show the target app |
 | `closeApp(app)` | `WMCloseAppAction` | Close the target app |
+| `windowLayout(app)` | `WMWindowLayoutAction` | Apply `windowLayout` via Accessibility |
 | `resetWindows(policy, keep:)` | `WMResetWindowsAction` | Apply `WorkspaceActivationPolicy` to non-member apps (`hide` / `merge` / `close`) |
 | `terminalCommand(command)` | `WMTerminalCommandAction` | Start a shell command in the background |
 | `workspaceTransition(context)` | `WMWorkspaceTransitionAction` | Full enter-workspace flow from `WorkspaceContext.transition` |
@@ -73,6 +75,7 @@ Under `Workspaces/Actions/Window/`.
 
 | Type | Behavior | Typical errors |
 |------|----------|----------------|
+| `WMWindowLayoutAction` | `WMAppAction` that applies `WorkspaceApplication.windowLayout` (`.window` / `.minimized` / `.fullscreen`) to all AX windows for the running process | `accessibilityNotTrusted`, `notRunning`, `noGUItoShow`, `unknown` |
 | `WMResetWindowsAction` | `hide`: hide regular non-members; `close`: terminate them; `merge`: no-op. Accessory and prohibited processes, and apps with no bundle id, are skipped. Protected apps are always spared | `noGUItoShow` when any hide returns false; `permissionDenied` when any terminate returns false |
 | `WMTerminalCommandAction` | Starts `/bin/zsh -lc` in the background through `TerminalCommandRunning` and returns after launch. Stdin, stdout, and stderr are `/dev/null`. Exit status is not waited on | `unknown` (launch failure) |
 
@@ -92,9 +95,9 @@ public struct WorkspaceTransition: Codable, Sendable, Equatable {
 | Field | Behavior |
 |-------|----------|
 | `activationPolicy` | `hide` (default): hide non-members, then open every member; `merge`: leave others alone and only open members that are not already running; `close`: terminate non-members, then open every member |
-| `terminalCommand` | Optional shell command after opens. Empty or `nil` is skipped. The command is started in the background; a launch failure is logged and the transition continues |
+| `terminalCommand` | Optional shell command after opens/layouts. Empty or `nil` is skipped. The command is started in the background; a launch failure is logged and the transition continues |
 
-`WMWorkspaceTransitionAction` (under `Workspaces/Actions/Transition/`) takes a `WorkspaceContext` and runs reset → open → terminal. Members are opened one at a time. Each step is best-effort: errors are logged and later steps still run.
+`WMWorkspaceTransitionAction` (under `Workspaces/Actions/Transition/`) takes a `WorkspaceContext` and runs reset → open → window layout (when Accessibility is trusted) → terminal. Members are opened one at a time. Layout is applied to every member app. Each step is best-effort: errors are logged and later steps still run.
 
 Reset only considers apps with the regular activation policy. It never hides or closes Finder, Dock, SystemUIServer, loginwindow, WindowManager, `app.opendawn.dawnApp` (DAWN), `app.opendawn.dawnAgent`, or the agent's own bundle id. Debug builds also spare Xcode (`com.apple.dt.Xcode`). Merge uses `ApplicationProvider` to skip apps that already have a running instance.
 
@@ -133,8 +136,8 @@ enum WMActionError: LocalizedError, Equatable {
 Mirror the libdawn event workflow: one concrete type, register it in the catalog, keep payloads/models in the right module.
 
 1. **Pick a folder** under `dawnAgent/Workspaces/Actions/`:
-   - App-scoped → `App/` and conform to `WMAppAction`
-   - Window or terminal → `Window/` and conform to `WMAction`
+   - App-scoped open/hide/close → `App/` and conform to `WMAppAction`
+   - Window layout / reset / terminal → `Window/` (`WMWindowLayoutAction` is still `WMAppAction`; others are plain `WMAction`)
    - Enter-workspace orchestration → `Transition/` and conform to `WMAction`
    - Anything else → a new domain folder and conform to `WMAction`
 2. **Implement** `execute() async throws(WMActionError)`. Inject protocols (`ApplicationProvider`, `WorkspaceOpener`, `TerminalCommandRunning`, `WorkspaceTransitionPerforming`, or a new seam) instead of calling AppKit globals when the action needs to be unit-tested.

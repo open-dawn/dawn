@@ -23,7 +23,8 @@ struct SharedModelsTests {
             createsNewApplicationInstance: true,
             arguments: ["--args"],
             environment: ["FOO": "bar"],
-            promptsUserIfNeeded: true
+            promptsUserIfNeeded: true,
+            windowLayout: .minimized
         )
 
         let context = WorkspaceContext(

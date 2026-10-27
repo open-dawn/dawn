@@ -5,6 +5,7 @@ import libdawn
 protocol WorkspaceTransitionPerforming {
     func resetWindows(policy: WorkspaceActivationPolicy, keepApplications: [WorkspaceApplication]) async throws
     func openApp(_ app: WorkspaceApplication) async throws
+    func applyWindowLayout(_ app: WorkspaceApplication) async throws
     func runTerminalCommand(_ command: String) async throws
 }
 
@@ -17,6 +18,10 @@ struct DefaultWorkspaceTransitionPerformer: WorkspaceTransitionPerforming {
         try await WMOpenAppAction(app: app).execute()
     }
 
+    func applyWindowLayout(_ app: WorkspaceApplication) async throws {
+        try await WMWindowLayoutAction(app: app).execute()
+    }
+
     func runTerminalCommand(_ command: String) async throws {
         try await WMTerminalCommandAction(command: command).execute()
     }
@@ -26,15 +31,18 @@ struct WMWorkspaceTransitionAction: WMAction {
     let context: WorkspaceContext
     private let provider: ApplicationProvider
     private let performer: WorkspaceTransitionPerforming
+    private let trustChecker: any AccessibilityTrustChecking
 
     init(
         context: WorkspaceContext,
         provider: ApplicationProvider = SystemApplicationProvider(),
-        performer: WorkspaceTransitionPerforming = DefaultWorkspaceTransitionPerformer()
+        performer: WorkspaceTransitionPerforming = DefaultWorkspaceTransitionPerformer(),
+        trustChecker: any AccessibilityTrustChecking = SystemAccessibilityTrustChecker()
     ) {
         self.context = context
         self.provider = provider
         self.performer = performer
+        self.trustChecker = trustChecker
     }
 
     func execute() async throws(WMActionError) {
@@ -64,6 +72,20 @@ struct WMWorkspaceTransitionAction: WMAction {
                     level: .error,
                     category: .general
                 )
+            }
+        }
+
+        if trustChecker.isProcessTrusted() {
+            for app in applications {
+                do {
+                    try await performer.applyWindowLayout(app)
+                } catch {
+                    #log(
+                        "Error applying window layout for \(app.bundleIdentifier) (\(error))",
+                        level: .error,
+                        category: .general
+                    )
+                }
             }
         }
 

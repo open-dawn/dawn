@@ -4,6 +4,7 @@ public enum WMActionIdentifier {
     case hideApp(WorkspaceApplication) // Hide all windows of target app
     case openApp(WorkspaceApplication) // Open or Show target app
     case closeApp(WorkspaceApplication) // Close an target app
+    case windowLayout(WorkspaceApplication) // Apply window layout via Accessibility
     case resetWindows(WorkspaceActivationPolicy, keep: [WorkspaceApplication]) // Apply activation policy to non-members
     case terminalCommand(String) // Run a shell command
     case workspaceTransition(WorkspaceContext) // Full enter-workspace transition
@@ -13,6 +14,7 @@ public enum WMActionIdentifier {
         case let .hideApp(app): WMHideAppAction(app: app)
         case let .openApp(app): WMOpenAppAction(app: app)
         case let .closeApp(app): WMCloseAppAction(app: app)
+        case let .windowLayout(app): WMWindowLayoutAction(app: app)
         case let .resetWindows(policy, keep):
             WMResetWindowsAction(activationPolicy: policy, keepApplications: keep)
         case let .terminalCommand(command): WMTerminalCommandAction(command: command)
