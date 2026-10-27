@@ -17,11 +17,12 @@ protocol MenuBarControlling: AnyObject {
 final class MenuBarController: NSObject, MenuBarControlling {
     private let statusBar: NSStatusBar
     private let statusItem: NSStatusItem
-    private let popover: NSPopover
-    private var isClosing = false
     private let appOpener: any DawnAppOpening
+    private var panel: MenuBarPanel?
+    private var hostingController: NSHostingController<MenuBarRootView>?
 
     private var isStopped = false
+    private var isPanelPresented = false
 
     init(
         workspace: WorkspaceRuntime,
@@ -32,13 +33,12 @@ final class MenuBarController: NSObject, MenuBarControlling {
         self.statusItem = statusBar.statusItem(
             withLength: NSStatusItem.squareLength
         )
-        self.popover = NSPopover()
         self.appOpener = appOpener
 
         super.init()
 
         configureStatusItem()
-        configurePopover(workspace: workspace)
+        configurePanel(workspace: workspace)
     }
 
     func stop() {
@@ -48,8 +48,12 @@ final class MenuBarController: NSObject, MenuBarControlling {
 
         isStopped = true
 
-        popover.close()
-        popover.contentViewController = nil
+        closePanel()
+
+        panel?.delegate = nil
+        panel?.contentViewController = nil
+        panel = nil
+        hostingController = nil
 
         statusItem.button?.target = nil
         statusItem.button?.action = nil
@@ -85,18 +89,14 @@ final class MenuBarController: NSObject, MenuBarControlling {
         if isRightClick || isControlClick {
             showContextMenu(relativeTo: sender)
         } else {
-            togglePopover(sender)
+            togglePanel(sender)
         }
     }
 
-    private func configurePopover(
+    private func configurePanel(
         workspace: WorkspaceRuntime
     ) {
-        popover.behavior = .transient
-        popover.animates = true
-        popover.delegate = self
-
-        popover.contentViewController = NSHostingController(
+        let hostingController = NSHostingController(
             rootView: MenuBarRootView(
                 workspace: workspace,
                 openApp: { [weak self] route in
@@ -105,14 +105,26 @@ final class MenuBarController: NSObject, MenuBarControlling {
                     }
 
                     try await appOpener.open(route)
-                    closePopover()
+                    closePanel()
                 }
             )
         )
+
+        hostingController.view.wantsLayer = true
+        hostingController.view.layer?.cornerRadius = 16
+        hostingController.view.layer?.cornerCurve = .continuous
+        hostingController.view.layer?.masksToBounds = true
+
+        let panel = MenuBarPanel(contentViewController: hostingController)
+
+        panel.delegate = self
+
+        self.hostingController = hostingController
+        self.panel = panel
     }
 
-    private func synchronizePopoverContentSize() {
-        guard let contentView = popover.contentViewController?.view else {
+    private func synchronizePanelContentSize() {
+        guard let panel, let contentView = panel.contentViewController?.view else {
             return
         }
 
@@ -125,47 +137,79 @@ final class MenuBarController: NSObject, MenuBarControlling {
             return
         }
 
-        popover.contentSize = NSSize(
-            width: 320,
-            height: ceil(fittingSize.height)
+        panel.setContentSize(
+            NSSize(
+                width: 320,
+                height: ceil(fittingSize.height)
+            )
+        )
+
+        panel.invalidateShadow()
+    }
+
+    private func positionPanel(relativeTo button: NSStatusBarButton) {
+        guard let panel, let buttonWindow = button.window, let visibleFrame = buttonWindow.screen?.visibleFrame else {
+            return
+        }
+
+        let buttonRectInWindow = button.convert(button.bounds, to: nil)
+
+        let buttonRectOnScreen = buttonWindow.convertToScreen(buttonRectInWindow)
+
+        let horizontalMargin: CGFloat = 8
+        let verticalSpacing: CGFloat = 4
+
+        var originX = buttonRectOnScreen.midX - panel.frame.width / 2
+
+        originX = min(
+            max(
+                originX,
+                visibleFrame.minX + horizontalMargin
+            ),
+            visibleFrame.maxX - panel.frame.width - horizontalMargin
+        )
+
+        let originY = buttonRectOnScreen.minY - panel.frame.height - verticalSpacing
+
+        panel.setFrameOrigin(
+            NSPoint(x: round(originX), y: round(originY))
         )
     }
 
     @objc
-    private func togglePopover(
+    private func togglePanel(
         _ sender: NSStatusBarButton
     ) {
-        guard !popover.isShown else {
-            popover.contentViewController?.view.window?.makeFirstResponder(nil)
-
-            closePopover()
+        guard let panel else {
             return
         }
 
-        guard !isClosing else {
+        if isPanelPresented {
+            closePanel()
             return
         }
 
-        NSApp.activate()
-        synchronizePopoverContentSize()
+        synchronizePanelContentSize()
+        positionPanel(relativeTo: sender)
 
-        popover.show(
-            relativeTo: sender.bounds,
-            of: sender,
-            preferredEdge: .minY
-        )
+        sender.highlight(true)
 
-        popover.contentViewController?.view.window?.makeKey()
+        panel.orderFrontRegardless()
+        panel.makeKey()
+
+        isPanelPresented = true
     }
 
-    private func closePopover(_ sender: Any? = nil) {
-        guard popover.isShown else {
+    private func closePanel() {
+        guard let panel else {
             return
         }
 
-        popover.contentViewController?.view.window?.makeFirstResponder(nil)
+        panel.makeFirstResponder(nil)
+        panel.orderOut(nil)
 
-        popover.performClose(sender)
+        isPanelPresented = false
+        statusItem.button?.highlight(false)
     }
 
     private lazy var contextMenu: NSMenu = {
@@ -218,13 +262,12 @@ final class MenuBarController: NSObject, MenuBarControlling {
     }
 
     private func showContextMenu(relativeTo sender: NSStatusBarButton) {
-        if popover.isShown {
-            popover.contentViewController?.view.window?.makeFirstResponder(nil)
-
-            closePopover()
-        }
+        closePanel()
 
         sender.highlight(true)
+        defer {
+            sender.highlight(false)
+        }
 
         contextMenu.popUp(
             positioning: nil,
@@ -234,8 +277,6 @@ final class MenuBarController: NSObject, MenuBarControlling {
             ),
             in: sender
         )
-
-        sender.highlight(false)
     }
 
     @objc
@@ -246,9 +287,9 @@ final class MenuBarController: NSObject, MenuBarControlling {
         alert.alertStyle = .warning
         alert.messageText = "Quit DAWN Agent?"
         alert.informativeText = """
-        DAWN will stop managing your workspaces and its menu bar item will disappear. \
-        Because DAWN Agent is a login item, it will start again the next time you sign in.
-        """
+            DAWN will stop managing your workspaces and its menu bar item will disappear. \
+            Because DAWN Agent is a login item, it will start again the next time you sign in.
+            """
 
         let quitButton = alert.addButton(withTitle: "Quit")
         quitButton.hasDestructiveAction = true
@@ -264,12 +305,19 @@ final class MenuBarController: NSObject, MenuBarControlling {
     }
 }
 
-extension MenuBarController: NSPopoverDelegate {
-    func popoverWillClose(_ notification: Notification) {
-        isClosing = true
-    }
+extension MenuBarController: NSWindowDelegate {
+    func windowDidResignKey(_ notification: Notification) {
+        guard let panel,
+              let window = notification.object as? NSWindow,
+              window === panel, isPanelPresented
+        else {
+            return
+        }
 
-    func popoverDidClose(_ notification: Notification) {
-        isClosing = false
+        guard panel.attachedSheet == nil else {
+            return
+        }
+
+        closePanel()
     }
 }

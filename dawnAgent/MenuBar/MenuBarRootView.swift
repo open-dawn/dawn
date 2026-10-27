@@ -27,30 +27,58 @@ struct MenuBarRootView: View {
     @State private var route: MenuBarRoute = .contextList
     @State private var openingRoute: DawnAppRoute?
 
+    var body: some View {
+        Group {
+            switch route {
+            case .contextList:
+                TimelineView(.periodic(from: .now, by: 60)) { timeline in
+                    contextList(relativeTo: timeline.date)
+                }
+            case .contextCreation:
+                ContextCreationFlowView {
+                    route = .contextList
+                }
+            }
+        }
+        .background {
+            DawnColors.primaryBackground
+                .ignoresSafeArea()
+        }
+    }
+}
+
+// MARK: - Context list layout
+
+extension MenuBarRootView {
+    private var activeContext: WorkspaceContext? {
+        guard let activeContextID = workspace.activeContextID else {
+            return nil
+        }
+
+        return workspace.contexts.first {
+            $0.id == activeContextID
+        }
+    }
+
+    private var inactiveContexts: [WorkspaceContext] {
+        workspace.contexts.filter {
+            $0.id != workspace.activeContextID
+        }
+    }
+
     private var isPerformingOperation: Bool {
         activatingContextID != nil || openingRoute != nil
     }
 
-    var body: some View {
-        switch route {
-        case .contextList:
-            TimelineView(.periodic(from: .now, by: 60)) { timeline in
-                contextList(relativeTo: timeline.date)
-            }
-        case .contextCreation:
-            ContextCreationFlowView {
-                route = .contextList
-            }
-        }
-    }
-
     private func contextList(relativeTo now: Date) -> some View {
-        VStack(alignment: .leading, spacing: 12) {
+        VStack(alignment: .leading, spacing: 0) {
             menuHeader
-            contextsHeader
-            contextsContent(relativeTo: now)
+                .padding(.horizontal, 16)
+                .padding(.top, 16)
+                .padding(.bottom, 4)
+
+            contextsScrollView(relativeTo: now)
         }
-        .padding(16)
         .frame(width: 320)
         .alert(
             "Couldn't Complete Action",
@@ -98,25 +126,36 @@ struct MenuBarRootView: View {
         }
     }
 
-    private var contextsHeader: some View {
-        // PIN-122: If there is a active context, it should appear here above the list
+    private func contextsScrollView(relativeTo now: Date) -> some View {
+        ScrollView {
+            LazyVStack(alignment: .leading, spacing: 4, pinnedViews: [.sectionHeaders]) {
+                if let activeContext {
+                    contextCard(for: activeContext, relativeTo: now)
+                        .padding(.vertical, 12)
+                }
 
-        HStack(alignment: .center) {
+                Section {
+                    contextsContent(relativeTo: now)
+                } header: {
+                    contextsSectionHeader
+                }
+            }
+            .padding(.horizontal, 16)
+            .padding(.bottom, 16)
+        }
+        .frame(maxHeight: 380)
+    }
+
+    private var contextsSectionHeader: some View {
+        HStack {
             Text("Contexts")
                 .font(DawnTextStyle.sectionLabel)
 
             Spacer()
-
-            DButton(
-                style: .compactLink,
-                action: {
-                    // PIN-122: Open dawnApp in current/latest context settings
-                },
-                content: {
-                    Text("view in app")
-                }
-            )
         }
+        .padding(.vertical, 8)
+        .frame(maxWidth: .infinity)
+        .background(DawnColors.primaryBackground)
     }
 
     @ViewBuilder
@@ -127,17 +166,24 @@ struct MenuBarRootView: View {
                 systemImage: "square.stack",
                 description: Text("Create a context to see it here.")
             )
+            .frame(maxWidth: .infinity)
+        } else if inactiveContexts.isEmpty {
+            ContentUnavailableView(
+                "No other contexts",
+                systemImage: "square.stack"
+            )
+            .frame(maxWidth: .infinity)
         } else {
-            ScrollView {
-                LazyVStack(spacing: 4) {
-                    ForEach(workspace.contexts) { context in
-                        contextCard(for: context, relativeTo: now)
-                    }
-                }
+            ForEach(inactiveContexts) { context in
+                contextCard(for: context, relativeTo: now)
             }
-            .frame(maxHeight: 280)
         }
     }
+}
+
+// MARK: - Context cards
+
+extension MenuBarRootView {
 
     private func contextCard(for context: WorkspaceContext, relativeTo now: Date) -> some View {
         let contextRoute = DawnAppRoute.context(context.id)
@@ -162,12 +208,13 @@ struct MenuBarRootView: View {
         let status: ContextCardModel.Status
 
         if workspace.activeContextID == context.id {
-            let activityText = workspace.activeSince.map {
-                activityTextFormatter.activeText(
-                    since: $0,
-                    relativeTo: now
-                )
-            } ?? "In use"
+            let activityText =
+                workspace.activeSince.map {
+                    activityTextFormatter.activeText(
+                        since: $0,
+                        relativeTo: now
+                    )
+                } ?? "In use"
 
             status = .active(activityText: activityText)
         } else {
@@ -212,7 +259,11 @@ struct MenuBarRootView: View {
             icon: icon
         )
     }
+}
 
+// MARK: - Actions
+
+extension MenuBarRootView {
     private func handle(_ action: ContextCardAction, for context: WorkspaceContext) {
         switch action {
         case .activate:

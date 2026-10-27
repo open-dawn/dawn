@@ -52,9 +52,17 @@ public struct ContextCard: View {
                     contextSymbol
 
                     VStack(alignment: .leading, spacing: 3) {
-                        Text(model.name)
-                            .font(DawnTextStyle.contextTitle)
-                            .lineLimit(1)
+                        HStack {
+                            Text(model.name)
+                                .font(DawnTextStyle.contextTitle)
+                                .lineLimit(1)
+
+                            Spacer()
+
+                            trailingControl
+                                .frame(width: 24)
+
+                        }
 
                         statusContent
 
@@ -63,7 +71,6 @@ public struct ContextCard: View {
                         }
                     }
 
-                    Spacer(minLength: 8)
                 }
                 .contentShape(Rectangle())
             }
@@ -71,13 +78,6 @@ public struct ContextCard: View {
             .disabled(isLoading)
             .accessibilityLabel(model.name)
             .accessibilityValue(statusAccessibilityValue)
-
-            VStack {
-                trailingControl
-                    .frame(width: 24)
-
-                Spacer()
-            }
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 16)
