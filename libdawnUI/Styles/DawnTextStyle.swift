@@ -62,4 +62,8 @@ public enum DawnTextStyle {
 
     public static let sidebarWarning: Font = .system(size: 11, weight: .bold)
     public static let sidebarChevron: Font = .system(size: 10, weight: .semibold)
+
+    // MARK: - Text Field
+
+    public static let textFieldSecondaryIcon: Font = .system(size: 12, weight: .bold)
 }

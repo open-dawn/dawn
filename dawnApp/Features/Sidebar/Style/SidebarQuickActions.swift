@@ -75,7 +75,7 @@ struct SidebarQuickActions: View {
         .frame(minHeight: SidebarMetrics.controlHeight)
         .background {
             RoundedRectangle(cornerRadius: SidebarMetrics.cornerRadius, style: .continuous)
-                .fill(DawnColors.sidebarSearchField)
+                .fill(DawnColors.textFieldInset)
         }
     }
 
