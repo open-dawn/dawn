@@ -1,7 +1,6 @@
 import Foundation
-import Testing
-
 @testable import libdawn
+import Testing
 
 @Suite("Event")
 struct EventTests {
@@ -59,6 +58,14 @@ struct EventTests {
                 ),
                 kind: .menuBarVisibilityMutationAcknowledged
             ),
+            (
+                event: Event.getSettings(GetSettingsEvent()),
+                kind: EventKind.getSettings
+            ),
+            (
+                event: Event.settingsFetched(SettingsFetchedEvent(settings: Settings())),
+                kind: EventKind.settingsFetched
+            )
         ]
     )
     func exposesKind(_ eventWithKind: (event: Event, kind: EventKind)) {
@@ -89,6 +96,8 @@ struct EventTests {
             .menuBarVisibilityMutationAcknowledged(.success(isVisible: false)),
             .menuBarVisibilityMutationAcknowledged(.failure(.persistence)),
             .menuBarVisibilityMutationAcknowledged(.failure(.unexpected)),
+            .getSettings(GetSettingsEvent()),
+            .settingsFetched(SettingsFetchedEvent(settings: Settings()))
         ]
     )
     func roundTripsThroughJSON(_ event: Event) throws {
