@@ -20,4 +20,8 @@ public enum EventKind: String, Codable, Sendable, Hashable, CaseIterable {
     case setMenuBarVisibility
     case menuBarVisibilityState
     case menuBarVisibilityMutationAcknowledged
+
+    // MARK: Settings
+    case getSettings
+    case settingsFetched
 }
