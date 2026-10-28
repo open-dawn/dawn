@@ -20,6 +20,9 @@ public enum Event: Codable, Sendable, Equatable {
     case getSettings(GetSettingsEvent)
     case settingsFetched(SettingsFetchedEvent)
 
+    case updateSettings(UpdateSettingsEvent)
+    case settingsMutationAcknowledgement(SettingsMutationAcknowledgement)
+
     public var kind: EventKind {
         switch self {
         case .debugPing: .debugPing
@@ -39,6 +42,8 @@ public enum Event: Codable, Sendable, Equatable {
         case .menuBarVisibilityMutationAcknowledged: .menuBarVisibilityMutationAcknowledged
         case .getSettings: .getSettings
         case .settingsFetched: .settingsFetched
+        case .updateSettings: .updateSettings
+        case .settingsMutationAcknowledgement: .settingsMutationAcknowledgement
         }
     }
 }

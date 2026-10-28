@@ -65,6 +65,14 @@ struct EventTests {
             (
                 event: Event.settingsFetched(SettingsFetchedEvent(settings: Settings())),
                 kind: EventKind.settingsFetched
+            ),
+            (
+                event: Event.settingsMutationAcknowledgement(SettingsMutationAcknowledgement.success),
+                kind: EventKind.settingsMutationAcknowledgement
+            ),
+            (
+                event: Event.updateSettings(UpdateSettingsEvent(settings: Settings())),
+                kind: EventKind.updateSettings
             )
         ]
     )
@@ -97,7 +105,9 @@ struct EventTests {
             .menuBarVisibilityMutationAcknowledged(.failure(.persistence)),
             .menuBarVisibilityMutationAcknowledged(.failure(.unexpected)),
             .getSettings(GetSettingsEvent()),
-            .settingsFetched(SettingsFetchedEvent(settings: Settings()))
+            .settingsFetched(SettingsFetchedEvent(settings: Settings())),
+            .settingsMutationAcknowledgement(SettingsMutationAcknowledgement.success),
+            .updateSettings(UpdateSettingsEvent(settings: Settings()))
         ]
     )
     func roundTripsThroughJSON(_ event: Event) throws {
