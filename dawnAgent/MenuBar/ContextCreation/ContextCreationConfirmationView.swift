@@ -24,6 +24,8 @@ struct ContextCreationConfirmationView: View {
                 .frame(width: 118, height: 147)
                 .accessibilityHidden(true)
 
+            Spacer()
+
             VStack(spacing: 6) {
                 DButton(style: .primary,action: onFinishAndSwitch) {
                     Text("Finish and switch")

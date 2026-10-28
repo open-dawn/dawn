@@ -46,6 +46,8 @@ struct ContextIdentityStepView: View {
                 symbolPicker
             }
 
+            Spacer()
+
             DButton(action: onNext) {
                 Text("Next")
                     .frame(maxWidth: .infinity)

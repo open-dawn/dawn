@@ -49,6 +49,8 @@ struct ContextApplicationsStepView: View {
             searchBar
             applicationGrid
 
+            Spacer()
+
             DButton(action: onNext) {
                 Text("Next")
                     .frame(maxWidth: .infinity)
@@ -75,6 +77,10 @@ struct ContextApplicationsStepView: View {
                 }
             }
         }
+        .frame(
+            height: 50,
+            alignment: .top
+        )
         .accessibilityLabel(selectionSummaryText)
     }
 

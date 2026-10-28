@@ -62,7 +62,11 @@ extension MenuBarContextListView {
 
             contextsScrollView(relativeTo: now)
         }
-        .frame(width: 320)
+        .frame(
+            maxWidth: .infinity,
+            maxHeight: .infinity,
+            alignment: .top
+        )
         .alert(
             "Couldn't Complete Action",
             isPresented: isShowingActivationError
@@ -147,7 +151,7 @@ extension MenuBarContextListView {
             .padding(.horizontal, 16)
             .padding(.bottom, 16)
         }
-        .frame(maxHeight: 380)
+        .frame(maxHeight: .infinity)
     }
 
     private var contextsSectionHeader: some View {

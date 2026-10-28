@@ -28,6 +28,8 @@ struct ContextOpeningBehaviorStepView: View {
             }
             .padding(.horizontal, 28)
 
+            Spacer()
+
             DButton(action: onFinish) {
                 Text("Finish")
                     .frame(maxWidth: .infinity)

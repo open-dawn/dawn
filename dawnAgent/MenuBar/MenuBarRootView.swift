@@ -42,6 +42,11 @@ struct MenuBarRootView: View {
                 })
             }
         }
+        .frame(
+            width: 360,
+            height: 600,
+            alignment: .top
+        )
         .background {
             DawnColors.primaryBackground
                 .ignoresSafeArea()

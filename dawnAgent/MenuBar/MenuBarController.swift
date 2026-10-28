@@ -267,23 +267,14 @@ extension MenuBarController {
     }
 
     private func synchronizePanelContentSize() {
-        guard let panel, let contentView = panel.contentViewController?.view else {
-            return
-        }
-
-        contentView.needsLayout = true
-        contentView.layoutSubtreeIfNeeded()
-
-        let fittingSize = contentView.fittingSize
-
-        guard fittingSize.height > 0 else {
+        guard let panel else {
             return
         }
 
         panel.setContentSize(
             NSSize(
-                width: 320,
-                height: ceil(fittingSize.height)
+                width: 360,
+                height: 600
             )
         )
 

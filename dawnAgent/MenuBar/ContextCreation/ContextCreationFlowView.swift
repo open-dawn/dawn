@@ -79,9 +79,10 @@ struct ContextCreationFlowView: View {
         VStack(spacing: 24) {
             header
             stepContent
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
         }
         .padding(16)
-        .frame(width: 320)
+        .frame(width: 320, height: 600)
         .alert("Couldn't Complete Context Creation", isPresented: isShowingOperationError) {
             Button("OK") {
                 operationError = nil
