@@ -601,8 +601,8 @@ struct SettingsStoreTests {
         #expect(await repository.savedDocuments.isEmpty)
     }
 
-    @Test("Set launch at login persists preference without changing contexts")
-    func launchAtLoginPreservesContexts() async throws {
+    @Test("Update settings persists launch at login without changing contexts")
+    func updateSettingsPreservesContexts() async throws {
         let context = WorkspaceContext(
             name: "Study",
             symbol: "book"
@@ -613,7 +613,7 @@ struct SettingsStoreTests {
         )
         let sut = try await SettingsStore(repository: repository)
 
-        try await sut.setLaunchAtLogin(true)
+        try await sut.updateSettings(Settings(launchAtLogin: true))
 
         let snapshot = await sut.snapshot()
         let savedDocuments = await repository.savedDocuments
@@ -623,13 +623,13 @@ struct SettingsStoreTests {
         #expect(savedDocuments == [snapshot])
     }
 
-    @Test("Set launch at login supports enabling and disabling")
-    func launchAtLoginCanBeToggled() async throws {
+    @Test("Update settings supports enabling and disabling launch at login")
+    func updateSettingsCanToggleLaunchAtLogin() async throws {
         let repository = SettingsRepositorySpy()
         let sut = try await SettingsStore(repository: repository)
 
-        try await sut.setLaunchAtLogin(true)
-        try await sut.setLaunchAtLogin(false)
+        try await sut.updateSettings(Settings(launchAtLogin: true))
+        try await sut.updateSettings(Settings(launchAtLogin: false))
 
         let snapshot = await sut.snapshot()
         let savedDocuments = await repository.savedDocuments
@@ -644,8 +644,8 @@ struct SettingsStoreTests {
         )
     }
 
-    @Test("Set launch at login leaves preference unchanged when persistence fails")
-    func failedLaunchAtLoginDoesNotMutate() async throws {
+    @Test("Failed settings update leaves the document unchanged")
+    func failedUpdateSettingsDoesNotMutate() async throws {
         let initialDocument = SettingsDocument.empty
         let repository = SettingsRepositorySpy(
             storedDocument: initialDocument,
@@ -654,10 +654,143 @@ struct SettingsStoreTests {
         let sut = try await SettingsStore(repository: repository)
 
         do {
-            try await sut.setLaunchAtLogin(true)
+            try await sut.updateSettings(Settings(launchAtLogin: true))
             Issue.record("Expected update to throw")
         } catch let error as TestError {
             #expect(error == .saveFailed)
+        } catch {
+            Issue.record("Unexpected error: \(error)")
+        }
+
+        #expect(await sut.snapshot() == initialDocument)
+        #expect(await repository.savedDocuments.isEmpty)
+    }
+
+    @Test("Update settings persists general settings without changing contexts")
+    func updateSettingsPersistsGeneralSettings() async throws {
+        let context = WorkspaceContext(
+            name: "Study",
+            symbol: "book"
+        )
+        let initialDocument = makeDocument(contexts: [context])
+        let repository = SettingsRepositorySpy(
+            storedDocument: initialDocument
+        )
+        let sut = try await SettingsStore(repository: repository)
+        let settings = Settings(
+            launchAtLogin: true,
+            showInMenuBar: false,
+            forceAppsToQuit: true,
+            analyticsEnabled: true,
+            protectedApps: [
+                ProtectedApplication(
+                    bundleIdentifier: "com.apple.Safari",
+                    displayName: "Safari"
+                )
+            ]
+        )
+
+        try await sut.updateSettings(settings)
+
+        let snapshot = await sut.snapshot()
+
+        #expect(snapshot.generalSettings == settings)
+        #expect(snapshot.contexts == [context])
+        #expect(await repository.savedDocuments == [snapshot])
+    }
+
+    @Test("Update settings accepts an empty protected app list")
+    func updateSettingsAcceptsEmptyProtectedApps() async throws {
+        let repository = SettingsRepositorySpy()
+        let sut = try await SettingsStore(repository: repository)
+        let settings = Settings(protectedApps: [])
+
+        try await sut.updateSettings(settings)
+
+        #expect(await sut.snapshot().generalSettings == settings)
+    }
+
+    @Test("Whitespace protected app name is rejected")
+    func emptyProtectedAppNameIsRejected() async throws {
+        let initialDocument = SettingsDocument.empty
+        let repository = SettingsRepositorySpy(storedDocument: initialDocument)
+        let sut = try await SettingsStore(repository: repository)
+
+        do {
+            try await sut.updateSettings(
+                Settings(
+                    protectedApps: [
+                        ProtectedApplication(
+                            bundleIdentifier: "com.apple.Safari",
+                            displayName: " \n "
+                        )
+                    ]
+                )
+            )
+            Issue.record("Expected update to throw")
+        } catch let error as SettingsStoreError {
+            #expect(error == .emptyApplicationDisplayName)
+        } catch {
+            Issue.record("Unexpected error: \(error)")
+        }
+
+        #expect(await sut.snapshot() == initialDocument)
+        #expect(await repository.savedDocuments.isEmpty)
+    }
+
+    @Test("Whitespace protected app bundle identifier is rejected")
+    func emptyProtectedAppBundleIdentifierIsRejected() async throws {
+        let initialDocument = SettingsDocument.empty
+        let repository = SettingsRepositorySpy(storedDocument: initialDocument)
+        let sut = try await SettingsStore(repository: repository)
+
+        do {
+            try await sut.updateSettings(
+                Settings(
+                    protectedApps: [
+                        ProtectedApplication(
+                            bundleIdentifier: " \n ",
+                            displayName: "Safari"
+                        )
+                    ]
+                )
+            )
+            Issue.record("Expected update to throw")
+        } catch let error as SettingsStoreError {
+            #expect(error == .emptyApplicationBundleIdentifier)
+        } catch {
+            Issue.record("Unexpected error: \(error)")
+        }
+
+        #expect(await sut.snapshot() == initialDocument)
+        #expect(await repository.savedDocuments.isEmpty)
+    }
+
+    @Test("Protected app bundle identifiers are rejected case-insensitively")
+    func duplicateProtectedAppBundleIdentifierIsRejected() async throws {
+        let initialDocument = SettingsDocument.empty
+        let repository = SettingsRepositorySpy(storedDocument: initialDocument)
+        let sut = try await SettingsStore(repository: repository)
+        let duplicateBundleID = "  COM.APPLE.SAFARI \n"
+
+        do {
+            try await sut.updateSettings(
+                Settings(
+                    protectedApps: [
+                        ProtectedApplication(
+                            bundleIdentifier: "com.apple.Safari",
+                            displayName: "Safari"
+                        ),
+                        ProtectedApplication(
+                            bundleIdentifier: duplicateBundleID,
+                            displayName: "Safari"
+                        )
+                    ]
+                )
+            )
+            Issue.record("Expected update to throw")
+        } catch let error as SettingsStoreError {
+            #expect(error == .duplicateApplication(bundleIdentifier: duplicateBundleID))
         } catch {
             Issue.record("Unexpected error: \(error)")
         }

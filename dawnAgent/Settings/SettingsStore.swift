@@ -94,15 +94,6 @@ actor SettingsStore {
         }
     }
 
-    @available(*, deprecated)
-    func setLaunchAtLogin(
-        _ enabled: Bool
-    ) async throws {
-        try await mutate { candidate in
-            candidate.generalSettings.launchAtLogin = enabled
-        }
-    }
-
     func updateSettings(_ settings: Settings) async throws {
         try await mutate { candidate in
             candidate.generalSettings = settings

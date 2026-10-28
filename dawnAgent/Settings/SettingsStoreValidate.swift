@@ -89,7 +89,9 @@ extension SettingsStore {
                 throw .emptyApplicationDisplayName
             }
 
-            guard applicationIdentifiers.insert(application.bundleIdentifier).inserted else {
+            let normalizedBundleIdentifier = trimmedBundleIdentifier.lowercased()
+
+            guard applicationIdentifiers.insert(normalizedBundleIdentifier).inserted else {
                 throw .duplicateApplication(bundleIdentifier: application.bundleIdentifier)
             }
         }
