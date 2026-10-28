@@ -33,10 +33,13 @@ public enum DawnColors {
     public static let primaryForeground = Color(red: 0xFF / 0xFF, green: 0xFF / 0xFF, blue: 0xFF / 0xFF) // #ffffff
     public static let secondaryForeground = Color(red: 0x70 / 0xFF, green: 0x70 / 0xFF, blue: 0x70 / 0xFF) // #707070
 
-    public static let dangerBackground = Color.red.opacity(0.3)
+    public static let dangerBackground = Color.red.opacity(0.15)
     public static let dangerForeground = Color.red
 
-    public static let warningBackground = Color.yellow.opacity(0.3)
+    public static let successBackground = Color.green.opacity(0.15)
+    public static let successForeground = Color.green
+
+    public static let warningBackground = Color.yellow.opacity(0.15)
     public static let warningForeground = Color.yellow
 
     // MARK: - Sidebar colors
@@ -74,5 +77,5 @@ public enum DawnColors {
         blue: 0x28 / 0xFF
     )
 
-    public static let sidebarSearchField = Color.black.opacity(0.25)
+    public static let textFieldInset = Color.black.opacity(0.25)
 }
