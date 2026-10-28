@@ -12,7 +12,6 @@ public enum Event: Codable, Sendable, Equatable {
     case contextsFetched(ContextsFetchedEvent)
 
     case availableContexts(AvailableContextsEvent)
-
     case contextMutationAcknowledged(ContextMutationAcknowledgement)
 
     case getMenuBarVisibility(GetMenuBarVisibilityEvent)
@@ -23,6 +22,9 @@ public enum Event: Codable, Sendable, Equatable {
     case getAccessibilityStatus(GetAccessibilityStatusEvent)
     case promptAccessibilityTrust(PromptAccessibilityTrustEvent)
     case accessibilityStatus(AccessibilityStatusEvent)
+
+    case getSettings(GetSettingsEvent)
+    case settingsFetched(SettingsFetchedEvent)
 
     public var kind: EventKind {
         switch self {
@@ -46,6 +48,8 @@ public enum Event: Codable, Sendable, Equatable {
         case .getAccessibilityStatus: .getAccessibilityStatus
         case .promptAccessibilityTrust: .promptAccessibilityTrust
         case .accessibilityStatus: .accessibilityStatus
+        case .getSettings: .getSettings
+        case .settingsFetched: .settingsFetched
         }
     }
 }

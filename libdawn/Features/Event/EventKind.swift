@@ -25,4 +25,8 @@ public enum EventKind: String, Codable, Sendable, Hashable, CaseIterable {
     case getAccessibilityStatus
     case promptAccessibilityTrust
     case accessibilityStatus
+
+    // MARK: Settings
+    case getSettings
+    case settingsFetched
 }
