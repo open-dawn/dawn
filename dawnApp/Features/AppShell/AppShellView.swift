@@ -65,6 +65,9 @@ struct AppShellView: View {
                     onCreateContext: { viewModel.presentContextCreator() },
                     onDismissError: dismissSidebarError
                 )
+                .background {
+                    SplitViewDividerFix()
+                }
 
                 detail(for: selectedDestination)
                     .padding(24)

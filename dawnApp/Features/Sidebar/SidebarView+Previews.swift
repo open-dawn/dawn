@@ -123,6 +123,9 @@
                     onCreateContext: {},
                     onDismissError: {}
                 )
+                .background {
+                    SplitViewDividerFix()
+                }
 
                 previewDetail
             }
