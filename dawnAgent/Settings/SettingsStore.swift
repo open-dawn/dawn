@@ -104,15 +104,6 @@ actor SettingsStore {
         }
     }
 
-    @available(*, deprecated)
-    func setLaunchAtLogin(
-        _ enabled: Bool
-    ) async throws {
-        try await mutate { candidate in
-            candidate.generalSettings.launchAtLogin = enabled
-        }
-    }
-
     private func setArchived(_ isArchived: Bool, id: UUID) async throws {
         await acquireMutationAccess()
         defer { releaseMutationAccess() }

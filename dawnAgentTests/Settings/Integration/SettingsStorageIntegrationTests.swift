@@ -59,7 +59,7 @@ struct SettingsStorageIntegrationTests {
 
         try await firstStore.updateContext(updatedStudy)
         try await firstStore.deleteContext(id: games.id)
-        try await firstStore.setLaunchAtLogin(true)
+        try await firstStore.updateSettings(Settings(launchAtLogin: true))
 
         let expectedDocument = await firstStore.snapshot()
 
