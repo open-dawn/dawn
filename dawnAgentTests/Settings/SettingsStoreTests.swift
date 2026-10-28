@@ -915,6 +915,130 @@ struct SettingsStoreTests {
         )
     }
 
+    @Test("Menu bar is visible by default")
+    func menuBarIsVisibleByDefault() {
+        #expect(Settings().showInMenuBar)
+    }
+
+    @Test("Legacy settings default menu bar visibility to true")
+    func legacySettingsDefaultToVisible() throws {
+        let data = Data(
+            """
+            {
+            "launchAtLogin": false
+            }
+            """.utf8
+        )
+
+        let settings = try JSONDecoder().decode(
+            Settings.self,
+            from: data
+        )
+
+        #expect(settings.showInMenuBar)
+    }
+
+    @Test("Disabling menu bar persists and preserves contexts")
+    func disablingMenuBarPersists() async throws {
+        let context = WorkspaceContext(
+            name: "Study",
+            symbol: "book"
+        )
+
+        let initialDocument = SettingsDocument(
+            schemaVersion: SettingsDocument.currentSchemaVersion,
+            contexts: [context],
+            generalSettings: Settings(showInMenuBar: true)
+        )
+
+        let repository = SettingsRepositorySpy(
+            storedDocument: initialDocument
+        )
+
+        let sut = try await SettingsStore(
+            repository: repository
+        )
+
+        try await sut.setMenuBarVisible(false)
+
+        let snapshot = await sut.snapshot()
+        let savedDocuments = await repository.savedDocuments
+
+        #expect(!snapshot.generalSettings.showInMenuBar)
+        #expect(snapshot.contexts == [context])
+        #expect(savedDocuments == [snapshot])
+    }
+
+    @Test("Menu bar can be enabled again")
+    func enablingMenuBarPersists() async throws {
+        let initialDocument = SettingsDocument(
+            schemaVersion: SettingsDocument.currentSchemaVersion,
+            contexts: [],
+            generalSettings: Settings(showInMenuBar: false)
+        )
+
+        let repository = SettingsRepositorySpy(
+            storedDocument: initialDocument
+        )
+
+        let sut = try await SettingsStore(
+            repository: repository
+        )
+
+        try await sut.setMenuBarVisible(true)
+
+        let snapshot = await sut.snapshot()
+
+        #expect(snapshot.generalSettings.showInMenuBar)
+        #expect(
+            await repository.savedDocuments == [snapshot]
+        )
+    }
+
+    @Test("Setting existing menu bar visibility does not save")
+    func unchangedMenuBarVisibilityDoesNotSave() async throws {
+        let initialDocument = SettingsDocument.empty
+
+        let repository = SettingsRepositorySpy(
+            storedDocument: initialDocument
+        )
+
+        let sut = try await SettingsStore(
+            repository: repository
+        )
+
+        try await sut.setMenuBarVisible(true)
+
+        #expect(await sut.snapshot() == initialDocument)
+        #expect(await repository.savedDocuments.isEmpty)
+    }
+
+    @Test("Menu bar persistence failure preserves previous value")
+    func failedMenuBarVisibilityUpdateDoesNotMutate() async throws {
+        let initialDocument = SettingsDocument.empty
+
+        let repository = SettingsRepositorySpy(
+            storedDocument: initialDocument,
+            saveError: TestError.saveFailed
+        )
+
+        let sut = try await SettingsStore(
+            repository: repository
+        )
+
+        do {
+            try await sut.setMenuBarVisible(false)
+            Issue.record("Expected update to throw")
+        } catch let error as TestError {
+            #expect(error == .saveFailed)
+        } catch {
+            Issue.record("Unexpected error: \(error)")
+        }
+
+        #expect(await sut.snapshot() == initialDocument)
+        #expect(await repository.savedDocuments.isEmpty)
+    }
+
     private func makeDocument(
         contexts: [WorkspaceContext]
     ) -> SettingsDocument {

@@ -6,6 +6,10 @@ final class ContextManager: WorkspaceManaging {
     private let store: SettingsStore
     private let snapshotPublisher: ContextSnapshotPublishing
 
+    var menuBarVisibilityStore: any MenuBarVisibilityStoring {
+        store
+    }
+
     init(
         repository: any SettingsRepository = UserDefaultsSettingsRepository(),
         snapshotPublisher: ContextSnapshotPublishing

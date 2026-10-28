@@ -10,13 +10,26 @@ import SwiftUI
 
 @MainActor
 protocol MenuBarControlling: AnyObject {
+    var isVisible: Bool { get }
+
+    func setVisible(_ isVisible: Bool)
     func stop()
 }
 
 @MainActor
+protocol StatusBarProviding: AnyObject {
+    func statusItem(withLength length: CGFloat)
+        -> NSStatusItem
+
+    func removeStatusItem(_ item: NSStatusItem)
+}
+
+extension NSStatusBar: StatusBarProviding {}
+
+@MainActor
 final class MenuBarController: NSObject, MenuBarControlling {
-    private let statusBar: NSStatusBar
-    private let statusItem: NSStatusItem
+    private let statusBar: any StatusBarProviding
+    private var statusItem: NSStatusItem?
     private let appOpener: any DawnAppOpening
     private var panel: MenuBarPanel?
     private var hostingController: NSHostingController<MenuBarRootView>?
@@ -24,21 +37,60 @@ final class MenuBarController: NSObject, MenuBarControlling {
     private var isStopped = false
     private var isPanelPresented = false
 
+    var isVisible: Bool {
+        statusItem != nil
+    }
+
     init(
         workspace: WorkspaceRuntime,
-        statusBar: NSStatusBar = .system,
+        initiallyVisible: Bool = true,
+        statusBar: any StatusBarProviding = NSStatusBar.system,
         appOpener: any DawnAppOpening = DawnAppOpener()
     ) {
         self.statusBar = statusBar
-        self.statusItem = statusBar.statusItem(
-            withLength: NSStatusItem.squareLength
-        )
         self.appOpener = appOpener
 
         super.init()
 
-        configureStatusItem()
         configurePanel(workspace: workspace)
+        setVisible(initiallyVisible)
+    }
+
+    func setVisible(_ isVisible: Bool) {
+        guard !isStopped else {
+            return
+        }
+
+        if isVisible {
+            installStatusItemIfNeeded()
+        } else {
+            removeStatusItemIfNeeded()
+        }
+    }
+
+    private func installStatusItemIfNeeded() {
+        guard statusItem == nil else {
+            return
+        }
+
+        let statusItem = statusBar.statusItem(withLength: NSStatusItem.squareLength)
+
+        self.statusItem = statusItem
+        configureStatusItem(statusItem)
+    }
+
+    private func removeStatusItemIfNeeded() {
+        guard let statusItem else {
+            return
+        }
+
+        closePanel()
+
+        statusItem.button?.target = nil
+        statusItem.button?.action = nil
+
+        statusBar.removeStatusItem(statusItem)
+        self.statusItem = nil
     }
 
     func stop() {
@@ -48,20 +100,15 @@ final class MenuBarController: NSObject, MenuBarControlling {
 
         isStopped = true
 
-        closePanel()
+        removeStatusItemIfNeeded()
 
         panel?.delegate = nil
         panel?.contentViewController = nil
         panel = nil
         hostingController = nil
-
-        statusItem.button?.target = nil
-        statusItem.button?.action = nil
-
-        statusBar.removeStatusItem(statusItem)
     }
 
-    private func configureStatusItem() {
+    private func configureStatusItem(_ statusItem: NSStatusItem) {
         guard let button = statusItem.button else {
             return
         }
@@ -93,6 +140,102 @@ final class MenuBarController: NSObject, MenuBarControlling {
         }
     }
 
+    private lazy var contextMenu: NSMenu = {
+        let menu = NSMenu()
+        menu.autoenablesItems = false
+
+        let openAppItem = NSMenuItem(
+            title: "Open DAWN",
+            action: #selector(openDawnApp),
+            keyEquivalent: ""
+        )
+        openAppItem.target = self
+        openAppItem.isEnabled = true
+
+        let quitItem = NSMenuItem(
+            title: "Quit DAWN Agent...",
+            action: #selector(confirmQuit),
+            keyEquivalent: ""
+        )
+        quitItem.target = self
+        quitItem.isEnabled = true
+
+        menu.addItem(openAppItem)
+        menu.addItem(.separator())
+        menu.addItem(quitItem)
+
+        return menu
+    }()
+
+    @objc
+    private func openDawnApp() {
+        Task {
+            do {
+                try await appOpener.open(.application)
+            } catch {
+                presentOpenAppError(error)
+            }
+        }
+    }
+
+    private func presentOpenAppError(_ error: Error) {
+        NSApp.activate()
+
+        let alert = NSAlert()
+        alert.alertStyle = .warning
+        alert.messageText = "Couldn't Open DAWN"
+        alert.informativeText = error.localizedDescription
+        alert.addButton(withTitle: "OK")
+        alert.runModal()
+    }
+
+    private func showContextMenu(relativeTo sender: NSStatusBarButton) {
+        closePanel()
+
+        sender.highlight(true)
+        defer {
+            sender.highlight(false)
+        }
+
+        contextMenu.popUp(
+            positioning: nil,
+            at: NSPoint(
+                x: sender.bounds.minX,
+                y: sender.bounds.minY
+            ),
+            in: sender
+        )
+    }
+
+    @objc
+    private func confirmQuit() {
+        NSApp.activate()
+
+        let alert = NSAlert()
+        alert.alertStyle = .warning
+        alert.messageText = "Quit DAWN Agent?"
+        alert.informativeText = """
+            DAWN will stop managing your workspaces and its menu bar item will disappear. \
+            Because DAWN Agent is a login item, it will start again the next time you sign in.
+            """
+
+        let quitButton = alert.addButton(withTitle: "Quit")
+        quitButton.hasDestructiveAction = true
+
+        let cancelButton = alert.addButton(withTitle: "Cancel")
+        cancelButton.keyEquivalent = "\u{1b}"
+
+        guard alert.runModal() == .alertFirstButtonReturn else {
+            return
+        }
+
+        NSApp.terminate(nil)
+    }
+}
+
+// MARK: Panel stuff
+
+extension MenuBarController {
     private func configurePanel(
         workspace: WorkspaceRuntime
     ) {
@@ -209,99 +352,7 @@ final class MenuBarController: NSObject, MenuBarControlling {
         panel.orderOut(nil)
 
         isPanelPresented = false
-        statusItem.button?.highlight(false)
-    }
-
-    private lazy var contextMenu: NSMenu = {
-        let menu = NSMenu()
-        menu.autoenablesItems = false
-
-        let openAppItem = NSMenuItem(
-            title: "Open DAWN",
-            action: #selector(openDawnApp),
-            keyEquivalent: ""
-        )
-        openAppItem.target = self
-        openAppItem.isEnabled = true
-
-        let quitItem = NSMenuItem(
-            title: "Quit DAWN Agent...",
-            action: #selector(confirmQuit),
-            keyEquivalent: ""
-        )
-        quitItem.target = self
-        quitItem.isEnabled = true
-
-        menu.addItem(openAppItem)
-        menu.addItem(.separator())
-        menu.addItem(quitItem)
-
-        return menu
-    }()
-
-    @objc
-    private func openDawnApp() {
-        Task {
-            do {
-                try await appOpener.open(.application)
-            } catch {
-                presentOpenAppError(error)
-            }
-        }
-    }
-
-    private func presentOpenAppError(_ error: Error) {
-        NSApp.activate()
-
-        let alert = NSAlert()
-        alert.alertStyle = .warning
-        alert.messageText = "Couldn't Open DAWN"
-        alert.informativeText = error.localizedDescription
-        alert.addButton(withTitle: "OK")
-        alert.runModal()
-    }
-
-    private func showContextMenu(relativeTo sender: NSStatusBarButton) {
-        closePanel()
-
-        sender.highlight(true)
-        defer {
-            sender.highlight(false)
-        }
-
-        contextMenu.popUp(
-            positioning: nil,
-            at: NSPoint(
-                x: sender.bounds.minX,
-                y: sender.bounds.minY
-            ),
-            in: sender
-        )
-    }
-
-    @objc
-    private func confirmQuit() {
-        NSApp.activate()
-
-        let alert = NSAlert()
-        alert.alertStyle = .warning
-        alert.messageText = "Quit DAWN Agent?"
-        alert.informativeText = """
-            DAWN will stop managing your workspaces and its menu bar item will disappear. \
-            Because DAWN Agent is a login item, it will start again the next time you sign in.
-            """
-
-        let quitButton = alert.addButton(withTitle: "Quit")
-        quitButton.hasDestructiveAction = true
-
-        let cancelButton = alert.addButton(withTitle: "Cancel")
-        cancelButton.keyEquivalent = "\u{1b}"
-
-        guard alert.runModal() == .alertFirstButtonReturn else {
-            return
-        }
-
-        NSApp.terminate(nil)
+        statusItem?.button?.highlight(false)
     }
 }
 

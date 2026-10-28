@@ -2,14 +2,21 @@ import AppKit
 import dawnLogging
 import libdawn
 
-typealias WorkspaceRuntimeFactory = @MainActor (EventBus) async throws -> WorkspaceRuntime
-typealias MenuBarControllerFactory = @MainActor (WorkspaceRuntime) -> any MenuBarControlling
+struct AgentRuntimeComponents {
+    let workspace: WorkspaceRuntime
+
+    let menuBarVisibilityStore: any MenuBarVisibilityStoring
+}
+
+typealias AgentRuntimeFactory = @MainActor (EventBus) async throws -> AgentRuntimeComponents
+typealias MenuBarControllerFactory = @MainActor (WorkspaceRuntime, Bool) -> any MenuBarControlling
 
 @MainActor
 final class AppDelegate: NSObject, NSApplicationDelegate {
     private let eventBusService: any EventBusServicing
     private let makeMenuBarController: MenuBarControllerFactory
-    private let makeWorkspaceRuntime: WorkspaceRuntimeFactory
+    private let makeAgentRuntime: AgentRuntimeFactory
+    private var menuBarVisibilityListener: MenuBarVisibilityListener?
 
     private var menuBarController: (any MenuBarControlling)?
     private var workspaceRuntime: WorkspaceRuntime?
@@ -22,22 +29,23 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     init(
         eventBusService: any EventBusServicing = EventBusService(),
-        makeMenuBarController: @escaping MenuBarControllerFactory = {
-            MenuBarController(workspace: $0)
+        makeMenuBarController: @escaping MenuBarControllerFactory = { workspace, isVisible in
+            MenuBarController(workspace: workspace, initiallyVisible: isVisible)
         },
-        makeWorkspaceRuntime: @escaping WorkspaceRuntimeFactory = { bus in
+        makeAgentRuntime: @escaping AgentRuntimeFactory = { bus in
             let publisher = EventBusContextSnapshotPublisher(bus: bus)
 
             let contextManager = try await ContextManager(snapshotPublisher: publisher)
 
-            return WorkspaceRuntime(
-                contextManager: contextManager,
+            return AgentRuntimeComponents(
+                workspace: WorkspaceRuntime(contextManager: contextManager),
+                menuBarVisibilityStore: contextManager.menuBarVisibilityStore
             )
         }
     ) {
         self.eventBusService = eventBusService
         self.makeMenuBarController = makeMenuBarController
-        self.makeWorkspaceRuntime = makeWorkspaceRuntime
+        self.makeAgentRuntime = makeAgentRuntime
 
         super.init()
     }
@@ -79,6 +87,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         windowManagerListener = nil
         debugPingListener = nil
         workspaceRuntime = nil
+        menuBarVisibilityListener = nil
     }
 
     func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
@@ -116,9 +125,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 category: .appLifecycle
             )
 
-            let workspaceRuntime = try await makeWorkspaceRuntime(eventBusService.bus)
+            let components = try await makeAgentRuntime(eventBusService.bus)
+
+            let workspaceRuntime = components.workspace
 
             await workspaceRuntime.refresh()
+
+            let initialMenuBarVisibility = await components.menuBarVisibilityStore.menuBarIsVisible()
 
             try Task.checkCancellation()
 
@@ -141,12 +154,19 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
             let debugPingListener = DebugPingListener(bus: eventBusService.bus)
 
-            let menuBarController = makeMenuBarController(workspaceRuntime)
+            let menuBarController = makeMenuBarController(workspaceRuntime, initialMenuBarVisibility)
+
+            let menuBarVisibilityListener = MenuBarVisibilityListener(
+                bus: eventBusService.bus,
+                store: components.menuBarVisibilityStore,
+                menuBarController: menuBarController
+            )
 
             self.workspaceRuntime = workspaceRuntime
             self.windowManagerListener = windowManagerListener
             self.debugPingListener = debugPingListener
             self.menuBarController = menuBarController
+            self.menuBarVisibilityListener = menuBarVisibilityListener
 
             #log(
                 "Starting dawnAgent event bus",

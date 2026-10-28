@@ -9,6 +9,7 @@
 
 import AppKit
 import SwiftUI
+import libdawn
 
 private struct ContextApplicationsStepPreview: View {
     private let applications: [ContextCreationApplication]
@@ -61,6 +62,7 @@ private struct ContextApplicationsStepPreview: View {
     var body: some View {
         ContextApplicationsStepView(
             applications: applications,
+            isLoadingApplications: false,
             selectedApplicationIDs: $selectedApplicationIDs,
             onChooseApplication: {},
             onNext: {}
@@ -91,8 +93,14 @@ private func previewApplication(
         ) ??
         NSImage(size: NSSize(width: 43, height: 43))
 
+    let workspaceApplication = WorkspaceApplication(
+        bundleIdentifier: bundleIdentifier,
+        displayName: name,
+        applicationURL: applicationURL
+    )
+
     return ContextCreationApplication(
-        name: name,
+        application: workspaceApplication,
         icon: icon
     )
 }

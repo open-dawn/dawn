@@ -6,16 +6,17 @@
 //
 
 import AppKit
-import Foundation
+import libdawn
 
 struct ContextCreationApplication: Identifiable {
-    let id: UUID
-    let name: String
+    let application: WorkspaceApplication
     let icon: NSImage
 
-    init(id: UUID = UUID(), name: String, icon: NSImage) {
-        self.id = id
-        self.name = name
-        self.icon = icon
+    var id: UUID {
+        application.id
+    }
+
+    var name: String {
+        application.displayName
     }
 }
