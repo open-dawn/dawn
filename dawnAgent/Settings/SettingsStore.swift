@@ -94,11 +94,18 @@ actor SettingsStore {
         }
     }
 
+    @available(*, deprecated)
     func setLaunchAtLogin(
         _ enabled: Bool
     ) async throws {
         try await mutate { candidate in
             candidate.generalSettings.launchAtLogin = enabled
+        }
+    }
+
+    func updateSettings(_ settings: Settings) async throws {
+        try await mutate { candidate in
+            candidate.generalSettings = settings
         }
     }
 
@@ -170,6 +177,7 @@ actor SettingsStore {
     private static func validate(_ document: SettingsDocument) throws {
         var contextIdentifiers = Set<UUID>()
 
+        try validate(document.generalSettings)
         for context in document.contexts {
             guard contextIdentifiers.insert(context.id).inserted else {
                 throw SettingsStoreError.duplicateContextIdentifier(context.id)
@@ -233,6 +241,31 @@ actor SettingsStore {
 
         guard !trimmedDisplayName.isEmpty else {
             throw SettingsStoreError.emptyApplicationDisplayName
+        }
+    }
+
+    private static func validate(_ settings: Settings) throws {
+        var applicationIdentifiers = Set<String>()
+        for application in settings.protectedApps {
+            guard applicationIdentifiers.insert(application.bundleIdentifier).inserted else {
+                throw SettingsStoreError.duplicateApplicationIdentifier(
+                    application.id
+                )
+            }
+
+            let trimmedBundleIdentifier = application.bundleIdentifier
+                .trimmingCharacters(in: .whitespacesAndNewlines)
+
+            guard !trimmedBundleIdentifier.isEmpty else {
+                throw SettingsStoreError.emptyApplicationBundleIdentifier
+            }
+
+            let trimmedDisplayName = application.displayName
+                .trimmingCharacters(in: .whitespacesAndNewlines)
+
+            guard !trimmedDisplayName.isEmpty else {
+                throw SettingsStoreError.emptyApplicationDisplayName
+            }
         }
     }
 
