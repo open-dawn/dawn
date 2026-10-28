@@ -12,7 +12,7 @@ import libdawn
 @Suite("Shared Models Tests")
 struct SharedModelsTests {
     @Test("Workspace context survives a Codable round trip")
-    func workspaceContextCodableRoundTrip() async throws {
+    func workspaceContextCodableRoundTrip() throws {
         let application = WorkspaceApplication(
             bundleIdentifier: "com.apple.Safari",
             displayName: "Safari",
@@ -57,10 +57,37 @@ struct SharedModelsTests {
         #expect(decoded.transition.activationPolicy == .hide)
     }
 
-    @Test("General settings disable launch at login by default")
-    func generalSettingsDefaultValue() async throws {
+    @Test("General Settings survives a Codable round trip")
+    func settingsCodableRoundTrip() throws {
+        let app = ProtectedApplication(
+            bundleIdentifier: "com.apple.Safari",
+            displayName: "Safari"
+        )
+        let setting = Settings(
+            launchAtLogin: true,
+            showInMenuBar: false,
+            forceAppsToQuit: true,
+            analyticsEnabled: true,
+            protectedApps: [app]
+        )
+
+        let data = try JSONEncoder().encode(setting)
+        let decoded = try JSONDecoder().decode(
+            Settings.self,
+            from: data
+        )
+
+        #expect(decoded == setting)
+    }
+
+    @Test("General settings use expected defaults")
+    func generalSettingsDefaultValue() {
         let settings = Settings()
 
         #expect(settings.launchAtLogin == false)
+        #expect(settings.showInMenuBar)
+        #expect(settings.forceAppsToQuit == false)
+        #expect(settings.analyticsEnabled == false)
+        #expect(settings.protectedApps.isEmpty)
     }
 }

@@ -9,7 +9,6 @@ import Foundation
 import libdawn
 
 struct SettingsDocument: Codable, Equatable, Sendable {
-
     static let currentSchemaVersion = 2
 
     let schemaVersion: Int
