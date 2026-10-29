@@ -18,7 +18,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var startupTask: Task<Void, Never>?
     private var isStartingOrStarted = false
 
-    private var isPreparintToTerminate = false
+    private var isPreparingToTerminate = false
 
     init(
         eventBusService: any EventBusServicing = EventBusService(),
@@ -82,18 +82,18 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
-        guard !isPreparintToTerminate, let workspaceRuntime, workspaceRuntime.activeContextID != nil else {
+        guard !isPreparingToTerminate, let workspaceRuntime, workspaceRuntime.activeContextID != nil else {
             return .terminateNow
         }
 
-        isPreparintToTerminate = true
+        isPreparingToTerminate = true
 
         Task { @MainActor in
             do {
                 try await workspaceRuntime.stopActiveContext()
                 sender.reply(toApplicationShouldTerminate: true)
             } catch {
-                isPreparintToTerminate = false
+                isPreparingToTerminate = false
                 sender.reply(toApplicationShouldTerminate: false)
             }
         }
