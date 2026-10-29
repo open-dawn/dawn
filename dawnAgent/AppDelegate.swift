@@ -133,13 +133,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
             let initialMenuBarVisibility = await components.menuBarVisibilityStore.menuBarIsVisible()
 
-            try Task.checkCancellation()
-
-            if workspaceRuntime.activeContextID != nil {
-                try await workspaceRuntime.stopActiveContext()
-            }
-
-            try Task.checkCancellation()
+            try await reconcileRestoredActivity(in: workspaceRuntime)
 
             #log(
                 "Workspace runtime created",
@@ -185,5 +179,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             isStartingOrStarted = false
             throw error
         }
+    }
+
+    private func reconcileRestoredActivity(in workspace: WorkspaceRuntime) async throws {
+        try Task.checkCancellation()
+
+        if workspace.activeContextID != nil {
+            try await workspace.stopActiveContext()
+        }
+
+        try Task.checkCancellation()
     }
 }
