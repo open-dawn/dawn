@@ -9,9 +9,9 @@ struct WMTerminalCommandAction: WMAction {
         self.runner = runner
     }
 
-    func execute() throws(WMActionError) {
+    func execute() async throws(WMActionError) {
         do {
-            try runner.run(command: command)
+            try await runner.run(command: command)
         } catch let error as WMActionError {
             throw error
         } catch {

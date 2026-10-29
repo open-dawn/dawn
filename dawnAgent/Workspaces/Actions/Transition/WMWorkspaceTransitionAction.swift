@@ -18,7 +18,7 @@ struct DefaultWorkspaceTransitionPerformer: WorkspaceTransitionPerforming {
     }
 
     func runTerminalCommand(_ command: String) async throws {
-        try WMTerminalCommandAction(command: command).execute()
+        try await WMTerminalCommandAction(command: command).execute()
     }
 }
 

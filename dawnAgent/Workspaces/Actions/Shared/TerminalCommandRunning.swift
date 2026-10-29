@@ -1,24 +1,30 @@
 import Foundation
 
-protocol TerminalCommandRunning {
-    func run(command: String) throws
+protocol TerminalCommandRunning: Sendable {
+    func run(command: String) async throws
 }
 
 struct ProcessTerminalCommandRunner: TerminalCommandRunning {
-    func run(command: String) throws {
-        let process = Process()
+    func run(command: String) async throws {
+        try await Task.detached(priority: .userInitiated) {
+            try RunningProcessRegistry().start(command: command)
+        }
+        .value
+    }
+}
+
+private final class RunningProcessRegistry {
+    private let process = Process()
+
+    func start(command: String) throws {
         process.executableURL = URL(fileURLWithPath: "/bin/zsh")
         process.arguments = ["-lc", command]
+        process.standardInput = FileHandle.nullDevice
         process.standardOutput = FileHandle.nullDevice
         process.standardError = FileHandle.nullDevice
-
-        try process.run()
-        process.waitUntilExit()
-
-        guard process.terminationStatus == 0 else {
-            throw WMActionError.unknown(
-                reason: "Terminal command exited with status \(process.terminationStatus)"
-            )
+        process.terminationHandler = { [self] finished in
+            finished.terminationHandler = nil
         }
+        try process.run()
     }
 }
