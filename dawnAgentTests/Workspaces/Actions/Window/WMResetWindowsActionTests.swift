@@ -9,11 +9,11 @@ struct WMResetWindowsActionTests {
     @Test("hide policy hides non-member apps and skips protected ones")
     func hidePolicyHidesNonMembers() throws {
         let safari = FakeRunningApp(bundleIdentifier: "com.apple.Safari")
-        let safari = FakeRunningApp(bundleIdentifier: "com.apple.Safari")
+        let slack = FakeRunningApp(bundleIdentifier: "com.tinyspeck.slackmacgap")
         let finder = FakeRunningApp(bundleIdentifier: "com.apple.finder")
 
         let provider = FakeAppProvider()
-        provider.allApps = [safari, safari, finder]
+        provider.allApps = [safari, slack, finder]
 
         let action = WMResetWindowsAction(
             activationPolicy: .hide,
@@ -25,9 +25,9 @@ struct WMResetWindowsActionTests {
         try action.execute()
 
         #expect(safari.hideCallCount == 0)
-        #expect(safari.hideCallCount == 1)
+        #expect(slack.hideCallCount == 1)
         #expect(finder.hideCallCount == 0)
-        #expect(safari.terminateCallCount == 0)
+        #expect(slack.terminateCallCount == 0)
     }
 
     @Test("merge policy leaves running apps untouched")
@@ -52,10 +52,10 @@ struct WMResetWindowsActionTests {
     @Test("close policy terminates non-member apps")
     func closePolicyTerminatesNonMembers() throws {
         let safari = FakeRunningApp(bundleIdentifier: "com.apple.Safari")
-        let safari = FakeRunningApp(bundleIdentifier: "com.apple.Safari")
+        let slack = FakeRunningApp(bundleIdentifier: "com.tinyspeck.slackmacgap")
 
         let provider = FakeAppProvider()
-        provider.allApps = [safari, safari]
+        provider.allApps = [safari, slack]
 
         let action = WMResetWindowsAction(
             activationPolicy: .close,
@@ -67,8 +67,8 @@ struct WMResetWindowsActionTests {
         try action.execute()
 
         #expect(safari.terminateCallCount == 0)
-        #expect(safari.terminateCallCount == 1)
-        #expect(safari.hideCallCount == 0)
+        #expect(slack.terminateCallCount == 1)
+        #expect(slack.hideCallCount == 0)
     }
 
     @Test("hide policy ignores accessory and prohibited processes")

@@ -55,6 +55,7 @@ struct WMResetWindowsAction: WMAction {
         let preserved = keepBundleIdentifiers.union(protectedBundleIdentifiers)
 
         return provider.runningApplications().filter { app in
+            guard app.activationPolicy == .regular else { return false }
             guard let bundleIdentifier = app.bundleIdentifier else { return false }
             return !preserved.contains(bundleIdentifier)
         }
