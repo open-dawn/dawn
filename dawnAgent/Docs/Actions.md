@@ -74,9 +74,6 @@ Under `Workspaces/Actions/Window/`.
 | `WMResetWindowsAction` | `hide`: hide non-members; `close`: terminate them; `merge`: no-op | none (hide/terminate results are ignored) |
 | `WMTerminalCommandAction` | Runs the command through `TerminalCommandRunning` (default: `/bin/zsh -lc`) | `unknown` |
 | `WMSetFocusAction` | Best-effort enable of a macOS Focus mode (e.g. Do Not Disturb) via `shortcuts run` | `unknown` |
-
-macOS has no public API to set Focus. `setFocus` is the Focus mode / Shortcuts name: create a Shortcut with that name whose action is **Set Focus**, then dawn runs it. Failure is soft (logged, switch continues).
-=======
 | `WMResetWindowsAction` | `hide`: hide regular non-members; `close`: terminate them; `merge`: no-op. Accessory and prohibited processes are skipped | `noGUItoShow` when hide returns false; `permissionDenied` when terminate returns false |
 | `WMTerminalCommandAction` | Starts `/bin/zsh -lc` in the background and returns after launch. Stdin, stdout, and stderr are `/dev/null`. Exit status is not waited on | `unknown` (launch failure) |
 
