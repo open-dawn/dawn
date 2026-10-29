@@ -10,9 +10,18 @@ enum WMProtectedApplications {
             "com.apple.WindowManager",
         ]
 
+        identifiers.formUnion([
+            "app.opendawn.dawnApp",
+            "app.opendawn.dawnAgent",
+        ])
+
         if let own = Bundle.main.bundleIdentifier {
             identifiers.insert(own)
         }
+
+        #if DEBUG
+            identifiers.insert("com.apple.dt.Xcode")
+        #endif
 
         return identifiers
     }

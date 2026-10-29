@@ -4,7 +4,7 @@ public enum WMActionIdentifier {
     case hideApp(WorkspaceApplication) // Hide all windows of target app
     case openApp(WorkspaceApplication) // Open or Show target app
     case closeApp(WorkspaceApplication) // Close an target app
-    case resetWindows(ActivationPolicy, keep: [WorkspaceApplication]) // Apply activation policy to non-members
+    case resetWindows(WorkspaceActivationPolicy, keep: [WorkspaceApplication]) // Apply activation policy to non-members
     case terminalCommand(String) // Run a shell command
     case workspaceTransition(WorkspaceContext) // Full enter-workspace transition
 

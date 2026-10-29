@@ -71,4 +71,47 @@ struct WMResetWindowsActionTests {
         #expect(slack.terminateCallCount == 1)
         #expect(slack.hideCallCount == 0)
     }
+
+    @Test("hide policy ignores accessory and prohibited processes")
+    func hidePolicySkipsNonRegularApps() throws {
+        let menuExtra = FakeRunningApp(bundleIdentifier: "com.example.menu")
+        menuExtra.activationPolicy = .accessory
+        let background = FakeRunningApp(bundleIdentifier: "com.example.agent")
+        background.activationPolicy = .prohibited
+        let slack = FakeRunningApp(bundleIdentifier: "com.tinyspeck.slackmacgap")
+
+        let provider = FakeAppProvider()
+        provider.allApps = [menuExtra, background, slack]
+
+        let action = WMResetWindowsAction(
+            activationPolicy: .hide,
+            protectedBundleIdentifiers: [],
+            provider: provider
+        )
+
+        try action.execute()
+
+        #expect(menuExtra.hideCallCount == 0)
+        #expect(background.hideCallCount == 0)
+        #expect(slack.hideCallCount == 1)
+    }
+
+    @Test("hide policy throws when hide returns false")
+    func hideFailureThrows() {
+        let slack = FakeRunningApp(bundleIdentifier: "com.tinyspeck.slackmacgap")
+        slack.hideResult = false
+
+        let provider = FakeAppProvider()
+        provider.allApps = [slack]
+
+        let action = WMResetWindowsAction(
+            activationPolicy: .hide,
+            protectedBundleIdentifiers: [],
+            provider: provider
+        )
+
+        #expect(throws: WMActionError.noGUItoShow) {
+            try action.execute()
+        }
+    }
 }

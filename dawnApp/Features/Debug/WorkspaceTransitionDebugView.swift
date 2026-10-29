@@ -64,9 +64,9 @@ struct WorkspaceTransitionDebugView: View {
     private var transitionSection: some View {
         Section("Transition") {
             Picker("Activation policy", selection: $viewModel.activationPolicy) {
-                Text("Hide others").tag(ActivationPolicy.hide)
-                Text("Merge (open missing only)").tag(ActivationPolicy.merge)
-                Text("Close others").tag(ActivationPolicy.close)
+                Text("Hide others").tag(WorkspaceActivationPolicy.hide)
+                Text("Merge (open missing only)").tag(WorkspaceActivationPolicy.merge)
+                Text("Close others").tag(WorkspaceActivationPolicy.close)
             }
 
             TextField("Terminal command (optional)", text: $viewModel.terminalCommand)

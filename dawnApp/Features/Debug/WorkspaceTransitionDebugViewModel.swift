@@ -8,7 +8,7 @@ import libdawn
 final class WorkspaceTransitionDebugViewModel {
     private let applicationSelector: any ApplicationSelecting
 
-    var activationPolicy: ActivationPolicy = .hide
+    var activationPolicy: WorkspaceActivationPolicy = .hide
     var terminalCommand = ""
     var applications: [WorkspaceApplication] = []
     var cleanupAfterRun = true

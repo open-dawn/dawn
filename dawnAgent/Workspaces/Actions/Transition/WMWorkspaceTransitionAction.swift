@@ -3,13 +3,13 @@ import Foundation
 import libdawn
 
 protocol WorkspaceTransitionPerforming {
-    func resetWindows(policy: ActivationPolicy, keepApplications: [WorkspaceApplication]) async throws
+    func resetWindows(policy: WorkspaceActivationPolicy, keepApplications: [WorkspaceApplication]) async throws
     func openApp(_ app: WorkspaceApplication) async throws
     func runTerminalCommand(_ command: String) async throws
 }
 
 struct DefaultWorkspaceTransitionPerformer: WorkspaceTransitionPerforming {
-    func resetWindows(policy: ActivationPolicy, keepApplications: [WorkspaceApplication]) async throws {
+    func resetWindows(policy: WorkspaceActivationPolicy, keepApplications: [WorkspaceApplication]) async throws {
         try WMResetWindowsAction(activationPolicy: policy, keepApplications: keepApplications).execute()
     }
 
@@ -82,7 +82,7 @@ struct WMWorkspaceTransitionAction: WMAction {
 
     private func applicationsToOpen(
         _ applications: [WorkspaceApplication],
-        policy: ActivationPolicy
+        policy: WorkspaceActivationPolicy
     ) -> [WorkspaceApplication] {
         switch policy {
         case .hide, .close:

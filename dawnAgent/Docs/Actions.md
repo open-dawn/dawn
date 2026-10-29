@@ -43,9 +43,10 @@ public enum WMActionIdentifier {
 | `hideApp(app)` | `WMHideAppAction` | Hide all windows of the target app |
 | `openApp(app)` | `WMOpenAppAction` | Open or show the target app |
 | `closeApp(app)` | `WMCloseAppAction` | Close the target app |
-| `resetWindows(policy, keep:)` | `WMResetWindowsAction` | Apply `ActivationPolicy` to non-member apps (`hide` / `merge` / `close`) |
-| `terminalCommand(command)` | `WMTerminalCommandAction` | Run a shell command via `/bin/zsh -lc` |
-| `workspaceTransition(context)` | `WMWorkspaceTransitionAction` | Full enter-workspace flow from `WorkspaceTransition` |
+| `terminalCommand(command)` | `WMTerminalCommandAction` | Start a shell command in the background |
+| `workspaceTransition(context)` | `WMWorkspaceTransitionAction` | Full enter-workspace flow from `WorkspaceContext.transition` |
+| `resetWindows(policy, keep:)` | `WMResetWindowsAction` | Apply `WorkspaceActivationPolicy` to non-member apps (`hide` / `merge` / `close`) |
+| `terminalCommand(command)` | `WMTerminalCommandAction` | Start a shell command in the background |
 
 ```swift
 let id = WMActionIdentifier.openApp(safari)
@@ -71,15 +72,13 @@ Under `Workspaces/Actions/Window/`.
 | Type | Behavior | Typical errors |
 |------|----------|----------------|
 | `WMResetWindowsAction` | `hide`: hide non-members; `close`: terminate them; `merge`: no-op | none (hide/terminate results are ignored) |
-<<<<<<< HEAD
 | `WMTerminalCommandAction` | Runs the command through `TerminalCommandRunning` (default: `/bin/zsh -lc`) | `unknown` |
-||||||| parent of 52313ae (fix: documentation follows the new actions)
 | `WMSetFocusAction` | Best-effort enable of a macOS Focus mode (e.g. Do Not Disturb) via `shortcuts run` | `unknown` |
 
 macOS has no public API to set Focus. `setFocus` is the Focus mode / Shortcuts name: create a Shortcut with that name whose action is **Set Focus**, then dawn runs it. Failure is soft (logged, switch continues).
 =======
+| `WMResetWindowsAction` | `hide`: hide regular non-members; `close`: terminate them; `merge`: no-op. Accessory and prohibited processes are skipped | `noGUItoShow` when hide returns false; `permissionDenied` when terminate returns false |
 | `WMTerminalCommandAction` | Starts `/bin/zsh -lc` in the background and returns after launch. Stdin, stdout, and stderr are `/dev/null`. Exit status is not waited on | `unknown` (launch failure) |
->>>>>>> 52313ae (fix: documentation follows the new actions)
 
 ## Workspace Transition
 
@@ -87,7 +86,7 @@ macOS has no public API to set Focus. `setFocus` is the Focus mode / Shortcuts n
 
 ```swift
 public struct WorkspaceTransition: Codable, Sendable, Equatable {
-    public var activationPolicy: ActivationPolicy
+    public var activationPolicy: WorkspaceActivationPolicy
     public var terminalCommand: String?
 
     public static let `default` = WorkspaceTransition()
@@ -100,7 +99,7 @@ public struct WorkspaceTransition: Codable, Sendable, Equatable {
 | `terminalCommand` | Optional shell command after opens. Empty or `nil` is skipped. Failure is logged and the transition continues |
 | `terminalCommand` | Optional shell command after opens. Empty or `nil` is skipped. The command is started in the background; a launch failure is logged and the transition continues |
 
-`WMWorkspaceTransitionAction` takes a `WorkspaceContext` and runs reset → open → terminal. Each step is best-effort: errors are logged and later steps still run. Protected system apps (Finder, Dock, dawn itself, …) are never hidden or closed by reset. Merge uses `ApplicationProvider` to skip apps that already have a running instance.
+`WMWorkspaceTransitionAction` takes a `WorkspaceContext` and runs reset → open → terminal. Each step is best-effort: errors are logged and later steps still run. Reset only considers apps with the regular activation policy. It never hides or closes Finder, Dock, SystemUIServer, loginwindow, WindowManager, `app.opendawn.dawnApp` (DAWN), or `app.opendawn.dawnAgent`. Debug builds also spare Xcode (`com.apple.dt.Xcode`). Merge uses `ApplicationProvider` to skip apps that already have a running instance.
 
 To add a case and map it in `.action` see [How to Add an Action](#how-to-add-an-action).
 

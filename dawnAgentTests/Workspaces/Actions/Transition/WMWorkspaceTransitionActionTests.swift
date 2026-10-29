@@ -106,13 +106,13 @@ struct WMWorkspaceTransitionActionTests {
 }
 
 final class FakeWorkspaceTransitionPerformer: WorkspaceTransitionPerforming {
-    private(set) var resetPolicies: [ActivationPolicy] = []
+    private(set) var resetPolicies: [WorkspaceActivationPolicy] = []
     private(set) var openedApps: [WorkspaceApplication] = []
     private(set) var terminalCommands: [String] = []
 
     var terminalError: Error?
 
-    func resetWindows(policy: ActivationPolicy, keepApplications _: [WorkspaceApplication]) async throws {
+    func resetWindows(policy: WorkspaceActivationPolicy, keepApplications _: [WorkspaceApplication]) async throws {
         resetPolicies.append(policy)
     }
 

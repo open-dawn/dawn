@@ -3,6 +3,7 @@ import AppKit
 
 final class FakeRunningApp: RunningApplicationControlling {
     var bundleIdentifier: String?
+    var activationPolicy: NSApplication.ActivationPolicy = .regular
     var activateResult = true
     var terminateResult = true
     var hideResult = true

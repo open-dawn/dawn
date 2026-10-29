@@ -3,13 +3,13 @@ import Foundation
 import libdawn
 
 struct WMResetWindowsAction: WMAction {
-    let activationPolicy: ActivationPolicy
+    let activationPolicy: WorkspaceActivationPolicy
     let keepBundleIdentifiers: Set<String>
     let protectedBundleIdentifiers: Set<String>
     private let provider: ApplicationProvider
 
     init(
-        activationPolicy: ActivationPolicy = .hide,
+        activationPolicy: WorkspaceActivationPolicy = .hide,
         keepBundleIdentifiers: Set<String> = [],
         protectedBundleIdentifiers: Set<String> = WMProtectedApplications.bundleIdentifiers,
         provider: ApplicationProvider = SystemApplicationProvider()
@@ -21,7 +21,7 @@ struct WMResetWindowsAction: WMAction {
     }
 
     init(
-        activationPolicy: ActivationPolicy,
+        activationPolicy: WorkspaceActivationPolicy,
         keepApplications: [WorkspaceApplication],
         protectedBundleIdentifiers: Set<String> = WMProtectedApplications.bundleIdentifiers,
         provider: ApplicationProvider = SystemApplicationProvider()
@@ -39,12 +39,14 @@ struct WMResetWindowsAction: WMAction {
         case .merge:
             return
         case .hide:
-            for app in nonMemberRunningApplications() {
-                _ = app.hide()
+            let hidden = nonMemberRunningApplications().map { $0.hide() }
+            if hidden.contains(false) {
+                throw WMActionError.noGUItoShow
             }
         case .close:
-            for app in nonMemberRunningApplications() {
-                _ = app.terminate()
+            let terminated = nonMemberRunningApplications().map { $0.terminate() }
+            if terminated.contains(false) {
+                throw WMActionError.permissionDenied
             }
         }
     }
