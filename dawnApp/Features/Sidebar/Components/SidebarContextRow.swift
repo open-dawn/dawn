@@ -52,6 +52,7 @@ struct SidebarContextRow: View {
                 .font(DawnTextStyle.sidebarIcon)
                 .foregroundStyle(DawnColors.primaryForeground)
                 .frame(width: SidebarMetrics.iconSize, height: SidebarMetrics.iconSize)
+                .contentTransition(.symbolEffect)
 
             if state.isActive {
                 Circle()
