@@ -1,8 +1,8 @@
 # Actions
 
-Workspace actions in dawnAgent. They perform concrete AppKit side effects (open, hide, close apps; reset windows) for workspace switching and related flows.
+Workspace actions in dawnAgent. They perform concrete side effects (open, hide, close apps; reset windows; run a shell command; enter a workspace) for workspace switching and related flows.
 
-Shared models such as `WorkspaceApplication` live in **libdawn**. Actions themselves live only in dawnAgent under `Workspaces/Actions/`.
+Shared models such as `WorkspaceApplication`, `WorkspaceContext`, `WorkspaceTransition`, and `WorkspaceActivationPolicy` live in **libdawn**. Actions themselves live only in dawnAgent under `Workspaces/Actions/`.
 
 Import `@testable import dawnAgent` in tests; production code uses the action types through `WMActionIdentifier`.
 
@@ -32,7 +32,10 @@ Closed enum used as the public catalog and factory. Callers pick a case; `.actio
 public enum WMActionIdentifier {
     case hideApp(WorkspaceApplication)
     case openApp(WorkspaceApplication)
-    ...
+    case closeApp(WorkspaceApplication)
+    case resetWindows(WorkspaceActivationPolicy, keep: [WorkspaceApplication])
+    case terminalCommand(String)
+    case workspaceTransition(WorkspaceContext)
 
     var action: WMAction { get }
 }
@@ -43,10 +46,9 @@ public enum WMActionIdentifier {
 | `hideApp(app)` | `WMHideAppAction` | Hide all windows of the target app |
 | `openApp(app)` | `WMOpenAppAction` | Open or show the target app |
 | `closeApp(app)` | `WMCloseAppAction` | Close the target app |
-| `terminalCommand(command)` | `WMTerminalCommandAction` | Start a shell command in the background |
-| `workspaceTransition(context)` | `WMWorkspaceTransitionAction` | Full enter-workspace flow from `WorkspaceContext.transition` |
 | `resetWindows(policy, keep:)` | `WMResetWindowsAction` | Apply `WorkspaceActivationPolicy` to non-member apps (`hide` / `merge` / `close`) |
 | `terminalCommand(command)` | `WMTerminalCommandAction` | Start a shell command in the background |
+| `workspaceTransition(context)` | `WMWorkspaceTransitionAction` | Full enter-workspace flow from `WorkspaceContext.transition` |
 
 ```swift
 let id = WMActionIdentifier.openApp(safari)
@@ -62,7 +64,7 @@ Under `Workspaces/Actions/App/`. All conform to `WMAppAction`.
 | Type | Behavior | Typical errors |
 |------|----------|----------------|
 | `WMOpenAppAction` | Opens the app via `NSWorkspace` (`activates`, respects `createNewInstance`) | `invalidURL`, `notFound`, `permissionDenied`, `corruptedFile`, `unknown` |
-| `WMHideAppAction` | Finds a running instance by bundle id, activates, then hides | `notRunning` |
+| `WMHideAppAction` | Finds a running instance by bundle id, activates, then hides | `notRunning`, `noGUItoShow` |
 | `WMCloseAppAction` | Finds a running instance, activates, then terminates | `notRunning`, `permissionDenied` |
 
 ## Window Actions
@@ -71,15 +73,12 @@ Under `Workspaces/Actions/Window/`.
 
 | Type | Behavior | Typical errors |
 |------|----------|----------------|
-| `WMResetWindowsAction` | `hide`: hide non-members; `close`: terminate them; `merge`: no-op | none (hide/terminate results are ignored) |
-| `WMTerminalCommandAction` | Runs the command through `TerminalCommandRunning` (default: `/bin/zsh -lc`) | `unknown` |
-| `WMSetFocusAction` | Best-effort enable of a macOS Focus mode (e.g. Do Not Disturb) via `shortcuts run` | `unknown` |
-| `WMResetWindowsAction` | `hide`: hide regular non-members; `close`: terminate them; `merge`: no-op. Accessory and prohibited processes are skipped | `noGUItoShow` when hide returns false; `permissionDenied` when terminate returns false |
-| `WMTerminalCommandAction` | Starts `/bin/zsh -lc` in the background and returns after launch. Stdin, stdout, and stderr are `/dev/null`. Exit status is not waited on | `unknown` (launch failure) |
+| `WMResetWindowsAction` | `hide`: hide regular non-members; `close`: terminate them; `merge`: no-op. Accessory and prohibited processes, and apps with no bundle id, are skipped. Protected apps are always spared | `noGUItoShow` when any hide returns false; `permissionDenied` when any terminate returns false |
+| `WMTerminalCommandAction` | Starts `/bin/zsh -lc` in the background through `TerminalCommandRunning` and returns after launch. Stdin, stdout, and stderr are `/dev/null`. Exit status is not waited on | `unknown` (launch failure) |
 
 ## Workspace Transition
 
-`WorkspaceTransition` (libdawn) on each `WorkspaceContext` drives enter-workspace side effects:
+`WorkspaceTransition` (libdawn) on each `WorkspaceContext` drives enter-workspace side effects. Missing `transition` values decode as `.default`.
 
 ```swift
 public struct WorkspaceTransition: Codable, Sendable, Equatable {
@@ -93,10 +92,13 @@ public struct WorkspaceTransition: Codable, Sendable, Equatable {
 | Field | Behavior |
 |-------|----------|
 | `activationPolicy` | `hide` (default): hide non-members, then open every member; `merge`: leave others alone and only open members that are not already running; `close`: terminate non-members, then open every member |
-| `terminalCommand` | Optional shell command after opens. Empty or `nil` is skipped. Failure is logged and the transition continues |
 | `terminalCommand` | Optional shell command after opens. Empty or `nil` is skipped. The command is started in the background; a launch failure is logged and the transition continues |
 
-`WMWorkspaceTransitionAction` takes a `WorkspaceContext` and runs reset → open → terminal. Each step is best-effort: errors are logged and later steps still run. Reset only considers apps with the regular activation policy. It never hides or closes Finder, Dock, SystemUIServer, loginwindow, WindowManager, `app.opendawn.dawnApp` (DAWN), or `app.opendawn.dawnAgent`. Debug builds also spare Xcode (`com.apple.dt.Xcode`). Merge uses `ApplicationProvider` to skip apps that already have a running instance.
+`WMWorkspaceTransitionAction` (under `Workspaces/Actions/Transition/`) takes a `WorkspaceContext` and runs reset → open → terminal. Members are opened one at a time. Each step is best-effort: errors are logged and later steps still run.
+
+Reset only considers apps with the regular activation policy. It never hides or closes Finder, Dock, SystemUIServer, loginwindow, WindowManager, `app.opendawn.dawnApp` (DAWN), `app.opendawn.dawnAgent`, or the agent's own bundle id. Debug builds also spare Xcode (`com.apple.dt.Xcode`). Merge uses `ApplicationProvider` to skip apps that already have a running instance.
+
+`DefaultContextSwitching` runs this action for a context switch and waits for any in-flight switch to finish before starting the next one.
 
 To add a case and map it in `.action` see [How to Add an Action](#how-to-add-an-action).
 
@@ -130,10 +132,12 @@ Mirror the libdawn event workflow: one concrete type, register it in the catalog
 
 1. **Pick a folder** under `dawnAgent/Workspaces/Actions/`:
    - App-scoped → `App/` and conform to `WMAppAction`
-   - Window, terminal, or other → `Window/` (or a new domain folder) and conform to `WMAction`
-2. **Implement** `execute() async throws(WMActionError)`. Inject protocols (`ApplicationProvider`, `WorkspaceOpener`, or a new seam) instead of calling AppKit globals when the action needs to be unit-tested.
+   - Window or terminal → `Window/` and conform to `WMAction`
+   - Enter-workspace orchestration → `Transition/` and conform to `WMAction`
+   - Anything else → a new domain folder and conform to `WMAction`
+2. **Implement** `execute() async throws(WMActionError)`. Inject protocols (`ApplicationProvider`, `WorkspaceOpener`, `TerminalCommandRunning`, `WorkspaceTransitionPerforming`, or a new seam) instead of calling AppKit globals when the action needs to be unit-tested.
 3. **Add a case** to `WMActionIdentifier` and map it in `var action`.
-4. **Reuse** `WorkspaceApplication` (and other models) from libdawn. Do not redefine shared workspace models in dawnAgent.
+4. **Reuse** `WorkspaceApplication`, `WorkspaceContext`, and `WorkspaceTransition` from libdawn. Do not redefine shared workspace models in dawnAgent.
 5. **Add tests** under `dawnAgentTests/Workspaces/Actions/<Domain>/` (see below).
 
 Example skeleton:
@@ -147,7 +151,7 @@ struct WMMyAppAction: WMAppAction {
         // ...
     }
 
-    init(_ app: WorkspaceApplication, provider: ApplicationProvider = SystemApplicationProvider()) {
+    init(app: WorkspaceApplication, provider: ApplicationProvider = SystemApplicationProvider()) {
         self.app = app
         self.provider = provider
     }
@@ -161,7 +165,7 @@ case myApp(WorkspaceApplication)
 
 var action: WMAction {
     switch self {
-    case let .myApp(app): WMMyAppAction(app)
+    case let .myApp(app): WMMyAppAction(app: app)
     // ...
     }
 }
@@ -174,7 +178,6 @@ Tests live in `dawnAgentTests/Workspaces/Actions/`. Use Swift Testing (`@Suite`,
 ### Principles
 
 - **Do not** launch real apps or rely on the live desktop in unit tests.
-- Inject fakes at the seam (`WorkspaceOpener`, `ApplicationProvider`).
+- Inject fakes at the seam (`WorkspaceOpener`, `ApplicationProvider`, `TerminalCommandRunning`, `WorkspaceTransitionPerforming`).
 - Assert **typed** `WMActionError` cases with `#expect(throws:)`.
 - Cover both failure paths and at least one success path per action.
-
