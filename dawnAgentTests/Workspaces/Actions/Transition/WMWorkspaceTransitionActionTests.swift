@@ -1,7 +1,6 @@
-// CURSOR: NEED REVIEW
+@testable import dawnAgent
 import Foundation
 import libdawn
-@testable import dawnAgent
 import Testing
 
 @Suite("WMWorkspaceTransitionAction Testing")
