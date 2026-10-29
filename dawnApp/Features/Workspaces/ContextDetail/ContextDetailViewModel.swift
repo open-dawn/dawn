@@ -8,6 +8,7 @@ final class ContextDetailViewModel {
     private let saveDebounce: Duration
 
     private(set) var operationInProgress: UUID?
+    // swiftlint:disable:next todo
     // FIXME: Active context stays in this view model. dawnAgent records it on
     // WorkspaceRuntime.lastRequestedContextID for the in-process menu bar and
     // does not publish it, so another frontend only knows about activations it started.
