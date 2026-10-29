@@ -44,9 +44,8 @@ public enum WMActionIdentifier {
 | `openApp(app)` | `WMOpenAppAction` | Open or show the target app |
 | `closeApp(app)` | `WMCloseAppAction` | Close the target app |
 | `resetWindows(policy, keep:)` | `WMResetWindowsAction` | Apply `ActivationPolicy` to non-member apps (`hide` / `merge` / `close`) |
-| `setFocus(focusModeName:)` | `WMSetFocusAction` | Enable a macOS Focus mode if possible (via Shortcuts) |
-| `terminalCommand(command)` | `WMTerminalCommandAction` | Run a shell command via `/bin/zsh -lc` |
-| `workspaceTransition(context)` | `WMWorkspaceTransitionAction` | Full enter-workspace flow from `WorkspaceTransition` |
+| `terminalCommand(command)` | `WMTerminalCommandAction` | Run a shell command |
+| `workspaceTransition(context)` | `WMWorkspaceTransitionAction` | Full enter-workspace flow from `WorkspaceContext.transition` |
 
 ```swift
 let id = WMActionIdentifier.openApp(safari)
@@ -65,25 +64,34 @@ Under `Workspaces/Actions/App/`. All conform to `WMAppAction`.
 | `WMHideAppAction` | Finds a running instance by bundle id, activates, then hides | `notRunning` |
 | `WMCloseAppAction` | Finds a running instance, activates, then terminates | `notRunning`, `permissionDenied` |
 
-## System Actions
+## Window Actions
+
+Under `Workspaces/Actions/Window/`.
 
 | Type | Behavior | Typical errors |
 |------|----------|----------------|
-| `WMSetFocusAction` | Best-effort enable of a macOS Focus mode (e.g. Do Not Disturb) via `shortcuts run` | `unknown` |
-
-macOS has no public API to set Focus. `setFocus` is the Focus mode / Shortcuts name: create a Shortcut with that name whose action is **Set Focus**, then dawn runs it. Failure is soft (logged, switch continues).
+| `WMResetWindowsAction` | `hide`: hide non-members; `close`: terminate them; `merge`: no-op | none (hide/terminate results are ignored) |
+| `WMTerminalCommandAction` | Runs the command through `TerminalCommandRunning` (default: `/bin/zsh -lc`) | `unknown` |
 
 ## Workspace Transition
 
 `WorkspaceTransition` (libdawn) on each `WorkspaceContext` drives enter-workspace side effects:
 
+```swift
+public struct WorkspaceTransition: Codable, Sendable, Equatable {
+    public var activationPolicy: ActivationPolicy
+    public var terminalCommand: String?
+
+    public static let `default` = WorkspaceTransition()
+}
+```
+
 | Field | Behavior |
 |-------|----------|
-| `activationPolicy` | `hide` (default): hide non-members; `merge`: leave others alone and only open missing members; `close`: terminate non-members |
-| `setFocus` | Optional macOS Focus mode name (soft-fail) |
-| `terminalCommand` | Optional shell command after opens (soft-fail) |
+| `activationPolicy` | `hide` (default): hide non-members, then open every member; `merge`: leave others alone and only open members that are not already running; `close`: terminate non-members, then open every member |
+| `terminalCommand` | Optional shell command after opens. Empty or `nil` is skipped. Failure is logged and the transition continues |
 
-`WMWorkspaceTransitionAction` orchestrates reset → open → focus → terminal. Protected system apps (Finder, Dock, dawn itself, …) are never hidden/closed by reset.
+`WMWorkspaceTransitionAction` takes a `WorkspaceContext` and runs reset → open → terminal. Each step is best-effort: errors are logged and later steps still run. Protected system apps (Finder, Dock, dawn itself, …) are never hidden or closed by reset. Merge uses `ApplicationProvider` to skip apps that already have a running instance.
 
 To add a case and map it in `.action` see [How to Add an Action](#how-to-add-an-action).
 
@@ -117,7 +125,7 @@ Mirror the libdawn event workflow: one concrete type, register it in the catalog
 
 1. **Pick a folder** under `dawnAgent/Workspaces/Actions/`:
    - App-scoped → `App/` and conform to `WMAppAction`
-   - Window / layout / other → `Window/` (or a new domain folder) and conform to `WMAction`
+   - Window, terminal, or other → `Window/` (or a new domain folder) and conform to `WMAction`
 2. **Implement** `execute() async throws(WMActionError)`. Inject protocols (`ApplicationProvider`, `WorkspaceOpener`, or a new seam) instead of calling AppKit globals when the action needs to be unit-tested.
 3. **Add a case** to `WMActionIdentifier` and map it in `var action`.
 4. **Reuse** `WorkspaceApplication` (and other models) from libdawn. Do not redefine shared workspace models in dawnAgent.
