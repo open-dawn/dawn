@@ -809,8 +809,8 @@ struct SettingsStoreTests {
         #expect(await repository.savedDocuments.isEmpty)
     }
 
-    @Test("startup retains valid active session")
-    func startupRetainsActiveSession() async throws {
+    @Test("load retains active session for startup reconciliation")
+    func loadRetainsActiveSessionForStartupReconciliation() async throws {
         let context = WorkspaceContext(
             name: "Work",
             symbol: "briefcase"

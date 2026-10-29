@@ -45,7 +45,7 @@ struct WorkspaceActivityTextFormatterTests {
 
         #expect(
             formatter.activeText(since: start, relativeTo: now)
-                == "0min in use"
+                == "just now"
         )
     }
 

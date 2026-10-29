@@ -273,6 +273,7 @@ struct AppDelegateTests {
 
         #expect(provider.getWorkspaceSnapshotCallCount == 1)
         #expect(runtime.contexts == expectedContexts)
+        #expect(provider.stopActiveContextCallCount == 0)
     }
 
     @Test("Start creates menu controller with shared runtime once")
@@ -308,6 +309,57 @@ struct AppDelegateTests {
         #expect(factoryCallCount == 1)
         #expect(injectedWorkspace === runtime)
     }
+
+    @Test("Start ends a restored active session before creating menu bar")
+    func startEndsRestoredActiveSession() async throws {
+        let context = WorkspaceContext(
+            name: "Work",
+            symbol: "briefcase"
+        )
+
+        let provider = ContextProviderStub(
+            contexts: [context]
+        )
+
+        provider.workspaceActivity.activate(
+            contextID: context.id,
+            at: Date(timeIntervalSince1970: 100)
+        )
+
+        let runtime = WorkspaceRuntime(
+            contextManager: provider
+        )
+
+        let service = EventBusServiceSpy()
+        let menuBarController = MenuBarControllerSpy()
+
+        var activeContextReceivedByMenuBar: UUID?
+
+        let delegate = AppDelegate(
+            eventBusService: service,
+            makeMenuBarController: { workspace in
+                activeContextReceivedByMenuBar =
+                    workspace.activeContextID
+
+                return menuBarController
+            },
+            makeWorkspaceRuntime: { _ in
+                runtime
+            }
+        )
+
+        try await delegate.start()
+
+        #expect(provider.stopActiveContextCallCount == 1)
+        #expect(provider.workspaceActivity.activeContextID == nil)
+        #expect(runtime.activeContextID == nil)
+        #expect(activeContextReceivedByMenuBar == nil)
+
+        #expect(
+            runtime.lastActiveAt(for: context.id)
+                == provider.lastStopDate
+        )
+    }
 }
 
 @MainActor
@@ -336,6 +388,8 @@ private final class EventBusServiceSpy: EventBusServicing {
 @MainActor
 private final class ContextProviderStub: WorkspaceManaging {
     private(set) var getWorkspaceSnapshotCallCount = 0
+    private(set) var stopActiveContextCallCount = 0
+    private(set) var lastStopDate: Date?
 
     private let contexts: [WorkspaceContext]
 
@@ -385,7 +439,11 @@ private final class ContextProviderStub: WorkspaceManaging {
     }
 
     func stopActiveContext(at date: Date) async throws -> WorkspaceActivityState {
+        stopActiveContextCallCount += 1
+        lastStopDate = date
+
         workspaceActivity.stop(at: date)
+
         return workspaceActivity
     }
 

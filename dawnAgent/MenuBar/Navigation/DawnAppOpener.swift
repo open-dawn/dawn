@@ -25,7 +25,7 @@ struct DawnAppOpener: DawnAppOpening {
         let configuration = NSWorkspace.OpenConfiguration()
         configuration.activates = true
 
-        _ = try await workspace.open(
+        try await workspace.open(
             route.url,
             configuration: configuration
         )

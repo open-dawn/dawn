@@ -18,6 +18,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var startupTask: Task<Void, Never>?
     private var isStartingOrStarted = false
 
+    private var isPreparintToTerminate = false
+
     init(
         eventBusService: any EventBusServicing = EventBusService(),
         makeMenuBarController: @escaping MenuBarControllerFactory = {
@@ -79,6 +81,26 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         workspaceRuntime = nil
     }
 
+    func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
+        guard !isPreparintToTerminate, let workspaceRuntime, workspaceRuntime.activeContextID != nil else {
+            return .terminateNow
+        }
+
+        isPreparintToTerminate = true
+
+        Task { @MainActor in
+            do {
+                try await workspaceRuntime.stopActiveContext()
+                sender.reply(toApplicationShouldTerminate: true)
+            } catch {
+                isPreparintToTerminate = false
+                sender.reply(toApplicationShouldTerminate: false)
+            }
+        }
+
+        return .terminateLater
+    }
+
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {
         false
     }
@@ -97,6 +119,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             let workspaceRuntime = try await makeWorkspaceRuntime(eventBusService.bus)
 
             await workspaceRuntime.refresh()
+
+            try Task.checkCancellation()
+
+            if workspaceRuntime.activeContextID != nil {
+                try await workspaceRuntime.stopActiveContext()
+            }
 
             try Task.checkCancellation()
 

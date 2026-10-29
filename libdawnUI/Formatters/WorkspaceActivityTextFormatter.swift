@@ -17,6 +17,11 @@ public struct WorkspaceActivityTextFormatter: Sendable {
     public func activeText(since startDate: Date, relativeTo now: Date) -> String {
         let interval = max(now.timeIntervalSince(startDate), 0)
         let totalMinutes = Int(interval / 60)
+
+        guard totalMinutes > 0 else {
+            return "just now"
+        }
+
         let hours = totalMinutes / 60
         let minutes = totalMinutes % 60
 
