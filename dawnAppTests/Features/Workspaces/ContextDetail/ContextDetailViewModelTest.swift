@@ -215,6 +215,125 @@ struct ContextDetailViewModelTests {
         #expect(viewModel.activeContextID == context.id)
     }
 
+    @Test("Adopting a snapshot updates an idle draft")
+    func adoptUpdatesIdleDraft() {
+        let context = WorkspaceContext(name: "Work", symbol: "briefcase")
+        let viewModel = ContextDetailViewModel(
+            contextManager: WorkspaceContextManagerSpy(),
+            saveDebounce: .zero
+        )
+        viewModel.adopt(context)
+
+        let refreshed = WorkspaceContext(
+            id: context.id,
+            name: "Workspace",
+            symbol: "star",
+            applications: [sampleApplication]
+        )
+        viewModel.adopt(refreshed)
+
+        #expect(viewModel.draft == refreshed)
+    }
+
+    @Test("Adopting a snapshot keeps a dirty name and refreshes applications")
+    func adoptKeepsDirtyName() async {
+        let context = WorkspaceContext(name: "Work", symbol: "briefcase")
+        let viewModel = ContextDetailViewModel(
+            contextManager: WorkspaceContextManagerSpy(),
+            saveDebounce: .zero
+        )
+        viewModel.adopt(context)
+        viewModel.setName("Dirty")
+
+        let refreshed = WorkspaceContext(
+            id: context.id,
+            name: "Remote",
+            symbol: "star",
+            applications: [sampleApplication]
+        )
+        viewModel.adopt(refreshed)
+
+        #expect(viewModel.draft?.name == "Dirty")
+        #expect(viewModel.draft?.symbol == "star")
+        #expect(viewModel.draft?.applications == [sampleApplication])
+
+        await viewModel.pendingSave?.value
+    }
+
+    @Test("Switching ids replaces the draft")
+    func adoptSwitchesContext() async {
+        let first = WorkspaceContext(name: "Work", symbol: "briefcase")
+        let second = WorkspaceContext(name: "Personal", symbol: "person")
+        let contextManager = WorkspaceContextManagerSpy()
+        let viewModel = ContextDetailViewModel(
+            contextManager: contextManager,
+            saveDebounce: .zero
+        )
+
+        viewModel.adopt(first)
+        viewModel.setName("Dirty")
+        let pendingSave = viewModel.pendingSave
+        viewModel.adopt(second)
+        await pendingSave?.value
+
+        #expect(contextManager.updatedContexts.isEmpty)
+        #expect(viewModel.draft == second)
+    }
+
+    @Test("A debounced name change saves the final name and snapshot applications")
+    func debouncedNameSaveUsesSnapshotApplications() async {
+        let context = WorkspaceContext(name: "Work", symbol: "briefcase")
+        let contextManager = WorkspaceContextManagerSpy()
+        let viewModel = ContextDetailViewModel(
+            contextManager: contextManager,
+            saveDebounce: .zero
+        )
+
+        viewModel.adopt(context)
+        viewModel.adopt(
+            WorkspaceContext(
+                id: context.id,
+                name: context.name,
+                symbol: context.symbol,
+                applications: [sampleApplication]
+            )
+        )
+        viewModel.setName("Worksp")
+        viewModel.setName("Workspace")
+        await viewModel.pendingSave?.value
+
+        #expect(contextManager.updatedContexts.count == 1)
+        #expect(contextManager.updatedContexts.first?.id == context.id)
+        #expect(contextManager.updatedContexts.first?.name == "Workspace")
+        #expect(contextManager.updatedContexts.first?.symbol == "briefcase")
+        #expect(contextManager.updatedContexts.first?.applications == [sampleApplication])
+        #expect(viewModel.operationInProgress == nil)
+    }
+
+    @Test("A failed update sets the error and leaves operation state clear")
+    func updateFailureSetsError() async {
+        let context = WorkspaceContext(name: "Work", symbol: "briefcase")
+        let contextManager = WorkspaceContextManagerSpy()
+        contextManager.error = SettingsContextStoreError.notConnected
+        let viewModel = ContextDetailViewModel(
+            contextManager: contextManager,
+            saveDebounce: .zero
+        )
+
+        viewModel.adopt(context)
+        viewModel.setName("Nope")
+        await viewModel.pendingSave?.value
+
+        #expect(contextManager.updatedContexts.map(\.name) == ["Nope"])
+        #expect(viewModel.error == .notConnected)
+        #expect(viewModel.operationInProgress == nil)
+    }
+
+    private let sampleApplication = WorkspaceApplication(
+        bundleIdentifier: "com.apple.Safari",
+        displayName: "Safari"
+    )
+
     private enum TestError: Error { case expected }
 }
 
@@ -222,6 +341,7 @@ struct ContextDetailViewModelTests {
 private final class WorkspaceContextManagerSpy: WorkspaceContextManaging {
     private(set) var switchedContextIDs: [UUID] = []
     private(set) var deletedContextIDs: [UUID] = []
+    private(set) var updatedContexts: [WorkspaceContext] = []
 
     var error: Error?
     var onSwitch: (() -> Void)?
@@ -237,6 +357,14 @@ private final class WorkspaceContextManagerSpy: WorkspaceContextManaging {
 
     func deleteContext(id: UUID) async throws {
         deletedContextIDs.append(id)
+
+        if let error {
+            throw error
+        }
+    }
+
+    func updateContext(_ context: WorkspaceContext) async throws {
+        updatedContexts.append(context)
 
         if let error {
             throw error
