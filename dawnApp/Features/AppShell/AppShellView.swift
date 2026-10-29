@@ -141,6 +141,11 @@ struct AppShellView: View {
                     )
                 }
 
+            #if DEBUG
+            case .debug:
+                WorkspaceTransitionDebugView()
+            #endif
+
             case .settings:
                 SettingsView()
 

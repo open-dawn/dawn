@@ -24,7 +24,11 @@ struct SharedModelsTests {
         let context = WorkspaceContext(
             name: "Study",
             symbol: "book",
-            applications: [application]
+            applications: [application],
+            transition: WorkspaceTransition(
+                activationPolicy: .merge,
+                terminalCommand: "echo study"
+            )
         )
 
         let data = try JSONEncoder().encode(context)
@@ -34,6 +38,23 @@ struct SharedModelsTests {
         )
 
         #expect(decoded == context)
+    }
+
+    @Test("Workspace context defaults transition when decoding legacy payloads")
+    func workspaceContextDefaultsMissingTransition() throws {
+        let legacyJSON = Data("""
+        {
+            "id": "00000000-0000-0000-0000-000000000001",
+            "name": "Legacy",
+            "symbol": "book",
+            "applications": []
+        }
+        """.utf8)
+
+        let decoded = try JSONDecoder().decode(WorkspaceContext.self, from: legacyJSON)
+
+        #expect(decoded.transition == .default)
+        #expect(decoded.transition.activationPolicy == .hide)
     }
 
     @Test("General settings disable launch at login by default")

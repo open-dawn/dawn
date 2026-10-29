@@ -11,7 +11,7 @@ struct WMOpenAppActionTests {
         let mockApp = WorkspaceApplication(bundleIdentifier: "", displayName: "", applicationURL: nil)
         let fakeWorkspace = FakeWorkspace()
 
-        let action = WMOpenAppAction(mockApp, workspace: fakeWorkspace)
+        let action = WMOpenAppAction(app: mockApp, workspace: fakeWorkspace)
 
         await #expect(throws: WMActionError.invalidURL) {
             try await action.execute()
@@ -26,7 +26,7 @@ struct WMOpenAppActionTests {
         let fakeWorkspace = FakeWorkspace()
         fakeWorkspace.errorToThrow = NSError(domain: NSCocoaErrorDomain, code: NSFileReadNoSuchFileError, userInfo: [:])
 
-        let action = WMOpenAppAction(mockApp, workspace: fakeWorkspace)
+        let action = WMOpenAppAction(app: mockApp, workspace: fakeWorkspace)
 
         let appURL = try #require(mockApp.applicationURL)
         await #expect(throws: WMActionError.notFound(filePath: appURL.path())) {
@@ -44,7 +44,7 @@ struct WMOpenAppActionTests {
                                              code: NSFileReadCorruptFileError,
                                              userInfo: [:])
 
-        let action = WMOpenAppAction(mockApp, workspace: fakeWorkspace)
+        let action = WMOpenAppAction(app: mockApp, workspace: fakeWorkspace)
 
         try #require(mockApp.applicationURL != nil)
         await #expect(throws: WMActionError.corruptedFile) {
@@ -62,7 +62,7 @@ struct WMOpenAppActionTests {
                                              code: NSFileReadNoPermissionError,
                                              userInfo: [:])
 
-        let action = WMOpenAppAction(mockApp, workspace: fakeWorkspace)
+        let action = WMOpenAppAction(app: mockApp, workspace: fakeWorkspace)
 
         try #require(mockApp.applicationURL != nil)
         await #expect(throws: WMActionError.permissionDenied) {
@@ -78,7 +78,7 @@ struct WMOpenAppActionTests {
         let fakeWorkspace = FakeWorkspace()
         fakeWorkspace.errorToThrow = NSError(domain: "idkw", code: 5, userInfo: [:])
 
-        let action = WMOpenAppAction(mockApp, workspace: fakeWorkspace)
+        let action = WMOpenAppAction(app: mockApp, workspace: fakeWorkspace)
 
         try #require(mockApp.applicationURL != nil)
         let errorMessage = fakeWorkspace.errorToThrow?.localizedDescription
@@ -93,7 +93,7 @@ struct WMOpenAppActionTests {
                                            displayName: "Safari",
                                            applicationURL: URL(filePath: "Applications/Safari.app"))
         let fakeWorkspace = FakeWorkspace()
-        let action = WMOpenAppAction(mockApp, workspace: fakeWorkspace)
+        let action = WMOpenAppAction(app: mockApp, workspace: fakeWorkspace)
 
         try #require(mockApp.applicationURL != nil)
         await #expect(throws: Never.self) { try await action.execute() }

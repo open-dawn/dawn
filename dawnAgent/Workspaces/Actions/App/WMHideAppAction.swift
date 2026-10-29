@@ -17,7 +17,7 @@ struct WMHideAppAction: WMAppAction {
         }
     }
 
-    init(_ app: WorkspaceApplication, provider: ApplicationProvider = SystemApplicationProvider()) {
+    init(app: WorkspaceApplication, provider: ApplicationProvider = SystemApplicationProvider()) {
         self.app = app
         self.provider = provider
     }

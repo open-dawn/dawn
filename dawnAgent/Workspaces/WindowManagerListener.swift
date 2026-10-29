@@ -7,15 +7,19 @@ protocol ContextSwitching {
 }
 
 @MainActor
-struct DefaultContextSwitching: ContextSwitching {
+final class DefaultContextSwitching: ContextSwitching {
+    private var tail: Task<Void, Never>?
+
     func switchToContext(to context: WorkspaceContext) async throws {
-        let appsList: [WorkspaceApplication] = context.applications
-
-        try await WMActionIdentifier.resetWindows.action.execute()
-
-        for app in appsList {
-            try await WMActionIdentifier.openApp(app).action.execute()
+        let previous = tail
+        let transition = Task { @MainActor in
+            await previous?.value
+            try await WMActionIdentifier.workspaceTransition(context).action.execute()
         }
+        tail = Task {
+            _ = try? await transition.value
+        }
+        try await transition.value
     }
 }
 
@@ -185,19 +189,12 @@ final class WindowManagerListener: Listener {
         if let error = error as? SettingsStoreError {
             return switch error {
             case .emptyContextName: .emptyContextName
-
             case .emptyContextSymbol: .emptyContextSymbol
-
             case .emptyApplicationBundleIdentifier: .emptyApplicationBundleIdentifier
-
             case .emptyApplicationDisplayName: .emptyApplicationDisplayName
-
             case let .duplicateApplication(bundleIdentifier): .duplicateApplication(bundleIdentifier: bundleIdentifier)
-
             case let .duplicateContextIdentifier(id): .duplicateContextIdentifier(id)
-
             case let .duplicateApplicationIdentifier(id): .duplicateApplicationIdentifier(id)
-
             case let .contextNotFound(id): .contextNotFound(id)
             }
         }
