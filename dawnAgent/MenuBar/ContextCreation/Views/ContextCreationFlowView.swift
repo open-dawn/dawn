@@ -6,8 +6,8 @@
 //
 
 import AppKit
-import UniformTypeIdentifiers
 import SwiftUI
+import UniformTypeIdentifiers
 import libdawn
 import libdawnUI
 
@@ -46,25 +46,31 @@ struct ContextCreationFlowView: View {
 
     let workspace: WorkspaceRuntime
     let onExit: () -> Void
+    private let modalPresentationState: MenuBarModalPresentationState
 
     init(
         workspace: WorkspaceRuntime,
+        modalPresentationState: MenuBarModalPresentationState,
         applicationProvider: any InstalledApplicationProviding = ApplicationsDirectoryProvider(),
         onExit: @escaping () -> Void
     ) {
         self.workspace = workspace
+        self.modalPresentationState = modalPresentationState
         self.applicationProvider = applicationProvider
         self.onExit = onExit
     }
 
     private var isShowingOperationError: Binding<Bool> {
-        Binding(get: {
-            operationError != nil
-        }, set: { isPresented in
-            if !isPresented {
-                operationError = nil
+        Binding(
+            get: {
+                operationError != nil
+            },
+            set: { isPresented in
+                if !isPresented {
+                    operationError = nil
+                }
             }
-        })
+        )
     }
 
     private var selectedApplications: [WorkspaceApplication] {
@@ -92,9 +98,33 @@ struct ContextCreationFlowView: View {
         }
         .fileImporter(
             isPresented: $isApplicationImporterPresented,
-            allowedContentTypes: [.applicationBundle]) { result in
-                handleApplicationSelection(result)
-            }
+            allowedContentTypes: [.applicationBundle]
+        ) { result in
+            handleApplicationSelection(result)
+        }
+        .onChange(of: operationError != nil) {_, isPresented in
+            modalPresentationState.setPresented(
+                isPresented,
+                for: .contextCreationError
+            )
+        }
+        .onChange(of: isApplicationImporterPresented) { _, isPresented in
+            modalPresentationState.setPresented(
+                isPresented,
+                for: .applicationImporter
+            )
+        }
+        .onDisappear {
+            modalPresentationState.setPresented(
+                false,
+                for: .contextCreationError
+            )
+
+            modalPresentationState.setPresented(
+                false,
+                for: .applicationImporter
+            )
+        }
     }
 
     @ViewBuilder
@@ -270,11 +300,12 @@ extension ContextCreationFlowView {
             return
         }
 
-        let displayName = bundle.object(
-            forInfoDictionaryKey: "CFBundleDisplayName"
-        ) as? String ?? bundle.object(
-            forInfoDictionaryKey: "CFBundleName"
-        ) as? String ?? applicationURL.deletingPathExtension().lastPathComponent
+        let displayName =
+            bundle.object(
+                forInfoDictionaryKey: "CFBundleDisplayName"
+            ) as? String ?? bundle.object(
+                forInfoDictionaryKey: "CFBundleName"
+            ) as? String ?? applicationURL.deletingPathExtension().lastPathComponent
 
         let workspaceApplication = WorkspaceApplication(
             bundleIdentifier: bundleIdentifier,
@@ -312,13 +343,15 @@ extension ContextCreationFlowView {
         do {
             let installedApplications = try await applicationProvider.applications()
 
-            let existingBundleIdentifiers = Set(applications.map {
-                $0.application.bundleIdentifier
-            })
+            let existingBundleIdentifiers = Set(
+                applications.map {
+                    $0.application.bundleIdentifier
+                }
+            )
 
             let newApplications = installedApplications.filter {
                 !existingBundleIdentifiers.contains($0.bundleIdentifier)
-            } .compactMap { application -> ContextCreationApplication? in
+            }.compactMap { application -> ContextCreationApplication? in
                 guard let applicationURL = application.applicationURL else {
                     return nil
                 }

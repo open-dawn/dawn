@@ -19,6 +19,7 @@ struct MenuBarRootView: View {
 
     let workspace: WorkspaceRuntime
     let openApp: (DawnAppRoute) async throws -> Void
+    let modalPresentationState: MenuBarModalPresentationState
 
     @State private var route: MenuBarRoute = .contextList
 
@@ -29,6 +30,7 @@ struct MenuBarRootView: View {
                 MenuBarContextListView(
                     workspace: workspace,
                     openApp: openApp,
+                    modalPresentationState: modalPresentationState,
                     onCreateContext: {
                         route = .contextCreation
                     }
@@ -37,6 +39,7 @@ struct MenuBarRootView: View {
             case .contextCreation:
                 ContextCreationFlowView(
                     workspace: workspace,
+                    modalPresentationState: modalPresentationState,
                     onExit: {
                     route = .contextList
                 })

@@ -34,7 +34,8 @@ private struct MenuBarRootPreview: View {
     var body: some View {
         MenuBarRootView(
             workspace: workspace,
-            openApp: { _ in }
+            openApp: { _ in },
+            modalPresentationState: MenuBarModalPresentationState()
         )
             .background(.regularMaterial)
             .preferredColorScheme(.dark)

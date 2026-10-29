@@ -964,7 +964,7 @@ struct SettingsStoreTests {
         let snapshot = await sut.snapshot()
         let savedDocuments = await repository.savedDocuments
 
-        #expect(!snapshot.generalSettings.showInMenuBar)
+        #expect(snapshot.generalSettings.showInMenuBar == false)
         #expect(snapshot.contexts == [context])
         #expect(savedDocuments == [snapshot])
     }

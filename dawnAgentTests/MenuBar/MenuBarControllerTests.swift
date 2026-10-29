@@ -14,7 +14,7 @@ import AppKit
 @Suite("MenuBarController", .serialized)
 struct MenuBarControllerTests {
     @Test("Visibility changes are idempotent")
-    func visibilityChangesAreIdempotent() {
+    func visibilityChangesAreIdempotent() throws {
         let statusBar = StatusBarSpy()
 
         let runtime = WorkspaceRuntime(
@@ -32,7 +32,7 @@ struct MenuBarControllerTests {
             statusBar.cleanUp()
         }
 
-        #expect(!sut.isVisible)
+        try #require(sut.isVisible == false)
         #expect(statusBar.creationCount == 0)
 
         sut.setVisible(true)

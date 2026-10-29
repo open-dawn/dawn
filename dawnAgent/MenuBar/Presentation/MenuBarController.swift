@@ -36,6 +36,7 @@ final class MenuBarController: NSObject, MenuBarControlling {
 
     private var isStopped = false
     private var isPanelPresented = false
+    private let modalPresentationState = MenuBarModalPresentationState()
 
     var isVisible: Bool {
         statusItem != nil
@@ -249,7 +250,8 @@ extension MenuBarController {
 
                     try await appOpener.open(route)
                     closePanel()
-                }
+                },
+                modalPresentationState: modalPresentationState
             )
         )
 
@@ -350,16 +352,23 @@ extension MenuBarController {
 extension MenuBarController: NSWindowDelegate {
     func windowDidResignKey(_ notification: Notification) {
         guard let panel,
-              let window = notification.object as? NSWindow,
-              window === panel, isPanelPresented
+            let window = notification.object as? NSWindow,
+            window === panel,
+            isPanelPresented
         else {
             return
         }
 
-        guard panel.attachedSheet == nil else {
-            return
-        }
+        Task { @MainActor [weak self] in
+            await Task.yield()
 
-        closePanel()
+            guard let self, let panel = self.panel, self.isPanelPresented, panel.isKeyWindow == false,
+                panel.attachedSheet == nil, self.modalPresentationState.isPresentingModal == false
+            else {
+                return
+            }
+
+            self.closePanel()
+        }
     }
 }

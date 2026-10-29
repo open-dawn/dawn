@@ -10,22 +10,57 @@ import libdawn
 import libdawnUI
 
 struct MenuBarContextListView: View {
-    let workspace: WorkspaceRuntime
-    let openApp: (DawnAppRoute) async throws -> Void
     let onCreateContext: () -> Void
 
     private let activityTextFormatter = WorkspaceActivityTextFormatter()
 
-    @State private var activatingContextID: UUID?
-    @State private var activationError: String?
-    @State private var openingRoute: DawnAppRoute?
-    @State private var stoppingContextID: UUID?
-    @State private var contextPendingDeletion: WorkspaceContext?
-    @State private var deletingContextID: UUID?
+    private let modalPresentationState: MenuBarModalPresentationState
+
+    @State private var viewModel: MenuBarContextListViewModel
+
+    init(
+        workspace: WorkspaceRuntime,
+        openApp: @escaping (DawnAppRoute) async throws -> Void,
+        modalPresentationState: MenuBarModalPresentationState,
+        onCreateContext: @escaping () -> Void
+    ) {
+        self.modalPresentationState = modalPresentationState
+        self.onCreateContext = onCreateContext
+
+        _viewModel = State(
+            initialValue: MenuBarContextListViewModel(
+                workspace: workspace,
+                openApp: openApp
+            )
+        )
+    }
 
     var body: some View {
         TimelineView(.periodic(from: .now, by: 60)) { timeline in
             contextList(relativeTo: timeline.date)
+        }
+        .onChange(of: viewModel.errorMessage != nil) { _, isPresented in
+            modalPresentationState.setPresented(
+                isPresented,
+                for: .contextListError
+            )
+        }
+        .onChange(of: viewModel.contextPendingDeletion != nil) { _, isPresented in
+            modalPresentationState.setPresented(
+                isPresented,
+                for: .deleteConfirmation
+            )
+        }
+        .onDisappear {
+            modalPresentationState.setPresented(
+                false,
+                for: .contextListError
+            )
+
+            modalPresentationState.setPresented(
+                false,
+                for: .deleteConfirmation
+            )
         }
     }
 }
@@ -33,26 +68,6 @@ struct MenuBarContextListView: View {
 // MARK: - Context list layout
 
 extension MenuBarContextListView {
-    private var activeContext: WorkspaceContext? {
-        guard let activeContextID = workspace.activeContextID else {
-            return nil
-        }
-
-        return workspace.contexts.first {
-            $0.id == activeContextID
-        }
-    }
-
-    private var inactiveContexts: [WorkspaceContext] {
-        workspace.contexts.filter {
-            $0.id != workspace.activeContextID
-        }
-    }
-
-    private var isPerformingOperation: Bool {
-        activatingContextID != nil || openingRoute != nil || stoppingContextID != nil || deletingContextID != nil
-    }
-
     private func contextList(relativeTo now: Date) -> some View {
         VStack(alignment: .leading, spacing: 0) {
             menuHeader
@@ -72,23 +87,24 @@ extension MenuBarContextListView {
             isPresented: isShowingActivationError
         ) {
             Button("OK") {
-                activationError = nil
+                viewModel.dismissError()
             }
         } message: {
-            Text(activationError ?? "")
+            Text(viewModel.errorMessage ?? "")
         }
         .alert(
             "Delete Context?",
             isPresented: isShowingDeleteConfirmation,
-            presenting: contextPendingDeletion
+            presenting: viewModel.contextPendingDeletion
         ) { context in
             Button("Cancel", role: .cancel) {
-                contextPendingDeletion = nil
+                viewModel.cancelDeletion()
             }
 
             Button("Delete", role: .destructive) {
-                contextPendingDeletion = nil
-                delete(context)
+                Task {
+                    await viewModel.confirmDeletion(of: context)
+                }
             }
         } message: { context in
             Text(
@@ -121,14 +137,16 @@ extension MenuBarContextListView {
             DButton(
                 style: .icon,
                 action: {
-                    openInApp(.settings)
+                    Task {
+                        await viewModel.open(.settings)
+                    }
                 },
                 content: {
                     Image(systemName: "gearshape")
                         .font(DawnTextStyle.actionIcon)
                 }
             )
-            .disabled(isPerformingOperation)
+            .disabled(viewModel.isPerformingOperation)
             .accessibilityLabel("Open DAWN settings")
             .help("Open DAWN settings")
         }
@@ -137,7 +155,7 @@ extension MenuBarContextListView {
     private func contextsScrollView(relativeTo now: Date) -> some View {
         ScrollView {
             LazyVStack(alignment: .leading, spacing: 4, pinnedViews: [.sectionHeaders]) {
-                if let activeContext {
+                if let activeContext = viewModel.activeContext {
                     contextCard(for: activeContext, relativeTo: now)
                         .padding(.vertical, 12)
                 }
@@ -168,21 +186,21 @@ extension MenuBarContextListView {
 
     @ViewBuilder
     private func contextsContent(relativeTo now: Date) -> some View {
-        if workspace.contexts.isEmpty {
+        if viewModel.workspace.contexts.isEmpty {
             ContentUnavailableView(
                 "No Contexts",
                 systemImage: "square.stack",
                 description: Text("Create a context to see it here.")
             )
             .frame(maxWidth: .infinity)
-        } else if inactiveContexts.isEmpty {
+        } else if viewModel.inactiveContexts.isEmpty {
             ContentUnavailableView(
                 "No other contexts",
                 systemImage: "square.stack"
             )
             .frame(maxWidth: .infinity)
         } else {
-            ForEach(inactiveContexts) { context in
+            ForEach(viewModel.inactiveContexts) { context in
                 contextCard(for: context, relativeTo: now)
             }
         }
@@ -194,33 +212,28 @@ extension MenuBarContextListView {
 extension MenuBarContextListView {
 
     private func contextCard(for context: WorkspaceContext, relativeTo now: Date) -> some View {
-        let contextRoute = DawnAppRoute.context(context.id)
-
-        return ContextCard(
+        ContextCard(
             model: contextCardModel(for: context, relativeTo: now),
-            isLoading: activatingContextID == context.id
-                || openingRoute == contextRoute
-                || stoppingContextID == context.id
-                || deletingContextID == context.id,
+            isLoading: viewModel.isLoading(context),
             onSelect: {
-                guard workspace.activeContextID != context.id else {
-                    return
+                Task {
+                    await viewModel.select(context)
                 }
-
-                activate(context)
             },
             onAction: { action in
-                handle(action, for: context)
+                Task {
+                    await viewModel.handle(action, for: context)
+                }
             }
-        ).disabled(isPerformingOperation)
+        ).disabled(viewModel.isPerformingOperation)
     }
 
     private func contextCardModel(for context: WorkspaceContext, relativeTo now: Date) -> ContextCardModel {
         let status: ContextCardModel.Status
 
-        if workspace.activeContextID == context.id {
+        if viewModel.workspace.activeContextID == context.id {
             let activityText =
-                workspace.activeSince.map {
+                viewModel.workspace.activeSince.map {
                     activityTextFormatter.activeText(
                         since: $0,
                         relativeTo: now
@@ -229,7 +242,7 @@ extension MenuBarContextListView {
 
             status = .active(activityText: activityText)
         } else {
-            let lastUsedText = workspace.lastActiveAt(for: context.id).map {
+            let lastUsedText = viewModel.workspace.lastActiveAt(for: context.id).map {
                 activityTextFormatter.lastUsedText(
                     at: $0,
                     relativeTo: now
@@ -251,140 +264,32 @@ extension MenuBarContextListView {
     }
 }
 
-// MARK: - Actions
+// MARK: - Bindings
 
 extension MenuBarContextListView {
-    private func handle(_ action: ContextCardAction, for context: WorkspaceContext) {
-        switch action {
-        case .activate:
-            activate(context)
-
-        case .openInApp:
-            openInApp(.context(context.id))
-
-        case .stop:
-            stop(context)
-
-        case .delete:
-            requestDeletion(of: context)
-        }
-    }
-
-    private func activate(_ context: WorkspaceContext) {
-        guard !isPerformingOperation else {
-            return
-        }
-
-        activatingContextID = context.id
-        activationError = nil
-
-        Task {
-            defer {
-                activatingContextID = nil
-            }
-
-            do {
-                try await workspace.activateContext(id: context.id)
-            } catch {
-                activationError = error.localizedDescription
-            }
-        }
-    }
-
     private var isShowingActivationError: Binding<Bool> {
         Binding(
             get: {
-                activationError != nil
+                viewModel.errorMessage != nil
             },
             set: { isPresented in
                 if !isPresented {
-                    activationError = nil
+                    viewModel.dismissError()
                 }
             }
         )
-    }
-
-    private func stop(_ context: WorkspaceContext) {
-        guard !isPerformingOperation, workspace.activeContextID == context.id else {
-            return
-        }
-
-        stoppingContextID = context.id
-        activationError = nil
-
-        Task {
-            defer {
-                stoppingContextID = nil
-            }
-
-            do {
-                try await workspace.stopActiveContext()
-            } catch {
-                activationError = error.localizedDescription
-            }
-        }
-    }
-
-    private func requestDeletion(of context: WorkspaceContext) {
-        guard !isPerformingOperation else {
-            return
-        }
-
-        contextPendingDeletion = context
     }
 
     private var isShowingDeleteConfirmation: Binding<Bool> {
         Binding(
             get: {
-                contextPendingDeletion != nil
+                viewModel.contextPendingDeletion != nil
             },
             set: { isPresented in
                 if !isPresented {
-                    contextPendingDeletion = nil
+                    viewModel.cancelDeletion()
                 }
             }
         )
-    }
-
-    private func delete(_ context: WorkspaceContext) {
-        guard !isPerformingOperation else {
-            return
-        }
-
-        deletingContextID = context.id
-        activationError = nil
-
-        Task {
-            defer {
-                deletingContextID = nil
-            }
-
-            do {
-                try await workspace.deleteContext(id: context.id)
-            } catch {
-                activationError = error.localizedDescription
-            }
-        }
-    }
-
-    private func openInApp(_ route: DawnAppRoute) {
-        guard !isPerformingOperation else {
-            return
-        }
-
-        openingRoute = route
-        activationError = nil
-
-        Task {
-            defer {
-                openingRoute = nil
-            }
-
-            do {
-                try await openApp(route)
-            } catch {
-                activationError = error.localizedDescription
-            }
-        }
     }
 }

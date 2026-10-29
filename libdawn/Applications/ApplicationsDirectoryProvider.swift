@@ -20,7 +20,8 @@ public struct ApplicationsDirectoryProvider: InstalledApplicationProviding, Send
         self.init(
             directories: [
                 URL(fileURLWithPath: "/Applications", isDirectory: true),
-                URL(fileURLWithPath: "~/Applications", isDirectory: true)
+                FileManager.default.homeDirectoryForCurrentUser
+                    .appendingPathComponent("Applications", isDirectory: true),
             ]
         )
     }
@@ -41,17 +42,19 @@ extension ApplicationsDirectoryProvider {
         var bundleIdentifiers = Set<String>()
 
         for directory in directories {
-            guard let enumerator = fileManager.enumerator(
-                at: directory,
-                includingPropertiesForKeys: [
-                    .isDirectoryKey,
-                    .isPackageKey,
-                ],
-                options: [
-                    .skipsHiddenFiles,
-                    .skipsPackageDescendants
-                ]
-            ) else {
+            guard
+                let enumerator = fileManager.enumerator(
+                    at: directory,
+                    includingPropertiesForKeys: [
+                        .isDirectoryKey,
+                        .isPackageKey,
+                    ],
+                    options: [
+                        .skipsHiddenFiles,
+                        .skipsPackageDescendants,
+                    ]
+                )
+            else {
                 continue
             }
 
@@ -77,16 +80,17 @@ extension ApplicationsDirectoryProvider {
 
     private static func makeApplication(at applicationURL: URL) -> WorkspaceApplication? {
         guard applicationURL.pathExtension.localizedCaseInsensitiveCompare("app") == .orderedSame,
-              let bundle = Bundle(url: applicationURL),
-              let bundleIdentifier = bundle.bundleIdentifier,
-              isUserFacingApplication(bundle)
+            let bundle = Bundle(url: applicationURL),
+            let bundleIdentifier = bundle.bundleIdentifier,
+            isUserFacingApplication(bundle)
         else {
             return nil
         }
 
-        let displayName = bundle.object(forInfoDictionaryKey: "CFBundleDisplayName") as? String
-        ?? bundle.object(forInfoDictionaryKey: "CFBundleName") as? String
-        ?? applicationURL.deletingPathExtension().lastPathComponent
+        let displayName =
+            bundle.object(forInfoDictionaryKey: "CFBundleDisplayName") as? String
+            ?? bundle.object(forInfoDictionaryKey: "CFBundleName") as? String
+            ?? applicationURL.deletingPathExtension().lastPathComponent
 
         return WorkspaceApplication(
             bundleIdentifier: bundleIdentifier,

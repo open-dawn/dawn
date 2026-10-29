@@ -32,22 +32,28 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         makeMenuBarController: @escaping MenuBarControllerFactory = { workspace, isVisible in
             MenuBarController(workspace: workspace, initiallyVisible: isVisible)
         },
-        makeAgentRuntime: @escaping AgentRuntimeFactory = { bus in
-            let publisher = EventBusContextSnapshotPublisher(bus: bus)
-
-            let contextManager = try await ContextManager(snapshotPublisher: publisher)
-
-            return AgentRuntimeComponents(
-                workspace: WorkspaceRuntime(contextManager: contextManager),
-                menuBarVisibilityStore: contextManager.menuBarVisibilityStore
-            )
-        }
+        makeAgentRuntime: @escaping AgentRuntimeFactory = AppDelegate.makeAgentRuntime
     ) {
         self.eventBusService = eventBusService
         self.makeMenuBarController = makeMenuBarController
         self.makeAgentRuntime = makeAgentRuntime
 
         super.init()
+    }
+
+    private static func makeAgentRuntime(bus: EventBus) async throws -> AgentRuntimeComponents {
+        let publisher = EventBusContextSnapshotPublisher(
+            bus: bus
+        )
+
+        let contextManager = try await ContextManager(
+            snapshotPublisher: publisher
+        )
+
+        return AgentRuntimeComponents(
+            workspace: WorkspaceRuntime(contextManager: contextManager),
+            menuBarVisibilityStore: contextManager.menuBarVisibilityStore
+        )
     }
 
     func applicationDidFinishLaunching(_ notification: Notification) {
@@ -91,7 +97,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
-        guard !isPreparingToTerminate, let workspaceRuntime, workspaceRuntime.activeContextID != nil else {
+        if isPreparingToTerminate {
+            return .terminateLater
+        }
+
+        guard let workspaceRuntime, workspaceRuntime.activeContextID != nil else {
             return .terminateNow
         }
 
