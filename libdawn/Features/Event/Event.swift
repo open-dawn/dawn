@@ -21,6 +21,7 @@ public enum Event: Codable, Sendable, Equatable {
 
     case getSettings(GetSettingsEvent)
     case settingsFetched(SettingsFetchedEvent)
+    case availableSettings(AvailableSettingsEvent)
 
     case updateSettings(UpdateSettingsEvent)
     case settingsMutationAcknowledgement(SettingsMutationAcknowledgement)
@@ -44,6 +45,7 @@ public enum Event: Codable, Sendable, Equatable {
         case .menuBarVisibilityMutationAcknowledged: .menuBarVisibilityMutationAcknowledged
         case .getSettings: .getSettings
         case .settingsFetched: .settingsFetched
+        case .availableSettings: .availableSettings
         case .updateSettings: .updateSettings
         case .settingsMutationAcknowledgement: .settingsMutationAcknowledgement
         }

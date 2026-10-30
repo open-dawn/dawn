@@ -320,7 +320,7 @@ struct SettingsContextStoreTests {
 }
 
 @MainActor
-private final class ContextEventBusSpy: SettingsContextEventBus {
+private final class ContextEventBusSpy: SettingsEventBus {
     private(set) var addedListeners: [Listener] = []
     private(set) var addedKinds: [Set<EventKind>?] = []
     private(set) var removedListeners: [Listener] = []

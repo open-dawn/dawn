@@ -67,6 +67,10 @@ struct EventTests {
                 kind: EventKind.settingsFetched
             ),
             (
+                event: Event.availableSettings(AvailableSettingsEvent(settings: Settings())),
+                kind: EventKind.availableSettings
+            ),
+            (
                 event: Event.settingsMutationAcknowledgement(SettingsMutationAcknowledgement.success),
                 kind: EventKind.settingsMutationAcknowledgement
             ),
@@ -106,6 +110,7 @@ struct EventTests {
             .menuBarVisibilityMutationAcknowledged(.failure(.unexpected)),
             .getSettings(GetSettingsEvent()),
             .settingsFetched(SettingsFetchedEvent(settings: Settings())),
+            .availableSettings(AvailableSettingsEvent(settings: Settings())),
             .settingsMutationAcknowledgement(SettingsMutationAcknowledgement.success),
             .updateSettings(UpdateSettingsEvent(settings: Settings()))
         ]
