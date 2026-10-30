@@ -141,6 +141,20 @@ final class SettingsContextStore: Listener {
         )
     }
 
+    func archiveContext(id: UUID) async throws(SettingsContextStoreError) {
+        _ = try await askForAcknowledgement(
+            .archiveContext(ArchiveContextEvent(contextID: id)),
+            expectedContextID: id
+        )
+    }
+
+    func unarchiveContext(id: UUID) async throws(SettingsContextStoreError) {
+        _ = try await askForAcknowledgement(
+            .unarchiveContext(UnarchiveContextEvent(contextID: id)),
+            expectedContextID: id
+        )
+    }
+
     func switchContext(id: UUID) async throws(SettingsContextStoreError) {
         _ = try await askForAcknowledgement(
             .switchContext(SwitchContextEvent(contextID: id)),

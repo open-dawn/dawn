@@ -131,6 +131,23 @@ private final class PreviewContextProvider: WorkspaceManaging {
             $0.id == id
         }
     }
+
+    func archiveContext(id: UUID) async throws {
+        guard let index = contexts.firstIndex(where: { $0.id == id }) else {
+            return
+        }
+
+        contexts[index].isArchived = true
+        workspaceActivity.clearActiveSession(for: id)
+    }
+
+    func unarchiveContext(id: UUID) async throws {
+        guard let index = contexts.firstIndex(where: { $0.id == id }) else {
+            return
+        }
+
+        contexts[index].isArchived = false
+    }
 }
 
 @MainActor

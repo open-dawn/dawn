@@ -40,13 +40,13 @@ final class MenuBarContextListViewModel {
         }
 
         return workspace.contexts.first {
-            $0.id == activeContextID
+            $0.id == activeContextID && !$0.isArchived
         }
     }
 
     var inactiveContexts: [WorkspaceContext] {
         workspace.contexts.filter {
-            $0.id != workspace.activeContextID
+            !$0.isArchived && $0.id != workspace.activeContextID
         }
     }
 

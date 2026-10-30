@@ -540,6 +540,12 @@ private final class ContextProviderStub: WorkspaceManaging {
     func deleteContext(id: UUID) async throws {
     }
 
+    func archiveContext(id: UUID) async throws {
+    }
+
+    func unarchiveContext(id: UUID) async throws {
+    }
+
     func getContext(id: UUID) async -> WorkspaceContext? {
         WorkspaceContext(id: id, name: "Placeholder", symbol: "book")
     }
