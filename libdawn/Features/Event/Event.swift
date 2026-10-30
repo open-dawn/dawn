@@ -1,13 +1,15 @@
 public enum Event: Codable, Sendable, Equatable {
     case debugPing(DebugPingEvent)
     case debugPong(DebugPongEvent)
+
     case initialized(InitializedEvent)
+
     case getContexts(GetContextsEvent)
+    case contextsFetched(ContextsFetchedEvent)
+    case switchContext(SwitchContextEvent)
     case createContext(CreateContextEvent)
     case updateContext(UpdateContextEvent)
     case deleteContext(DeleteContextEvent)
-    case switchContext(SwitchContextEvent)
-    case contextsFetched(ContextsFetchedEvent)
 
     case availableContexts(AvailableContextsEvent)
     case contextMutationAcknowledged(ContextMutationAcknowledgement)
