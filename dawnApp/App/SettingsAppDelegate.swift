@@ -4,6 +4,7 @@ import AppKit
 final class SettingsAppDelegate: NSObject, NSApplicationDelegate {
     let eventBusService: SettingsEventBusService
     let contextStore: SettingsContextStore
+    let settingsStore: SettingsViewStore
     let updaterService: AppUpdaterService
 
     override init() {
@@ -11,27 +12,28 @@ final class SettingsAppDelegate: NSObject, NSApplicationDelegate {
         let updateClient = SparkleUpdateClient()
 
         self.eventBusService = eventBusService
-        self.contextStore = SettingsContextStore(
-            bus: eventBusService.bus
-        )
-        self.updaterService = AppUpdaterService(client: updateClient)
+        contextStore = SettingsContextStore(bus: eventBusService.bus)
+        settingsStore = SettingsViewStore(bus: eventBusService.bus)
+        updaterService = AppUpdaterService(client: updateClient)
 
         super.init()
     }
 
-    func applicationDidFinishLaunching(_ notification: Notification) {
+    func applicationDidFinishLaunching(_: Notification) {
         guard ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"] == nil else {
             return
         }
 
         contextStore.start()
+        settingsStore.start()
         eventBusService.start()
         updaterService.start()
         SettingsLoginItem.registerIfNeeded()
     }
 
-    func applicationWillTerminate(_ notification: Notification) {
+    func applicationWillTerminate(_: Notification) {
         contextStore.stop()
+        settingsStore.stop()
         eventBusService.stop()
     }
 }

@@ -25,9 +25,11 @@ final class SettingsCoordinator: SettingsProviding {
 
 @MainActor
 final class SettingsListener: Listener {
+    private let bus: EventBus
     private let settingsProvider: any SettingsProviding
 
     init(bus: EventBus, settingsProvider: any SettingsProviding) {
+        self.bus = bus
         self.settingsProvider = settingsProvider
         bus.addListener(self, kinds: [
             .getSettings,
@@ -57,7 +59,7 @@ final class SettingsListener: Listener {
         Task { @MainActor in
             do {
                 try await settingsProvider.updateSettings(payload.settings)
-                publishSettings()
+                publishSettings(payload.settings)
                 reply(.settingsMutationAcknowledgement(.success))
             } catch {
                 reply(
@@ -69,8 +71,9 @@ final class SettingsListener: Listener {
         }
     }
 
-    private func publishSettings() {
-        // PIN-160 Apply stored settings to app
+    private func publishSettings(_ settings: Settings) {
+        // PIN-160 Apply stored settings to app behavior.
+        bus.publish(.availableSettings(AvailableSettingsEvent(settings: settings)))
     }
 
     private func mutationFailure(from error: Error) -> SettingsMutationAcknowledgement.Failure {
