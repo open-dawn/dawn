@@ -1,87 +1,110 @@
 import Foundation
-import SwiftUI
+import Observation
+import libdawn
+
+@MainActor
+protocol SettingsViewStoreClient: AnyObject {
+    var settings: Settings { get }
+    var error: SettingsViewStoreError? { get }
+
+    func refresh() async
+    func updateSettings(_ settings: Settings) async throws(SettingsViewStoreError)
+}
+
+extension SettingsViewStore: SettingsViewStoreClient {}
 
 @Observable
+@MainActor
 final class SettingsViewModel {
-    private(set) var openAtLogin: Bool
-    private(set) var defaultContextName: String
-
-    var sectionsWithSettings: [SettingSection<SettingsViewModel>]
+    var draft = Settings()
 
     private(set) var error: ViewModelError?
     private(set) var errorMessage: String?
-    private(set) var isLoading: Bool
+    private(set) var applicationSelectionError: ApplicationSelectionError?
+    private(set) var isLoading = false
 
-    init() {
-        isLoading = true
-        defer { self.isLoading = false }
+    private let client: any SettingsViewStoreClient
+    private let applicationSelector: any ApplicationSelecting
 
-        openAtLogin = false
-        defaultContextName = "Context #id"
-        error = nil
-        errorMessage = nil
-        sectionsWithSettings = [
-            SettingSection(
-                title: "Global", settings: [
-                    SettingItem("Open at login",
-                                desc: "",
-                                type: .toggle(\.openAtLogin),
-                                defaultValue: false),
-                    SettingItem("Default name",
-                                desc: "",
-                                type: .textField(\.defaultContextName),
-                                defaultValue: "Name")
-                ]
-            )
-        ]
-
-        do {
-            try getCurrentSettings()
-        } catch {
-            self.error = error
-            errorMessage = error.errorDescription
-        }
+    init(
+        client: any SettingsViewStoreClient,
+        applicationSelector: any ApplicationSelecting = SystemApplicationSelector()
+    ) {
+        self.client = client
+        self.applicationSelector = applicationSelector
     }
 
-    func setSettings() {
-        // Pending: persist current settings.
-        print("Calling setSettings()")
-        for section in sectionsWithSettings {
-            for setting in section.settings {
-                print("\"\(setting.title)\" with value \(setting.inputType.getAssociatedValue(self))")
-            }
+    func load() async {
+        isLoading = true
+        defer { isLoading = false }
+
+        await client.refresh()
+
+        if client.error != nil {
+            let loadError = ViewModelError.loadFailed
+            error = loadError
+            errorMessage = loadError.errorDescription
+            return
+        }
+
+        draft = client.settings
+        error = nil
+        errorMessage = nil
+        applicationSelectionError = nil
+    }
+
+    func setSettings() async {
+        do {
+            try await client.updateSettings(draft)
+            error = nil
+            errorMessage = nil
+        } catch {
+            let persistenceError = ViewModelError.persistenceFailed
+            self.error = persistenceError
+            errorMessage = persistenceError.errorDescription
         }
     }
 
     func resetSettingsToDefaults() {
-        for section in sectionsWithSettings {
-            for setting in section.settings {
-                resetSettingToDefault(setting)
+        draft = Settings()
+    }
+
+    func addProtectedApp() async {
+        guard !isLoading else {
+            return
+        }
+
+        isLoading = true
+        applicationSelectionError = nil
+        defer { isLoading = false }
+
+        do {
+            guard let application = try await applicationSelector.selectApplication() else {
+                return
             }
+
+            let alreadyProtected = draft.protectedApps.contains {
+                $0.bundleIdentifier.caseInsensitiveCompare(application.bundleIdentifier) == .orderedSame
+            }
+
+            guard !alreadyProtected else {
+                return
+            }
+
+            draft.protectedApps.append(
+                ProtectedApplication(
+                    bundleIdentifier: application.bundleIdentifier,
+                    displayName: application.displayName
+                )
+            )
+        } catch let error as ApplicationSelectionError {
+            applicationSelectionError = error
+        } catch {
+            applicationSelectionError = .unknown
         }
     }
 
-    func getCurrentSettings() throws(ViewModelError) {}
-
-    func resetSettingToDefault(_ setting: SettingItem<SettingsViewModel>) {
-        let anyKeyPath = setting.inputType.getKeyPath(self)
-
-        if let boolPath = anyKeyPath as? ReferenceWritableKeyPath<SettingsViewModel, Bool>,
-           let boolValue = setting.defaultValue as? Bool
-        {
-            self[keyPath: boolPath] = boolValue
-            return
-        }
-
-        if let stringPath = anyKeyPath as? ReferenceWritableKeyPath<SettingsViewModel, String>,
-           let stringValue = setting.defaultValue as? String
-        {
-            self[keyPath: stringPath] = stringValue
-            return
-        }
-
-        let invalidError = ViewModelError.invalidSetting
-        error = invalidError
-        errorMessage = invalidError.errorDescription
+    func removeProtectedApp(id: UUID) {
+        draft.protectedApps.removeAll { $0.id == id }
     }
 }
