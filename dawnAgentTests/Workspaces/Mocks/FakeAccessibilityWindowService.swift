@@ -2,7 +2,6 @@ import Foundation
 import libdawn
 @testable import dawnAgent
 
-@MainActor
 final class FakeAccessibilityElement: AccessibilityElementServing {
     func attributeValue(for _: AccessibilityAttribute) throws(AccessibilityError) -> Any? { nil }
 
@@ -11,7 +10,6 @@ final class FakeAccessibilityElement: AccessibilityElementServing {
     func performAction(_: AccessibilityAction) throws(AccessibilityError) {}
 }
 
-@MainActor
 final class FakeAccessibilityWindowService: AccessibilityWindowServing {
     var windowsByPID: [pid_t: [AccessibilityWindow]] = [:]
     var windowsError: AccessibilityError?

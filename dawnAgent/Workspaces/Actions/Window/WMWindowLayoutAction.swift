@@ -80,7 +80,7 @@ struct WMWindowLayoutAction: WMAppAction {
     ) throws(AccessibilityError) {
         do {
             try windows.setFullscreen(window, fullscreen: fullscreen)
-        } catch let error as AccessibilityError {
+        } catch {
             if case .attributeUnavailable = error, !fullscreen {
                 return
             }

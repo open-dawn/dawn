@@ -1,6 +1,5 @@
 import Foundation
 
-@MainActor
 public final class AccessibilityWindow {
     public let processID: pid_t
     public let title: String?
@@ -17,7 +16,6 @@ public final class AccessibilityWindow {
     }
 }
 
-@MainActor
 public protocol AccessibilityWindowServing: AnyObject {
     func windows(forProcessID processID: pid_t) throws(AccessibilityError) -> [AccessibilityWindow]
     func raise(_ window: AccessibilityWindow) throws(AccessibilityError)

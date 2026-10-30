@@ -44,4 +44,4 @@ Inject fakes conforming to `AccessibilityWindowServing` or `AccessibilityElement
 
 Prefer these helpers for **normal / minimized** presentation. Treat **fullscreen** as optional and verify per target app when building layout actions.
 
-Dawn wiring: `WMWindowLayoutAction` (dawnAgent) reads `WorkspaceApplication.windowLayout` and calls this service after open during context switches when the agent is Accessibility-trusted.
+Dawn wiring: `WMWorkspaceTransitionAction` applies `WMWindowLayoutAction` after opens when Accessibility is trusted. `WMWindowLayoutAction` reads `WorkspaceApplication.windowLayout` and calls this service.

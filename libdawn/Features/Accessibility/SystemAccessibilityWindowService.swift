@@ -1,7 +1,6 @@
 import ApplicationServices
 import Foundation
 
-@MainActor
 public final class SystemAccessibilityWindowService: AccessibilityWindowServing {
     private let runtime: any AccessibilityRuntimeServing
 
