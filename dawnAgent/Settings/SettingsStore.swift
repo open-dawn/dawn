@@ -6,6 +6,7 @@
 //
 
 import Foundation
+import dawnLogging
 import libdawn
 
 actor SettingsStore {
@@ -13,6 +14,22 @@ actor SettingsStore {
     private var document: SettingsDocument
     private var mutationInProgress = false
     private var mutationWaiters: [CheckedContinuation<Void, Never>] = []
+
+    static func make(repository: any SettingsRepository) async throws -> SettingsStore {
+        do {
+            return try await SettingsStore(repository: repository)
+        } catch {
+            #log(
+                "Corrupted SettingsStore \(error.localizedDescription)",
+                level: .error,
+                category: .settings
+            )
+            #log("Reseting setting store", level: .info, category: .settings)
+
+            try await repository.save(.empty)
+            return try await SettingsStore(repository: repository)
+        }
+    }
 
     init(repository: any SettingsRepository) async throws {
         var document = try await repository.load() ?? .empty
