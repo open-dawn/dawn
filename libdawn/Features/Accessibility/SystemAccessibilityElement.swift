@@ -1,7 +1,6 @@
 import ApplicationServices
 import Foundation
 
-@MainActor
 public final class SystemAccessibilityElement: AccessibilityElementServing {
     private let element: AXUIElement
 
@@ -25,7 +24,7 @@ public final class SystemAccessibilityElement: AccessibilityElementServing {
         case .success:
             guard let value else { return nil }
             if CFGetTypeID(value) == CFBooleanGetTypeID() {
-                return CFBooleanGetValue(value as CFBoolean ?? CFBooleanFalse)
+                return CFEqual(value, kCFBooleanTrue)
             }
             return value as Any
         case .noValue:
@@ -66,7 +65,6 @@ public final class SystemAccessibilityElement: AccessibilityElementServing {
     }
 }
 
-@MainActor
 public final class SystemAccessibilityRuntime: AccessibilityRuntimeServing {
     public init() {}
 

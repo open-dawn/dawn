@@ -3,7 +3,6 @@ import libdawn
 @testable import dawnAgent
 import Testing
 
-@MainActor
 @Suite("WMWindowLayoutAction Testing")
 struct WMWindowLayoutActionTests {
     @Test("throws accessibilityNotTrusted when AX is not trusted")
