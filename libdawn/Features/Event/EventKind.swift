@@ -1,19 +1,21 @@
 public enum EventKind: String, Codable, Sendable, Hashable, CaseIterable {
     case debugPing
     case debugPong
+
     case initialized
 
     // MARK: Contexts
     case getContexts
     case contextsFetched
+    case switchContext
     case createContext
     case updateContext
     case deleteContext
     case archiveContext
     case unarchiveContext
-    case switchContext
-    case contextMutationAcknowledged
+
     case availableContexts
+    case contextMutationAcknowledged
 
     // MARK: MenuBar Visibility
     case getMenuBarVisibility
@@ -24,6 +26,7 @@ public enum EventKind: String, Codable, Sendable, Hashable, CaseIterable {
     // MARK: Settings
     case getSettings
     case settingsFetched
+
     case updateSettings
     case settingsMutationAcknowledgement
 }
