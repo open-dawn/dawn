@@ -11,6 +11,7 @@ struct MainApp: App {
                 .environment(appDelegate.contextStore)
                 .environment(appDelegate.updaterService)
                 .environment(appDelegate.accessibilityPermissionService)
+                .environment(appDelegate.settingsStore)
                 .handlesExternalEvents(
                     preferring: ["*"],
                     allowing: ["*"]
@@ -23,6 +24,7 @@ struct MainApp: App {
 
                     await appDelegate.contextStore.refresh()
                     await appDelegate.accessibilityPermissionService.refresh()
+                    await appDelegate.settingsStore.refresh()
                 }
         }
         .defaultSize(width: 1080, height: 680)

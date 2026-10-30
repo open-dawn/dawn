@@ -4,6 +4,7 @@ import AppKit
 final class SettingsAppDelegate: NSObject, NSApplicationDelegate {
     let eventBusService: SettingsEventBusService
     let contextStore: SettingsContextStore
+    let settingsStore: SettingsViewStore
     let updaterService: AppUpdaterService
     let accessibilityPermissionService: AccessibilityPermissionService
 
@@ -12,9 +13,8 @@ final class SettingsAppDelegate: NSObject, NSApplicationDelegate {
         let updateClient = SparkleUpdateClient()
 
         self.eventBusService = eventBusService
-        contextStore = SettingsContextStore(
-            bus: eventBusService.bus
-        )
+        contextStore = SettingsContextStore(bus: eventBusService.bus)
+        settingsStore = SettingsViewStore(bus: eventBusService.bus)
         updaterService = AppUpdaterService(client: updateClient)
         accessibilityPermissionService = AccessibilityPermissionService(
             bus: eventBusService.bus
@@ -29,6 +29,7 @@ final class SettingsAppDelegate: NSObject, NSApplicationDelegate {
         }
 
         contextStore.start()
+        settingsStore.start()
         eventBusService.start()
         updaterService.start()
         SettingsLoginItem.registerIfNeeded()
@@ -36,6 +37,7 @@ final class SettingsAppDelegate: NSObject, NSApplicationDelegate {
 
     func applicationWillTerminate(_: Notification) {
         contextStore.stop()
+        settingsStore.stop()
         eventBusService.stop()
     }
 }

@@ -31,6 +31,7 @@ public enum EventKind: String, Codable, Sendable, Hashable, CaseIterable {
     // MARK: Settings
     case getSettings
     case settingsFetched
+    case availableSettings
 
     case updateSettings
     case settingsMutationAcknowledgement
