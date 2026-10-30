@@ -26,8 +26,10 @@ public enum Event: Codable, Sendable, Equatable {
 |------|---------|--------|
 | `debugPing` | `DebugPingEvent()` | Smoke `ask` |
 | `debugPong` | `DebugPongEvent(message:)` | Default message `"pong"` |
-| `switchSpace` | `SwitchSpaceEvent(spaceIndex:)` | |
-| `initializedEvent` | `InitializedEvent()` | |
+| `initialized` | `InitializedEvent()` | |
+| `getAccessibilityStatus` | `GetAccessibilityStatusEvent()` | Ask dawnAgent AX trust |
+| `promptAccessibilityTrust` | `PromptAccessibilityTrustEvent()` | Ask dawnAgent to show AX prompt |
+| `accessibilityStatus` | `AccessibilityStatusEvent(isTrusted:)` | Reply for accessibility asks |
 
 ### How to Create an Event
 To create an event: 
@@ -209,3 +211,23 @@ public enum EventRemoteError: Error, Equatable, Sendable {
 ```
 
 `EventAskError` is thrown by both buses. `EventRemoteError` is transport-side (disconnected client, bad XPC payload).
+
+## Accessibility window helpers
+
+macOS Accessibility (`AXUIElement`) seams for listing and manipulating windows by PID. Prefer injecting protocols in dawnAgent actions; use system types only at the edges.
+
+See [Accessibility](Accessibility.md) for fullscreen / Spaces limitations.
+
+| Type | Notes |
+|------|--------|
+| `AccessibilityWindowServing` | `windows(forProcessID:)`, `raise`, `setMinimized` / `isMinimized`, best-effort fullscreen |
+| `AccessibilityElementServing` | Low-level get/set/perform |
+| `AccessibilityRuntimeServing` | Application element for PID + wrap raw window elements |
+| `SystemAccessibilityWindowService` | Default `AXUIElement` implementation |
+| `AccessibilityError` | `notTrusted`, unsupported attribute, AX failure codes |
+
+```swift
+let service: any AccessibilityWindowServing = SystemAccessibilityWindowService()
+let windows = try service.windows(forProcessID: pid)
+try service.raise(windows[0])
+```

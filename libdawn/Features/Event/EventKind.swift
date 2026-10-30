@@ -18,4 +18,9 @@ public enum EventKind: String, Codable, Sendable, Hashable, CaseIterable {
     case setMenuBarVisibility
     case menuBarVisibilityState
     case menuBarVisibilityMutationAcknowledged
+
+    // MARK: Accessibility
+    case getAccessibilityStatus
+    case promptAccessibilityTrust
+    case accessibilityStatus
 }

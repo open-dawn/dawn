@@ -6,8 +6,16 @@ import libdawn
 struct WMOpenAppAction: WMAppAction {
     private(set) var app: WorkspaceApplication
     private(set) var workspace: WorkspaceOpener
+    private let provider: ApplicationProvider
 
     func execute() async throws(WMActionError) {
+        if shouldRestoreRunningApplication,
+           let runningApp = provider.runningApplications(withBundleIdentifier: app.bundleIdentifier).first
+        {
+            try restore(runningApp)
+            return
+        }
+
         guard let appUrl: URL = app.applicationURL else {
             #log(
                 "Unable to open \(app.bundleIdentifier): missing application URL",
@@ -20,14 +28,14 @@ struct WMOpenAppAction: WMAppAction {
 
         let configuration = NSWorkspace.OpenConfiguration()
         configuration.activates = true
-        configuration.createsNewApplicationInstance = app.createNewInstance
         configuration.hides = false
         configuration.hidesOthers = false
-        configuration.promptsUserIfNeeded = false // Future setting
-        // configuration.appleEvent = nil
-        // configuration.arguments = []
-        // configuration.environment = [:]
-        // configuration.architecture = x86_64
+        configuration.requiresUniversalLinks = false
+        configuration.allowsRunningApplicationSubstitution = app.allowsRunningApplicationSubstitution
+        configuration.createsNewApplicationInstance = app.createsNewApplicationInstance
+        configuration.arguments = app.arguments
+        configuration.environment = app.environment
+        configuration.promptsUserIfNeeded = app.promptsUserIfNeeded
 
         do {
             try await workspace.openApplication(at: appUrl, configuration: configuration)
@@ -46,6 +54,23 @@ struct WMOpenAppAction: WMAppAction {
         }
     }
 
+    private var shouldRestoreRunningApplication: Bool {
+        app.allowsRunningApplicationSubstitution && !app.createsNewApplicationInstance
+    }
+
+    private func restore(_ runningApp: any RunningApplicationControlling) throws(WMActionError) {
+        if runningApp.isHidden, !runningApp.unhide() {
+            #log(
+                "Unable to unhide \(app.bundleIdentifier)",
+                level: .error,
+                category: .general
+            )
+            throw WMActionError.noGUItoShow
+        }
+
+        runningApp.activate(options: .activateAllWindows)
+    }
+
     private func map(workspaceError error: Error, filePath: String) -> WMActionError {
         let nsError = error as NSError
         guard nsError.domain == NSCocoaErrorDomain else {
@@ -60,9 +85,14 @@ struct WMOpenAppAction: WMAppAction {
         }
     }
 
-    init(app: WorkspaceApplication, workspace: WorkspaceOpener = NSWorkspace.shared) {
+    init(
+        app: WorkspaceApplication,
+        workspace: WorkspaceOpener = NSWorkspace.shared,
+        provider: ApplicationProvider = SystemApplicationProvider()
+    ) {
         self.app = app
         self.workspace = workspace
+        self.provider = provider
     }
 }
 

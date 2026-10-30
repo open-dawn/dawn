@@ -7,6 +7,7 @@ enum WMActionError: LocalizedError, Equatable {
     case invalidURL
     case notRunning
     case noGUItoShow
+    case accessibilityNotTrusted
     case unknown(reason: String?)
 
     var localizedDescription: String? {
@@ -17,6 +18,7 @@ enum WMActionError: LocalizedError, Equatable {
         case .invalidURL: String(localized: "Error in URL creation")
         case .notRunning: String(localized: "Application is not running")
         case .noGUItoShow: String(localized: "Attempt to hide an application without interface")
+        case .accessibilityNotTrusted: String(localized: "Accessibility permission is required")
         case let .unknown(reason): String(localized: "Unknown Error (\(reason ?? "nil"))")
         }
     }

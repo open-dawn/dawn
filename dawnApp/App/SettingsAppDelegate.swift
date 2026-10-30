@@ -4,12 +4,16 @@ import AppKit
 final class SettingsAppDelegate: NSObject, NSApplicationDelegate {
     let eventBusService: SettingsEventBusService
     let contextStore: SettingsContextStore
+    let accessibilityPermissionService: AccessibilityPermissionService
 
     override init() {
         let eventBusService = SettingsEventBusService()
 
         self.eventBusService = eventBusService
         self.contextStore = SettingsContextStore(
+            bus: eventBusService.bus
+        )
+        self.accessibilityPermissionService = AccessibilityPermissionService(
             bus: eventBusService.bus
         )
 

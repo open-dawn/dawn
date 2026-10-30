@@ -22,6 +22,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var workspaceRuntime: WorkspaceRuntime?
     private var windowManagerListener: WindowManagerListener?
     private var debugPingListener: DebugPingListener?
+    private var accessibilityTrustListener: AccessibilityTrustListener?
     private var startupTask: Task<Void, Never>?
     private var isStartingOrStarted = false
 
@@ -56,7 +57,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         )
     }
 
-    func applicationDidFinishLaunching(_ notification: Notification) {
+    func applicationDidFinishLaunching(_: Notification) {
         guard ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"] == nil else {
             return
         }
@@ -81,7 +82,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
     }
 
-    func applicationWillTerminate(_ notification: Notification) {
+    func applicationWillTerminate(_: Notification) {
         startupTask?.cancel()
         startupTask = nil
 
@@ -92,6 +93,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         windowManagerListener = nil
         debugPingListener = nil
+        accessibilityTrustListener = nil
         workspaceRuntime = nil
         menuBarVisibilityListener = nil
     }
@@ -120,7 +122,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         return .terminateLater
     }
 
-    func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {
+    func applicationShouldTerminateAfterLastWindowClosed(_: NSApplication) -> Bool {
         false
     }
 
@@ -129,37 +131,22 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         isStartingOrStarted = true
 
         do {
-            #log(
-                "Creating workspace runtime",
-                level: .info,
-                category: .appLifecycle
-            )
+            #log("Creating workspace runtime", level: .info, category: .appLifecycle)
 
             let components = try await makeAgentRuntime(eventBusService.bus)
-
             let workspaceRuntime = components.workspace
-
             await workspaceRuntime.refresh()
-
             let initialMenuBarVisibility = await components.menuBarVisibilityStore.menuBarIsVisible()
-
             try await reconcileRestoredActivity(in: workspaceRuntime)
-
-            #log(
-                "Workspace runtime created",
-                level: .info,
-                category: .appLifecycle
-            )
+            #log("Workspace runtime created", level: .info, category: .appLifecycle)
 
             let windowManagerListener = WindowManagerListener(
                 bus: eventBusService.bus,
                 workspace: workspaceRuntime
             )
-
             let debugPingListener = DebugPingListener(bus: eventBusService.bus)
-
+            let accessibilityTrustListener = AccessibilityTrustListener(bus: eventBusService.bus)
             let menuBarController = makeMenuBarController(workspaceRuntime, initialMenuBarVisibility)
-
             let menuBarVisibilityListener = MenuBarVisibilityListener(
                 bus: eventBusService.bus,
                 store: components.menuBarVisibilityStore,
@@ -169,22 +156,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             self.workspaceRuntime = workspaceRuntime
             self.windowManagerListener = windowManagerListener
             self.debugPingListener = debugPingListener
+            self.accessibilityTrustListener = accessibilityTrustListener
             self.menuBarController = menuBarController
             self.menuBarVisibilityListener = menuBarVisibilityListener
 
-            #log(
-                "Starting dawnAgent event bus",
-                level: .info,
-                category: .eventBus
-            )
-
+            #log("Starting dawnAgent event bus", level: .info, category: .eventBus)
             eventBusService.start()
 
-            #log(
-                "dawnAgent startup completed",
-                level: .info,
-                category: .appLifecycle
-            )
+            #log("dawnAgent startup completed", level: .info, category: .appLifecycle)
         } catch {
             isStartingOrStarted = false
             throw error

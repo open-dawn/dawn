@@ -11,6 +11,7 @@ Typed pub/sub and request/reply between DAWN processes. Apps implement `Listener
 - [Host](Docs/Host.md) — bus, listeners, accepting remotes
 - [Client](Docs/Client.md) — connecting, publishing, asking, listening
 - [API](Docs/API.md) — public types
+- [Accessibility](Docs/Accessibility.md) — AX window helpers (list / raise / minimize) and Spaces limits
 
 ## Host vs client
 
