@@ -97,7 +97,7 @@ public struct WorkspaceTransition: Codable, Sendable, Equatable {
 | `activationPolicy` | `hide` (default): hide non-members, then open every member; `merge`: leave others alone and only open members that are not already running; `close`: terminate non-members, then open every member |
 | `terminalCommand` | Optional shell command after opens/layouts. Empty or `nil` is skipped. The command is started in the background; a launch failure is logged and the transition continues |
 
-`WMWorkspaceTransitionAction` (under `Workspaces/Actions/Transition/`) takes a `WorkspaceContext` and runs reset → open → window layout (when Accessibility is trusted) → terminal. Members are opened one at a time. Layout is applied to every member app. Each step is best-effort: errors are logged and later steps still run.
+`WMWorkspaceTransitionAction` (under `Workspaces/Actions/Transition/`) takes a `WorkspaceContext` and runs reset → for each opened app: open → wait for AX windows → window layout (when Accessibility is trusted) → then layout any already-running members (merge) → terminal. Members are opened one at a time. Each step is best-effort: errors are logged and later steps still run.
 
 Reset only considers apps with the regular activation policy. It never hides or closes Finder, Dock, SystemUIServer, loginwindow, WindowManager, `app.opendawn.dawnApp` (DAWN), `app.opendawn.dawnAgent`, or the agent's own bundle id. Debug builds also spare Xcode (`com.apple.dt.Xcode`). Merge uses `ApplicationProvider` to skip apps that already have a running instance.
 

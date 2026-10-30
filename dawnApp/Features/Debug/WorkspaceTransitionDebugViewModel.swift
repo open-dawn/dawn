@@ -17,7 +17,6 @@ final class WorkspaceTransitionDebugViewModel {
 
     /// Defaults stamped onto newly added apps (and shown when none is selected).
     var allowsRunningApplicationSubstitution = true
-    var createsNewApplicationInstance = false
     var argumentsText = ""
     var environmentText = ""
     var promptsUserIfNeeded = false
@@ -70,8 +69,7 @@ final class WorkspaceTransitionDebugViewModel {
             selectedApplicationID = application.id
             appendLog(
                 "Added app \(application.displayName) "
-                    + "(layout: \(application.windowLayout.rawValue), "
-                    + "newInstance: \(application.createsNewApplicationInstance))"
+                    + "(layout: \(application.windowLayout.rawValue))"
             )
         } catch let error as ApplicationSelectionError {
             applicationSelectionError = error
@@ -238,7 +236,6 @@ final class WorkspaceTransitionDebugViewModel {
 
     private func applyCurrentOptions(to application: inout WorkspaceApplication) {
         application.allowsRunningApplicationSubstitution = allowsRunningApplicationSubstitution
-        application.createsNewApplicationInstance = createsNewApplicationInstance
         application.arguments = Self.parseArguments(argumentsText)
         application.environment = Self.parseEnvironment(environmentText)
         application.promptsUserIfNeeded = promptsUserIfNeeded
@@ -249,7 +246,6 @@ final class WorkspaceTransitionDebugViewModel {
         guard let application = applications.first(where: { $0.id == id }) else { return }
 
         allowsRunningApplicationSubstitution = application.allowsRunningApplicationSubstitution
-        createsNewApplicationInstance = application.createsNewApplicationInstance
         argumentsText = application.arguments.joined(separator: " ")
         environmentText = Self.formatEnvironment(application.environment)
         promptsUserIfNeeded = application.promptsUserIfNeeded

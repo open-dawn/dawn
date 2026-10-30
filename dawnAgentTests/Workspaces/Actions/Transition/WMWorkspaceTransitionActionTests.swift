@@ -5,17 +5,22 @@ import Testing
 
 @Suite("WMWorkspaceTransitionAction Testing")
 struct WMWorkspaceTransitionActionTests {
-    @Test("hide policy resets then opens all apps, then terminal")
+    @Test("hide policy opens then layouts each app before terminal")
     func hideOpensAllThenTerminal() async throws {
         let safari = WorkspaceApplication(
             bundleIdentifier: "com.apple.Safari",
             displayName: "Safari",
             applicationURL: URL(fileURLWithPath: "/Applications/Safari.app")
         )
+        let notes = WorkspaceApplication(
+            bundleIdentifier: "com.apple.Notes",
+            displayName: "Notes",
+            applicationURL: URL(fileURLWithPath: "/Applications/Notes.app")
+        )
         let context = WorkspaceContext(
             name: "Work",
             symbol: "briefcase",
-            applications: [safari],
+            applications: [safari, notes],
             transition: WorkspaceTransition(
                 activationPolicy: .hide,
                 terminalCommand: "echo dawn"
@@ -36,12 +41,22 @@ struct WMWorkspaceTransitionActionTests {
         try await action.execute()
 
         #expect(performer.resetPolicies == [.hide])
-        #expect(performer.openedApps.map(\.bundleIdentifier) == ["com.apple.Safari"])
-        #expect(performer.laidOutApps.map(\.bundleIdentifier) == ["com.apple.Safari"])
+        #expect(performer.openedApps.map(\.bundleIdentifier) == ["com.apple.Safari", "com.apple.Notes"])
+        #expect(performer.laidOutApps.map(\.bundleIdentifier) == ["com.apple.Safari", "com.apple.Notes"])
         #expect(performer.terminalCommands == ["echo dawn"])
+        #expect(
+            performer.steps == [
+                .open("com.apple.Safari"),
+                .wait("com.apple.Safari"),
+                .layout("com.apple.Safari"),
+                .open("com.apple.Notes"),
+                .wait("com.apple.Notes"),
+                .layout("com.apple.Notes"),
+            ]
+        )
     }
 
-    @Test("merge policy only opens apps that are not already running")
+    @Test("merge policy only opens missing apps but layouts every member")
     func mergeOpensMissingOnly() async throws {
         let safari = WorkspaceApplication(
             bundleIdentifier: "com.apple.Safari",
@@ -78,8 +93,16 @@ struct WMWorkspaceTransitionActionTests {
 
         #expect(performer.resetPolicies == [.merge])
         #expect(performer.openedApps.map(\.bundleIdentifier) == ["com.apple.Notes"])
-        #expect(performer.laidOutApps.map(\.bundleIdentifier) == ["com.apple.Safari", "com.apple.Notes"])
+        #expect(performer.laidOutApps.map(\.bundleIdentifier) == ["com.apple.Notes", "com.apple.Safari"])
         #expect(performer.terminalCommands.isEmpty)
+        #expect(
+            performer.steps == [
+                .open("com.apple.Notes"),
+                .wait("com.apple.Notes"),
+                .layout("com.apple.Notes"),
+                .layout("com.apple.Safari"),
+            ]
+        )
     }
 
     @Test("skips window layout when Accessibility is not trusted")
@@ -110,6 +133,7 @@ struct WMWorkspaceTransitionActionTests {
 
         #expect(performer.openedApps.map(\.bundleIdentifier) == ["com.apple.Safari"])
         #expect(performer.laidOutApps.isEmpty)
+        #expect(performer.steps == [.open("com.apple.Safari")])
     }
 
     @Test("continues when optional terminal step fails")
@@ -143,11 +167,18 @@ struct WMWorkspaceTransitionActionTests {
     }
 }
 
+enum FakeTransitionStep: Equatable {
+    case open(String)
+    case wait(String)
+    case layout(String)
+}
+
 final class FakeWorkspaceTransitionPerformer: WorkspaceTransitionPerforming {
     private(set) var resetPolicies: [WorkspaceActivationPolicy] = []
     private(set) var openedApps: [WorkspaceApplication] = []
     private(set) var laidOutApps: [WorkspaceApplication] = []
     private(set) var terminalCommands: [String] = []
+    private(set) var steps: [FakeTransitionStep] = []
 
     var terminalError: Error?
 
@@ -157,10 +188,16 @@ final class FakeWorkspaceTransitionPerformer: WorkspaceTransitionPerforming {
 
     func openApp(_ app: WorkspaceApplication) async throws {
         openedApps.append(app)
+        steps.append(.open(app.bundleIdentifier))
+    }
+
+    func waitForWindows(bundleIdentifier: String) async {
+        steps.append(.wait(bundleIdentifier))
     }
 
     func applyWindowLayout(_ app: WorkspaceApplication) async throws {
         laidOutApps.append(app)
+        steps.append(.layout(app.bundleIdentifier))
     }
 
     func runTerminalCommand(_ command: String) async throws {
