@@ -37,9 +37,6 @@
             .onChange(of: viewModel.allowsRunningApplicationSubstitution) { _, _ in
                 viewModel.applyCurrentOptionsToSelectedApplication()
             }
-            .onChange(of: viewModel.createsNewApplicationInstance) { _, _ in
-                viewModel.applyCurrentOptionsToSelectedApplication()
-            }
             .onChange(of: viewModel.argumentsText) { _, _ in
                 viewModel.applyCurrentOptionsToSelectedApplication()
             }
@@ -144,11 +141,6 @@
                 )
 
                 Toggle(
-                    "Create new application instance",
-                    isOn: $viewModel.createsNewApplicationInstance
-                )
-
-                Toggle(
                     "Prompt user if needed",
                     isOn: $viewModel.promptsUserIfNeeded
                 )
@@ -191,7 +183,8 @@
             } footer: {
                 Text(
                     "These options map to WorkspaceApplication launch fields used by "
-                        + "WMOpenAppAction and WMWindowLayoutAction."
+                        + "WMOpenAppAction and WMWindowLayoutAction. "
+                        + "Args/env are process-level — verify with `ps eww -p <pid>` after launch."
                 )
             }
         }
@@ -318,9 +311,6 @@
                 "layout: \(application.windowLayout.rawValue)",
             ]
 
-            if application.createsNewApplicationInstance {
-                parts.append("new instance")
-            }
             if !application.allowsRunningApplicationSubstitution {
                 parts.append("no substitution")
             }
