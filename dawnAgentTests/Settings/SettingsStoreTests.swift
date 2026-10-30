@@ -6,8 +6,8 @@
 //
 
 import Foundation
-import libdawn
 import Testing
+import libdawn
 
 @testable import dawnAgent
 
@@ -655,6 +655,379 @@ struct SettingsStoreTests {
 
         do {
             try await sut.setLaunchAtLogin(true)
+            Issue.record("Expected update to throw")
+        } catch let error as TestError {
+            #expect(error == .saveFailed)
+        } catch {
+            Issue.record("Unexpected error: \(error)")
+        }
+
+        #expect(await sut.snapshot() == initialDocument)
+        #expect(await repository.savedDocuments.isEmpty)
+    }
+
+    @Test("recording activation persists activity")
+    func activationPersists() async throws {
+        let context = WorkspaceContext(
+            name: "Work",
+            symbol: "briefcase"
+        )
+
+        let repository = SettingsRepositorySpy(
+            storedDocument: makeDocument(
+                contexts: [context]
+            )
+        )
+
+        let store = try await SettingsStore(repository: repository)
+
+        let activatedAt = Date(timeIntervalSince1970: 100)
+
+        try await store.recordContextActivation(
+            contextID: context.id,
+            at: activatedAt
+        )
+
+        let snapshot = await store.snapshot()
+
+        #expect(snapshot.workspaceActivity.activeContextID == context.id)
+        #expect(snapshot.workspaceActivity.activeSince == activatedAt)
+        #expect(await repository.savedDocuments == [snapshot])
+    }
+
+    @Test("stopping the active context persists its last-active time")
+    func stoppingPersists() async throws {
+        let context = WorkspaceContext(
+            name: "Work",
+            symbol: "briefcase"
+        )
+        var document = makeDocument(
+            contexts: [context]
+        )
+
+        document.workspaceActivity.activate(
+            contextID: context.id,
+            at: Date(timeIntervalSince1970: 100)
+        )
+
+        let repository = SettingsRepositorySpy(
+            storedDocument: document
+        )
+        let store = try await SettingsStore(
+            repository: repository
+        )
+        let stoppedAt = Date(timeIntervalSince1970: 200)
+
+        try await store.stopActiveContext(at: stoppedAt)
+
+        let snapshot = await store.snapshot()
+
+        #expect(
+            snapshot.workspaceActivity.activeContextID == nil
+        )
+        #expect(
+            snapshot.workspaceActivity.lastActiveAt(
+                for: context.id
+            ) == stoppedAt
+        )
+    }
+
+    @Test("deleting a context removes its activity metadata")
+    func deletionRemovesActivity() async throws {
+        let context = WorkspaceContext(
+            name: "Work",
+            symbol: "briefcase"
+        )
+        var document = makeDocument(
+            contexts: [context]
+        )
+
+        document.workspaceActivity.activate(
+            contextID: context.id,
+            at: Date(timeIntervalSince1970: 100)
+        )
+
+        let repository = SettingsRepositorySpy(
+            storedDocument: document
+        )
+        let store = try await SettingsStore(
+            repository: repository
+        )
+
+        try await store.deleteContext(id: context.id)
+
+        let snapshot = await store.snapshot()
+
+        #expect(snapshot.contexts.isEmpty)
+        #expect(snapshot.workspaceActivity == .empty)
+    }
+
+    @Test("unknown active ID throws contextNotFound")
+    func unknownActiveIDThrowsError() async throws {
+        let unknownID = UUID()
+        let document = makeDocument(contexts: [])
+
+        let repository = SettingsRepositorySpy(storedDocument: document)
+
+        let store = try await SettingsStore(repository: repository)
+
+        await #expect(throws: SettingsStoreError.contextNotFound(unknownID)) {
+            try await store.recordContextActivation(contextID: unknownID, at: Date(timeIntervalSince1970: 100))
+        }
+
+        #expect(await store.snapshot() == document)
+        #expect(await repository.savedDocuments.isEmpty)
+    }
+
+    @Test("Failed persistence leaves cache unchanged")
+    func failedPersistenceLeavesCacheUnchanged() async throws {
+        let context = WorkspaceContext(
+            name: "Work",
+            symbol: "briefcase"
+        )
+
+        let initialDocument = makeDocument(
+            contexts: [context]
+        )
+
+        let repository = SettingsRepositorySpy(
+            storedDocument: initialDocument,
+            saveError: TestError.saveFailed
+        )
+
+        let store = try await SettingsStore(repository: repository)
+
+        await #expect(throws: TestError.saveFailed) {
+            try await store.recordContextActivation(
+                contextID: context.id,
+                at: Date(timeIntervalSince1970: 100)
+            )
+        }
+
+        #expect(await store.snapshot() == initialDocument)
+        #expect(await repository.storedDocument == initialDocument)
+        #expect(await repository.savedDocuments.isEmpty)
+    }
+
+    @Test("load retains active session for startup reconciliation")
+    func loadRetainsActiveSessionForStartupReconciliation() async throws {
+        let context = WorkspaceContext(
+            name: "Work",
+            symbol: "briefcase"
+        )
+        let activeSince = Date(
+            timeIntervalSince1970: 100
+        )
+
+        var document = makeDocument(
+            contexts: [context]
+        )
+        document.workspaceActivity.activate(
+            contextID: context.id,
+            at: activeSince
+        )
+
+        let repository = SettingsRepositorySpy(
+            storedDocument: document
+        )
+        let store = try await SettingsStore(
+            repository: repository
+        )
+
+        let snapshot = await store.snapshot()
+
+        #expect(snapshot == document)
+        #expect(
+            snapshot.workspaceActivity.activeContextID
+                == context.id
+        )
+        #expect(
+            snapshot.workspaceActivity.activeSince
+                == activeSince
+        )
+
+        #expect(
+            await repository.savedDocuments.isEmpty
+        )
+    }
+
+    @Test("startup removes orphaned activity")
+    func startupRemovesOrphanedActivity() async throws {
+        let retainedContext = WorkspaceContext(
+            name: "Work",
+            symbol: "briefcase"
+        )
+        let orphanedContextID = UUID()
+        let retainedLastActiveAt = Date(
+            timeIntervalSince1970: 100
+        )
+        let orphanedLastActiveAt = Date(
+            timeIntervalSince1970: 200
+        )
+
+        var document = makeDocument(
+            contexts: [retainedContext]
+        )
+        document.workspaceActivity = WorkspaceActivityState(
+            activeSession: .init(
+                contextID: orphanedContextID,
+                startedAt: Date(
+                    timeIntervalSince1970: 300
+                )
+            ),
+            lastActiveAtByContextID: [
+                retainedContext.id: retainedLastActiveAt,
+                orphanedContextID: orphanedLastActiveAt,
+            ]
+        )
+
+        let repository = SettingsRepositorySpy(
+            storedDocument: document
+        )
+        let store = try await SettingsStore(
+            repository: repository
+        )
+
+        let snapshot = await store.snapshot()
+
+        #expect(
+            snapshot.workspaceActivity.activeContextID == nil
+        )
+        #expect(
+            snapshot.workspaceActivity.activeSince == nil
+        )
+        #expect(
+            snapshot.workspaceActivity.lastActiveAt(
+                for: retainedContext.id
+            ) == retainedLastActiveAt
+        )
+        #expect(
+            snapshot.workspaceActivity.lastActiveAt(
+                for: orphanedContextID
+            ) == nil
+        )
+
+        #expect(
+            await repository.savedDocuments == [snapshot]
+        )
+        #expect(
+            await repository.storedDocument == snapshot
+        )
+    }
+
+    @Test("Menu bar is visible by default")
+    func menuBarIsVisibleByDefault() {
+        #expect(Settings().showInMenuBar)
+    }
+
+    @Test("Legacy settings default menu bar visibility to true")
+    func legacySettingsDefaultToVisible() throws {
+        let data = Data(
+            """
+            {
+            "launchAtLogin": false
+            }
+            """.utf8
+        )
+
+        let settings = try JSONDecoder().decode(
+            Settings.self,
+            from: data
+        )
+
+        #expect(settings.showInMenuBar)
+    }
+
+    @Test("Disabling menu bar persists and preserves contexts")
+    func disablingMenuBarPersists() async throws {
+        let context = WorkspaceContext(
+            name: "Study",
+            symbol: "book"
+        )
+
+        let initialDocument = SettingsDocument(
+            schemaVersion: SettingsDocument.currentSchemaVersion,
+            contexts: [context],
+            generalSettings: Settings(showInMenuBar: true)
+        )
+
+        let repository = SettingsRepositorySpy(
+            storedDocument: initialDocument
+        )
+
+        let sut = try await SettingsStore(
+            repository: repository
+        )
+
+        try await sut.setMenuBarVisible(false)
+
+        let snapshot = await sut.snapshot()
+        let savedDocuments = await repository.savedDocuments
+
+        #expect(snapshot.generalSettings.showInMenuBar == false)
+        #expect(snapshot.contexts == [context])
+        #expect(savedDocuments == [snapshot])
+    }
+
+    @Test("Menu bar can be enabled again")
+    func enablingMenuBarPersists() async throws {
+        let initialDocument = SettingsDocument(
+            schemaVersion: SettingsDocument.currentSchemaVersion,
+            contexts: [],
+            generalSettings: Settings(showInMenuBar: false)
+        )
+
+        let repository = SettingsRepositorySpy(
+            storedDocument: initialDocument
+        )
+
+        let sut = try await SettingsStore(
+            repository: repository
+        )
+
+        try await sut.setMenuBarVisible(true)
+
+        let snapshot = await sut.snapshot()
+
+        #expect(snapshot.generalSettings.showInMenuBar)
+        #expect(
+            await repository.savedDocuments == [snapshot]
+        )
+    }
+
+    @Test("Setting existing menu bar visibility does not save")
+    func unchangedMenuBarVisibilityDoesNotSave() async throws {
+        let initialDocument = SettingsDocument.empty
+
+        let repository = SettingsRepositorySpy(
+            storedDocument: initialDocument
+        )
+
+        let sut = try await SettingsStore(
+            repository: repository
+        )
+
+        try await sut.setMenuBarVisible(true)
+
+        #expect(await sut.snapshot() == initialDocument)
+        #expect(await repository.savedDocuments.isEmpty)
+    }
+
+    @Test("Menu bar persistence failure preserves previous value")
+    func failedMenuBarVisibilityUpdateDoesNotMutate() async throws {
+        let initialDocument = SettingsDocument.empty
+
+        let repository = SettingsRepositorySpy(
+            storedDocument: initialDocument,
+            saveError: TestError.saveFailed
+        )
+
+        let sut = try await SettingsStore(
+            repository: repository
+        )
+
+        do {
+            try await sut.setMenuBarVisible(false)
             Issue.record("Expected update to throw")
         } catch let error as TestError {
             #expect(error == .saveFailed)

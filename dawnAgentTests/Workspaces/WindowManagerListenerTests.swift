@@ -348,7 +348,7 @@ struct WindowManagerListenerTests {
         )
 
         #expect(switcher.switchedContexts == [context])
-        #expect(workspace.lastRequestedContextID == context.id)
+        #expect(workspace.activeContextID == context.id)
         #expect(
             response
                 == .contextMutationAcknowledged(
@@ -381,7 +381,7 @@ struct WindowManagerListenerTests {
         )
 
         #expect(switcher.switchedContexts.isEmpty)
-        #expect(workspace.lastRequestedContextID == nil)
+        #expect(workspace.activeContextID == nil)
         #expect(
             response
                 == .contextMutationAcknowledged(
@@ -404,10 +404,9 @@ struct WindowManagerListenerTests {
 }
 
 @MainActor
-final class FakeContextManager: ContextProviding {
+final class FakeContextManager: WorkspaceManaging {
     var contexts: [WorkspaceContext] = []
-
-    private var continuation: CheckedContinuation<Void, Never>?
+    var workspaceActivity: WorkspaceActivityState = .empty
 
     private(set) var createPayloads: [CreateContextEvent] = []
     var createResult: WorkspaceContext?
@@ -420,11 +419,11 @@ final class FakeContextManager: ContextProviding {
     var deleteError: Error?
 
     func getAvailableContexts() -> [WorkspaceContext] {
-        defer {
-            continuation?.resume()
-            continuation = nil
-        }
-        return contexts
+        contexts
+    }
+
+    func getWorkspaceActivity() async -> WorkspaceActivityState {
+        workspaceActivity
     }
 
     func createContext(name: String, symbol: String, applications: [WorkspaceApplication]) async throws
@@ -475,6 +474,7 @@ final class FakeContextManager: ContextProviding {
             throw deleteError
         }
 
+        workspaceActivity.removeContext(id: id)
         contexts.removeAll { $0.id == id }
     }
 
@@ -482,8 +482,29 @@ final class FakeContextManager: ContextProviding {
         contexts.first { $0.id == id }
     }
 
-    func waitUntilSwitched() async {
-        await withCheckedContinuation { continuation = $0 }
+    func recordContextActivation(contextID: UUID, at date: Date) async throws -> WorkspaceActivityState {
+        guard contexts.contains(where: { $0.id == contextID }) else {
+            throw SettingsStoreError.contextNotFound(contextID)
+        }
+
+        workspaceActivity.activate(
+            contextID: contextID,
+            at: date
+        )
+
+        return workspaceActivity
+    }
+
+    func stopActiveContext(at date: Date) async throws -> WorkspaceActivityState {
+        workspaceActivity.stop(at: date)
+        return workspaceActivity
+    }
+
+    func getWorkspaceSnapshot() async -> WorkspaceSnapshot {
+        WorkspaceSnapshot(
+            contexts: contexts,
+            activity: workspaceActivity
+        )
     }
 }
 

@@ -40,6 +40,25 @@ struct EventTests {
                 event: Event.contextMutationAcknowledged(.success(contextID: UUID())),
                 kind: EventKind.contextMutationAcknowledged
             ),
+            (event: Event.getMenuBarVisibility(GetMenuBarVisibilityEvent()), kind: .getMenuBarVisibility),
+            (
+                event: Event.setMenuBarVisibility(SetMenuBarVisibilityEvent(isVisible: false)),
+                kind: .setMenuBarVisibility
+            ),
+            (
+                event: Event.menuBarVisibilityState(
+                    MenuBarVisibilityStateEvent(
+                        isVisible: true
+                    )
+                ),
+                kind: .menuBarVisibilityState
+            ),
+            (
+                event: Event.menuBarVisibilityMutationAcknowledged(
+                    .success(isVisible: false)
+                ),
+                kind: .menuBarVisibilityMutationAcknowledged
+            ),
         ]
     )
     func exposesKind(_ eventWithKind: (event: Event, kind: EventKind)) {
@@ -63,7 +82,13 @@ struct EventTests {
             .contextMutationAcknowledged(ContextMutationAcknowledgement.failure(failure: .contextNotFound(UUID()))),
             .availableContexts(
                 AvailableContextsEvent(contexts: [WorkspaceContext(name: "Placeholder", symbol: "book")])
-            )
+            ),
+            .getMenuBarVisibility(GetMenuBarVisibilityEvent()),
+            .setMenuBarVisibility(SetMenuBarVisibilityEvent(isVisible: false)),
+            .menuBarVisibilityState(MenuBarVisibilityStateEvent(isVisible: true)),
+            .menuBarVisibilityMutationAcknowledged(.success(isVisible: false)),
+            .menuBarVisibilityMutationAcknowledged(.failure(.persistence)),
+            .menuBarVisibilityMutationAcknowledged(.failure(.unexpected)),
         ]
     )
     func roundTripsThroughJSON(_ event: Event) throws {

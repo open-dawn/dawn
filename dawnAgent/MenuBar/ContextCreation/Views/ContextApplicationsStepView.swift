@@ -11,6 +11,7 @@ import libdawnUI
 
 struct ContextApplicationsStepView: View {
     let applications: [ContextCreationApplication]
+    let isLoadingApplications: Bool
 
     @Binding var selectedApplicationIDs: [UUID]
 
@@ -48,6 +49,8 @@ struct ContextApplicationsStepView: View {
             searchBar
             applicationGrid
 
+            Spacer()
+
             DButton(action: onNext) {
                 Text("Next")
                     .frame(maxWidth: .infinity)
@@ -74,6 +77,10 @@ struct ContextApplicationsStepView: View {
                 }
             }
         }
+        .frame(
+            height: 50,
+            alignment: .top
+        )
         .accessibilityLabel(selectionSummaryText)
     }
 
@@ -113,7 +120,10 @@ struct ContextApplicationsStepView: View {
 
     @ViewBuilder
     private var applicationGrid: some View {
-        if filteredApplications.isEmpty {
+        if isLoadingApplications {
+            ProgressView("Loading applications...")
+                .frame(maxWidth: .infinity, minHeight: 220)
+        } else if filteredApplications.isEmpty {
             ContentUnavailableView(
                 searchQuery.isEmpty ? "No Applications Available" : "No Matching Applications",
                 systemImage: "app.dashed"

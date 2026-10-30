@@ -2,14 +2,21 @@ import AppKit
 import dawnLogging
 import libdawn
 
-typealias WorkspaceRuntimeFactory = @MainActor (EventBus) async throws -> WorkspaceRuntime
-typealias MenuBarControllerFactory = @MainActor (WorkspaceRuntime) -> any MenuBarControlling
+struct AgentRuntimeComponents {
+    let workspace: WorkspaceRuntime
+
+    let menuBarVisibilityStore: any MenuBarVisibilityStoring
+}
+
+typealias AgentRuntimeFactory = @MainActor (EventBus) async throws -> AgentRuntimeComponents
+typealias MenuBarControllerFactory = @MainActor (WorkspaceRuntime, Bool) -> any MenuBarControlling
 
 @MainActor
 final class AppDelegate: NSObject, NSApplicationDelegate {
     private let eventBusService: any EventBusServicing
     private let makeMenuBarController: MenuBarControllerFactory
-    private let makeWorkspaceRuntime: WorkspaceRuntimeFactory
+    private let makeAgentRuntime: AgentRuntimeFactory
+    private var menuBarVisibilityListener: MenuBarVisibilityListener?
 
     private var menuBarController: (any MenuBarControlling)?
     private var workspaceRuntime: WorkspaceRuntime?
@@ -18,26 +25,35 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var startupTask: Task<Void, Never>?
     private var isStartingOrStarted = false
 
+    private var isPreparingToTerminate = false
+
     init(
         eventBusService: any EventBusServicing = EventBusService(),
-        makeMenuBarController: @escaping MenuBarControllerFactory = {
-            MenuBarController(workspace: $0)
+        makeMenuBarController: @escaping MenuBarControllerFactory = { workspace, isVisible in
+            MenuBarController(workspace: workspace, initiallyVisible: isVisible)
         },
-        makeWorkspaceRuntime: @escaping WorkspaceRuntimeFactory = { bus in
-            let publisher = EventBusContextSnapshotPublisher(bus: bus)
-
-            let contextManager = try await ContextManager(snapshotPublisher: publisher)
-
-            return WorkspaceRuntime(
-                contextManager: contextManager,
-            )
-        }
+        makeAgentRuntime: @escaping AgentRuntimeFactory = AppDelegate.makeAgentRuntime
     ) {
         self.eventBusService = eventBusService
         self.makeMenuBarController = makeMenuBarController
-        self.makeWorkspaceRuntime = makeWorkspaceRuntime
+        self.makeAgentRuntime = makeAgentRuntime
 
         super.init()
+    }
+
+    private static func makeAgentRuntime(bus: EventBus) async throws -> AgentRuntimeComponents {
+        let publisher = EventBusContextSnapshotPublisher(
+            bus: bus
+        )
+
+        let contextManager = try await ContextManager(
+            snapshotPublisher: publisher
+        )
+
+        return AgentRuntimeComponents(
+            workspace: WorkspaceRuntime(contextManager: contextManager),
+            menuBarVisibilityStore: contextManager.menuBarVisibilityStore
+        )
     }
 
     func applicationDidFinishLaunching(_ notification: Notification) {
@@ -77,6 +93,31 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         windowManagerListener = nil
         debugPingListener = nil
         workspaceRuntime = nil
+        menuBarVisibilityListener = nil
+    }
+
+    func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
+        if isPreparingToTerminate {
+            return .terminateLater
+        }
+
+        guard let workspaceRuntime, workspaceRuntime.activeContextID != nil else {
+            return .terminateNow
+        }
+
+        isPreparingToTerminate = true
+
+        Task { @MainActor in
+            do {
+                try await workspaceRuntime.stopActiveContext()
+                sender.reply(toApplicationShouldTerminate: true)
+            } catch {
+                isPreparingToTerminate = false
+                sender.reply(toApplicationShouldTerminate: false)
+            }
+        }
+
+        return .terminateLater
     }
 
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {
@@ -94,11 +135,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 category: .appLifecycle
             )
 
-            let workspaceRuntime = try await makeWorkspaceRuntime(eventBusService.bus)
+            let components = try await makeAgentRuntime(eventBusService.bus)
+
+            let workspaceRuntime = components.workspace
 
             await workspaceRuntime.refresh()
 
-            try Task.checkCancellation()
+            let initialMenuBarVisibility = await components.menuBarVisibilityStore.menuBarIsVisible()
+
+            try await reconcileRestoredActivity(in: workspaceRuntime)
 
             #log(
                 "Workspace runtime created",
@@ -113,12 +158,19 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
             let debugPingListener = DebugPingListener(bus: eventBusService.bus)
 
-            let menuBarController = makeMenuBarController(workspaceRuntime)
+            let menuBarController = makeMenuBarController(workspaceRuntime, initialMenuBarVisibility)
+
+            let menuBarVisibilityListener = MenuBarVisibilityListener(
+                bus: eventBusService.bus,
+                store: components.menuBarVisibilityStore,
+                menuBarController: menuBarController
+            )
 
             self.workspaceRuntime = workspaceRuntime
             self.windowManagerListener = windowManagerListener
             self.debugPingListener = debugPingListener
             self.menuBarController = menuBarController
+            self.menuBarVisibilityListener = menuBarVisibilityListener
 
             #log(
                 "Starting dawnAgent event bus",
@@ -137,5 +189,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             isStartingOrStarted = false
             throw error
         }
+    }
+
+    private func reconcileRestoredActivity(in workspace: WorkspaceRuntime) async throws {
+        try Task.checkCancellation()
+
+        if workspace.activeContextID != nil {
+            try await workspace.stopActiveContext()
+        }
+
+        try Task.checkCancellation()
     }
 }

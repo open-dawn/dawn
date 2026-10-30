@@ -1,6 +1,6 @@
+import SwiftUI
 import libdawn
 import libdawnUI
-import SwiftUI
 
 struct AppShellView: View {
     @Environment(SettingsContextStore.self)
@@ -32,12 +32,23 @@ struct AppShellView: View {
         private var eventBusService
 
         @State private var viewModel: ContextDetailViewModel
-        @State private var selectedDestination: SidebarDestination?
+        @State private var navigation: AppNavigationModel
 
         private var interactionsDisabled: Bool {
-            !eventBusService.isConnected ||
-                store.isLoading ||
-                viewModel.operationInProgress != nil
+            !eventBusService.isConnected || store.isLoading || viewModel.operationInProgress != nil
+        }
+
+        private var isShowingNavigationError: Binding<Bool> {
+            Binding(
+                get: {
+                    navigation.error != nil
+                },
+                set: { isPresented in
+                    if !isPresented {
+                        navigation.dismissError()
+                    }
+                }
+            )
         }
 
         init(store: SettingsContextStore, availableUpdate: AppUpdateAvailability?) {
@@ -46,6 +57,8 @@ struct AppShellView: View {
             _viewModel = State(
                 initialValue: ContextDetailViewModel(contextManager: store)
             )
+
+            _navigation = State(initialValue: AppNavigationModel())
         }
 
         var body: some View {
@@ -61,7 +74,7 @@ struct AppShellView: View {
                         update: availableUpdate,
                         errorMessage: (viewModel.error ?? store.error)?.localizedDescription
                     ),
-                    selectedDestination: $selectedDestination,
+                    selectedDestination: $navigation.selectedDestination,
                     onCreateContext: { viewModel.presentContextCreator() },
                     onDismissError: dismissSidebarError
                 )
@@ -69,7 +82,7 @@ struct AppShellView: View {
                     SplitViewDividerFix()
                 }
 
-                detail(for: selectedDestination)
+                detail(for: navigation.selectedDestination)
                     .padding(24)
                     .frame(
                         minWidth: SidebarMetrics.minimumDetailWidth,
@@ -88,10 +101,18 @@ struct AppShellView: View {
             }
             .preferredColorScheme(.dark)
             .onChange(of: store.contexts) { _, contexts in
-                selectedDestination = selectedDestination?.reconciled(with: contexts)
+                navigation.contextsDidChange(contexts)
                 viewModel.reconcileActiveContext(with: contexts)
             }
-            .sheet( // PIN-139 Change in future with new creation sheet
+            .onOpenURL(perform: handleOpenURL)
+            .task(id: eventBusService.isConnected) {
+                guard eventBusService.isConnected else {
+                    return
+                }
+
+                await refreshContextsAndResolvePendingRoute()
+            }
+            .sheet(  // PIN-139 Change in future with new creation sheet
                 isPresented: Binding<Bool>(
                     get: { viewModel.isCreatingOrEditing },
                     set: { isPresented in
@@ -111,6 +132,13 @@ struct AppShellView: View {
                     ContextCreatorView(context: viewModel.contextBeingEdited)
                 }
             )
+            .alert("Couldn't Open Context", isPresented: isShowingNavigationError) {
+                Button("OK") {
+                    navigation.dismissError()
+                }
+            } message: {
+                Text(navigation.error?.localizedDescription ?? "")
+            }
         }
 
         private func dismissSidebarError() {
@@ -121,15 +149,15 @@ struct AppShellView: View {
         @ViewBuilder
         private func detail(for destination: SidebarDestination?) -> some View {
             switch destination {
-            case let .context(contextID):
+            case .context(let contextID):
                 if let context = store.contexts.first(where: { $0.id == contextID }) {
                     ContextDetailView(
                         context: context,
                         viewModel: viewModel,
                         interactionsDisabled: interactionsDisabled,
                         onDelete: { deleted in
-                            if selectedDestination == .context(deleted.id) {
-                                selectedDestination = nil
+                            if navigation.selectedDestination == .context(deleted.id) {
+                                navigation.selectedDestination = nil
                             }
                         }
                     )
@@ -160,6 +188,41 @@ struct AppShellView: View {
                     systemImage: "sidebar.leading",
                     description: Text("Select a context in the sidebar, or create a new one.")
                 )
+            }
+        }
+
+        private func handleOpenURL(_ url: URL) {
+            guard let route = DawnAppRoute(url: url) else {
+                return
+            }
+
+            let requiresRefresh = navigation.receive(
+                route,
+                availableContexts: store.contexts
+            )
+
+            guard requiresRefresh, eventBusService.isConnected else {
+                return
+            }
+
+            Task {
+                await refreshContextsAndResolvePendingRoute()
+            }
+        }
+
+        private func refreshContextsAndResolvePendingRoute() async {
+            await store.refresh()
+
+            guard navigation.pendingRoute != nil else {
+                return
+            }
+
+            if store.error == nil {
+                navigation.contextRefreshSucceeded(
+                    with: store.contexts
+                )
+            } else {
+                navigation.contextRefreshFailed()
             }
         }
     }

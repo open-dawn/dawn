@@ -14,9 +14,13 @@ import libdawn
 private struct MenuBarRootPreview: View {
     @State private var workspace: WorkspaceRuntime
 
-    init(contexts: [WorkspaceContext]) {
+    init(
+        contexts: [WorkspaceContext],
+        activity: WorkspaceActivityState = .empty
+    ) {
         let contextProvider = PreviewContextProvider(
-            contexts: contexts
+            contexts: contexts,
+            workspaceActivity: activity
         )
 
         _workspace = State(
@@ -28,33 +32,63 @@ private struct MenuBarRootPreview: View {
     }
 
     var body: some View {
-        MenuBarRootView(workspace: workspace)
+        MenuBarRootView(
+            workspace: workspace,
+            openApp: { _ in },
+            modalPresentationState: MenuBarModalPresentationState()
+        )
             .background(.regularMaterial)
             .preferredColorScheme(.dark)
             .task {
                 await workspace.refresh()
-
-                guard let firstContext = workspace.contexts.first else {
-                    return
-                }
-
-                try? await workspace.activateContext(
-                    id: firstContext.id
-                )
             }
     }
 }
 
 @MainActor
-private final class PreviewContextProvider: ContextProviding {
+private final class PreviewContextProvider: WorkspaceManaging {
     private var contexts: [WorkspaceContext]
+    var workspaceActivity: WorkspaceActivityState
 
-    init(contexts: [WorkspaceContext]) {
+    init(
+        contexts: [WorkspaceContext],
+        workspaceActivity: WorkspaceActivityState = .empty
+    ) {
         self.contexts = contexts
+        self.workspaceActivity = workspaceActivity
     }
 
     func getAvailableContexts() async -> [WorkspaceContext] {
         contexts
+    }
+
+    func getWorkspaceActivity() async -> libdawn.WorkspaceActivityState {
+        workspaceActivity
+    }
+
+    func getWorkspaceSnapshot() async -> WorkspaceSnapshot {
+        return WorkspaceSnapshot(
+            contexts: contexts,
+            activity: workspaceActivity
+        )
+    }
+
+    func recordContextActivation(contextID: UUID, at date: Date) async throws -> WorkspaceActivityState {
+        guard contexts.contains(where: { $0.id == contextID }) else {
+            throw SettingsStoreError.contextNotFound(contextID)
+        }
+
+        workspaceActivity.activate(
+            contextID: contextID,
+            at: date
+        )
+
+        return workspaceActivity
+    }
+
+    func stopActiveContext(at date: Date) async throws -> WorkspaceActivityState {
+        workspaceActivity.stop(at: date)
+        return workspaceActivity
     }
 
     func getContext(id: UUID) async -> WorkspaceContext? {
@@ -91,6 +125,8 @@ private final class PreviewContextProvider: ContextProviding {
     }
 
     func deleteContext(id: UUID) async throws {
+        workspaceActivity.removeContext(id: id)
+
         contexts.removeAll {
             $0.id == id
         }
@@ -150,9 +186,47 @@ private enum MenuBarRootPreviewFixtures {
             ]
         ),
     ]
+
+    static func activity(
+        relativeTo now: Date
+    ) -> WorkspaceActivityState {
+        var activity = WorkspaceActivityState.empty
+
+        let work = contexts[0]
+        let personal = contexts[1]
+
+        activity.activate(
+            contextID: personal.id,
+            at: now.addingTimeInterval(-2 * 24 * 60 * 60)
+        )
+
+        activity.stop(
+            at: now.addingTimeInterval(-24 * 60 * 60)
+        )
+
+        activity.activate(
+            contextID: work.id,
+            at: now.addingTimeInterval(
+                -(5 * 60 + 12) * 60
+            )
+        )
+
+        return activity
+    }
 }
 
-#Preview("Root — Contexts") {
+#Preview("Root — Activity States") {
+    let now = Date.now
+
+    MenuBarRootPreview(
+        contexts: MenuBarRootPreviewFixtures.contexts,
+        activity: MenuBarRootPreviewFixtures.activity(
+            relativeTo: now
+        )
+    )
+}
+
+#Preview("Root — Inactive Contexts") {
     MenuBarRootPreview(
         contexts: MenuBarRootPreviewFixtures.contexts
     )

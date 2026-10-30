@@ -13,6 +13,11 @@ public enum Event: Codable, Sendable, Equatable {
 
     case contextMutationAcknowledged(ContextMutationAcknowledgement)
 
+    case getMenuBarVisibility(GetMenuBarVisibilityEvent)
+    case setMenuBarVisibility(SetMenuBarVisibilityEvent)
+    case menuBarVisibilityState(MenuBarVisibilityStateEvent)
+    case menuBarVisibilityMutationAcknowledged(MenuBarVisibilityMutationAcknowledgement)
+
     public var kind: EventKind {
         switch self {
         case .debugPing: .debugPing
@@ -26,6 +31,10 @@ public enum Event: Codable, Sendable, Equatable {
         case .switchContext: .switchContext
         case .contextMutationAcknowledged: .contextMutationAcknowledged
         case .availableContexts: .availableContexts
+        case .getMenuBarVisibility: .getMenuBarVisibility
+        case .setMenuBarVisibility: .setMenuBarVisibility
+        case .menuBarVisibilityState: .menuBarVisibilityState
+        case .menuBarVisibilityMutationAcknowledged: .menuBarVisibilityMutationAcknowledged
         }
     }
 }
