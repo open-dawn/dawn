@@ -1,21 +1,81 @@
 import SwiftUI
+import libdawn
 
 struct SettingsView: View {
-    @State private var viewModel = SettingsViewModel()
+    @Environment(SettingsViewStore.self)
+    private var settingsStore
+
+    @State private var viewModel: SettingsViewModel?
+
+    var body: some View {
+        Group {
+            if let viewModel {
+                SettingsContent(viewModel: viewModel)
+            } else {
+                ProgressView()
+            }
+        }
+        .onAppear {
+            if viewModel == nil {
+                viewModel = SettingsViewModel(client: settingsStore)
+            }
+
+            Task {
+                await viewModel?.load()
+            }
+        }
+    }
+}
+
+private struct SettingsContent: View {
+    @Bindable var viewModel: SettingsViewModel
 
     var body: some View {
         VStack {
             Form {
-                ForEach(viewModel.sectionsWithSettings, id: \.id) { section in
-                    Section(section.title) {
-                        ForEach(section.settings, id: \.id) { setting in
-                            settingRow(setting)
+                Section("Global") {
+                    Toggle("Open at login", isOn: $viewModel.draft.launchAtLogin)
+                    Toggle("Show menu bar icon", isOn: $viewModel.draft.showMenuBarIcon)
+                    Toggle("Force apps to quit", isOn: $viewModel.draft.forceAppsToQuit)
+                    Toggle("Analytics", isOn: $viewModel.draft.analyticsEnabled)
+                }
+
+                Section("Protected apps") {
+                    HStack {
+                        Text("Apps that stay open across context switches")
+                            .foregroundStyle(.secondary)
+                        Spacer()
+                        Button {
+                            Task {
+                                await viewModel.addProtectedApp()
+                            }
+                        } label: {
+                            Image(systemName: "plus")
                         }
+                        .disabled(viewModel.isLoading)
+                        .accessibilityLabel("Add protected app")
+                    }
+
+                    ForEach(viewModel.draft.protectedApps) { app in
+                        protectedAppRow(app)
                     }
                 }
             }
             .formStyle(.grouped)
             .scrollContentBackground(.hidden)
+            .disabled(viewModel.isLoading)
+
+            if let selectionError = viewModel.applicationSelectionError {
+                Text(selectionError.localizedDescription)
+                    .foregroundStyle(.red)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            }
+
+            if let errorMessage = viewModel.errorMessage {
+                Text(errorMessage)
+                    .foregroundStyle(.red)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            }
 
             Spacer()
 
@@ -25,42 +85,42 @@ struct SettingsView: View {
                     viewModel.resetSettingsToDefaults()
                 }
                 .tint(.yellow)
+                .disabled(viewModel.isLoading)
 
                 Button("Apply settings") {
-                    viewModel.setSettings()
+                    Task {
+                        await viewModel.setSettings()
+                    }
                 }
                 .tint(.green)
+                .disabled(viewModel.isLoading)
             }
         }
     }
 
-    private func settingRow(_ setting: SettingItem<SettingsViewModel>) -> some View {
+    @ViewBuilder
+    private func protectedAppRow(_ app: ProtectedApplication) -> some View {
         HStack {
-            switch setting.inputType {
-            case let .toggle(keyPath):
-                Toggle(setting.title, isOn: Binding(
-                    get: { viewModel[keyPath: keyPath] },
-                    set: { viewModel[keyPath: keyPath] = $0 }
-                ))
+            VStack(alignment: .leading) {
+                Text(app.displayName)
 
-                Button("Reset \(setting.title) to default value", systemImage: "arrow.circlepath") {
-                    viewModel.resetSettingToDefault(setting)
-                }
-                .labelStyle(.iconOnly)
-                .disabled(viewModel[keyPath: keyPath] == setting.defaultValue as? Bool)
-
-            case let .textField(keyPath):
-                TextField(setting.title, text: Binding(
-                    get: { viewModel[keyPath: keyPath] },
-                    set: { viewModel[keyPath: keyPath] = $0 }
-                ))
-                Button("Reset \(setting.title) to default value", systemImage: "arrow.circlepath") {
-                    viewModel.resetSettingToDefault(setting)
-                }
-                .labelStyle(.iconOnly)
-                .disabled(viewModel[keyPath: keyPath] == setting.defaultValue as? String)
+                Text(app.bundleIdentifier)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
             }
+
+            Spacer()
+
+            Button(
+                "Delete \(app.displayName)",
+                systemImage: "trash",
+                role: .destructive
+            ) {
+                viewModel.removeProtectedApp(id: app.id)
+            }
+            .tint(.red)
+            .labelStyle(.iconOnly)
+            .disabled(viewModel.isLoading)
         }
-        .tint(.gray)
     }
 }
