@@ -9,6 +9,7 @@ struct MainApp: App {
             AppShellView()
                 .environment(appDelegate.eventBusService)
                 .environment(appDelegate.contextStore)
+                .environment(appDelegate.updaterService)
                 .handlesExternalEvents(
                     preferring: ["*"],
                     allowing: ["*"]
