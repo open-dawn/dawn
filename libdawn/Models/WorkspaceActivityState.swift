@@ -66,11 +66,14 @@ public struct WorkspaceActivityState: Codable, Equatable, Sendable {
     }
 
     public mutating func removeContext(id contextID: UUID) {
+        clearActiveSession(for: contextID)
+        lastActiveAtByContextID[contextID] = nil
+    }
+
+    public mutating func clearActiveSession(for contextID: UUID) {
         if activeSession?.contextID == contextID {
             activeSession = nil
         }
-
-        lastActiveAtByContextID[contextID] = nil
     }
 
     public mutating func reconcile(validContextIDs: Set<UUID>) {

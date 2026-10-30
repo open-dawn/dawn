@@ -370,6 +370,99 @@ struct ContextManagerTests {
                 == activity
         )
     }
+
+    @Test("Retrieval returns active and archived contexts in stored order")
+    func retrievalKeepsStoredOrder() async throws {
+        let study = WorkspaceContext(name: "Study", symbol: "book")
+        let archived = WorkspaceContext(
+            name: "Old",
+            symbol: "archivebox",
+            isArchived: true
+        )
+        let games = WorkspaceContext(name: "Games", symbol: "gamecontroller")
+
+        var document: SettingsDocument = .empty
+        document.contexts = [study, archived, games]
+
+        let manager = try await ContextManager(
+            repository: MockSettingsRepository(document: document),
+            snapshotPublisher: SnapshotPublisherSpy()
+        )
+
+        #expect(await manager.getAvailableContexts() == [study, archived, games])
+        #expect(await manager.getContext(id: archived.id) == archived)
+    }
+
+    @Test("Archive publishes the stored list with the flag set")
+    func archivePublishesStoredList() async throws {
+        let study = WorkspaceContext(name: "Study", symbol: "book")
+        let games = WorkspaceContext(name: "Games", symbol: "gamecontroller")
+
+        var document: SettingsDocument = .empty
+        document.contexts = [study, games]
+
+        let publisher = SnapshotPublisherSpy()
+        let manager = try await ContextManager(
+            repository: MockSettingsRepository(document: document),
+            snapshotPublisher: publisher
+        )
+
+        try await manager.archiveContext(id: study.id)
+
+        let archivedStudy = WorkspaceContext(
+            id: study.id,
+            name: study.name,
+            symbol: study.symbol,
+            isArchived: true
+        )
+
+        #expect(publisher.publishedSnapshots == [[archivedStudy, games]])
+    }
+
+    @Test("Unarchive publishes the stored list with the flag cleared")
+    func unarchivePublishesStoredList() async throws {
+        let study = WorkspaceContext(name: "Study", symbol: "book")
+        let archived = WorkspaceContext(
+            name: "Old",
+            symbol: "archivebox",
+            isArchived: true
+        )
+
+        var document: SettingsDocument = .empty
+        document.contexts = [study, archived]
+
+        let publisher = SnapshotPublisherSpy()
+        let manager = try await ContextManager(
+            repository: MockSettingsRepository(document: document),
+            snapshotPublisher: publisher
+        )
+
+        try await manager.unarchiveContext(id: archived.id)
+
+        let restored = WorkspaceContext(
+            id: archived.id,
+            name: archived.name,
+            symbol: archived.symbol
+        )
+
+        #expect(publisher.publishedSnapshots == [[study, restored]])
+    }
+
+    @Test("Missing archive does not publish")
+    func missingArchiveDoesNotPublish() async throws {
+        let publisher = SnapshotPublisherSpy()
+        let manager = try await ContextManager(
+            repository: MockSettingsRepository(),
+            snapshotPublisher: publisher
+        )
+        let missingID = UUID()
+
+        await #expect(throws: SettingsStoreError.contextNotFound(missingID)) {
+            try await manager.archiveContext(id: missingID)
+        }
+
+        #expect(publisher.publishedSnapshots.isEmpty)
+    }
 }
 
 actor MockSettingsRepository: SettingsRepository {

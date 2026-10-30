@@ -71,6 +71,36 @@ struct SettingsContextStoreTests {
         #expect(store.contexts == [second])
     }
 
+    @Test("Available contexts snapshot keeps archived contexts in the same list")
+    func availableContextsSnapshotIncludesArchivedContexts() {
+        let bus = ContextEventBusSpy()
+        let store = SettingsContextStore(bus: bus)
+        let active = WorkspaceContext(name: "Work", symbol: "briefcase")
+        let archived = WorkspaceContext(
+            name: "Old",
+            symbol: "archivebox",
+            isArchived: true
+        )
+
+        store.handle(
+            .availableContexts(
+                AvailableContextsEvent(contexts: [active, archived])
+            ),
+            reply: nil
+        )
+
+        #expect(store.contexts == [active, archived])
+
+        store.handle(
+            .availableContexts(
+                AvailableContextsEvent(contexts: [active])
+            ),
+            reply: nil
+        )
+
+        #expect(store.contexts == [active])
+    }
+
     @Test("Refresh asks for and stores available contexts")
     func refreshStoresContexts() async {
         let context = WorkspaceContext(
@@ -96,6 +126,28 @@ struct SettingsContextStoreTests {
         #expect(store.contexts == [context])
         #expect(store.error == nil)
         #expect(!store.isLoading)
+    }
+
+    @Test("Refresh stores archived contexts in the same list")
+    func refreshStoresArchivedContexts() async {
+        let active = WorkspaceContext(name: "Work", symbol: "briefcase")
+        let archived = WorkspaceContext(
+            name: "Old",
+            symbol: "archivebox",
+            isArchived: true
+        )
+
+        let bus = ContextEventBusSpy()
+        bus.askResponse = .contextsFetched(
+            ContextsFetchedEvent(contexts: [active, archived])
+        )
+
+        let store = SettingsContextStore(bus: bus)
+
+        await store.refresh()
+
+        #expect(store.contexts == [active, archived])
+        #expect(store.error == nil)
     }
 
     @Test("Refresh reports an unexpected response")
@@ -215,6 +267,33 @@ struct SettingsContextStoreTests {
         )
 
         #expect(store.contexts == [existingContext])
+        #expect(store.error == nil)
+    }
+
+    @Test("Archive and unarchive send the expected requests")
+    func archiveCommandsSendExpectedRequests() async throws {
+        let archivedID = UUID()
+        let restoredID = UUID()
+        let bus = ContextEventBusSpy()
+        let store = SettingsContextStore(bus: bus)
+
+        bus.askResponse = .contextMutationAcknowledged(
+            .success(contextID: archivedID)
+        )
+        try await store.archiveContext(id: archivedID)
+
+        bus.askResponse = .contextMutationAcknowledged(
+            .success(contextID: restoredID)
+        )
+        try await store.unarchiveContext(id: restoredID)
+
+        #expect(
+            bus.askedEvents == [
+                .archiveContext(ArchiveContextEvent(contextID: archivedID)),
+                .unarchiveContext(UnarchiveContextEvent(contextID: restoredID)),
+            ]
+        )
+        #expect(bus.requestedTimeouts == [.seconds(5), .seconds(5)])
         #expect(store.error == nil)
     }
 

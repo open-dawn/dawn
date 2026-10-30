@@ -19,6 +19,7 @@ public enum ContextMutationAcknowledgement: Codable, Sendable, Equatable {
         case duplicateContextIdentifier(UUID)
         case duplicateApplicationIdentifier(UUID)
         case contextNotFound(UUID)
+        case contextArchived(UUID)
 
         case persistence
         case unexpected
@@ -48,6 +49,8 @@ extension ContextMutationAcknowledgement.Failure: LocalizedError {
             "An application with this identifier already exists."
         case .contextNotFound:
             "The selected context no longer exists."
+        case .contextArchived:
+            "The selected context is archived."
         case .persistence:
             "Workspace manager could not save the changes."
         case .unexpected:

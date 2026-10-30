@@ -141,4 +141,21 @@ struct WorkspaceActivityStateTests {
 
         #expect(decoded == expected)
     }
+
+    @Test("clearing the active session keeps last-active history")
+    func clearActiveSessionKeepsHistory() {
+        let contextID = UUID()
+        let otherID = UUID()
+        let startedAt = Date(timeIntervalSince1970: 100)
+        var state = WorkspaceActivityState.empty
+
+        state.activate(contextID: contextID, at: startedAt)
+        state.stop(at: Date(timeIntervalSince1970: 150))
+        state.activate(contextID: otherID, at: Date(timeIntervalSince1970: 200))
+        state.clearActiveSession(for: otherID)
+
+        #expect(state.activeContextID == nil)
+        #expect(state.lastActiveAt(for: contextID) == Date(timeIntervalSince1970: 150))
+        #expect(state.lastActiveAt(for: otherID) == nil)
+    }
 }
