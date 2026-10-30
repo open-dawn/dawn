@@ -8,7 +8,7 @@ struct AgentRuntimeComponents {
     let menuBarVisibilityStore: any MenuBarVisibilityStoring
 }
 
-typealias AgentRuntimeFactory = @MainActor (EventBus) async throws -> AgentRuntimeComponents
+typealias AgentRuntimeFactory = @MainActor (EventBus, SettingsStore) async throws -> AgentRuntimeComponents
 typealias MenuBarControllerFactory = @MainActor (WorkspaceRuntime, Bool) -> any MenuBarControlling
 
 @MainActor
@@ -22,31 +22,39 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var workspaceRuntime: WorkspaceRuntime?
     private var windowManagerListener: WindowManagerListener?
     private var debugPingListener: DebugPingListener?
+    private var settingsListener: SettingsListener?
     private var startupTask: Task<Void, Never>?
     private var isStartingOrStarted = false
 
     private var isPreparingToTerminate = false
+    private var repository: any SettingsRepository
 
     init(
         eventBusService: any EventBusServicing = EventBusService(),
+        repository: any SettingsRepository = UserDefaultsSettingsRepository(),
         makeMenuBarController: @escaping MenuBarControllerFactory = { workspace, isVisible in
             MenuBarController(workspace: workspace, initiallyVisible: isVisible)
         },
         makeAgentRuntime: @escaping AgentRuntimeFactory = AppDelegate.makeAgentRuntime
     ) {
         self.eventBusService = eventBusService
+        self.repository = repository
         self.makeMenuBarController = makeMenuBarController
         self.makeAgentRuntime = makeAgentRuntime
 
         super.init()
     }
 
-    private static func makeAgentRuntime(bus: EventBus) async throws -> AgentRuntimeComponents {
+    private static func makeAgentRuntime(
+        bus: EventBus,
+        store: SettingsStore
+    ) async throws -> AgentRuntimeComponents {
         let publisher = EventBusContextSnapshotPublisher(
             bus: bus
         )
 
-        let contextManager = try await ContextManager(
+        let contextManager = ContextManager(
+            store: store,
             snapshotPublisher: publisher
         )
 
@@ -92,6 +100,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         windowManagerListener = nil
         debugPingListener = nil
+        settingsListener = nil
         workspaceRuntime = nil
         menuBarVisibilityListener = nil
     }
@@ -135,7 +144,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 category: .appLifecycle
             )
 
-            let components = try await makeAgentRuntime(eventBusService.bus)
+            let store = try await SettingsStore.make(repository: repository)
+            let components = try await makeAgentRuntime(eventBusService.bus, store)
 
             let workspaceRuntime = components.workspace
 
@@ -156,6 +166,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 workspace: workspaceRuntime
             )
 
+            let settingsListener = SettingsListener(
+                bus: eventBusService.bus,
+                settingsProvider: SettingsCoordinator(store: store)
+            )
+
             let debugPingListener = DebugPingListener(bus: eventBusService.bus)
 
             let menuBarController = makeMenuBarController(workspaceRuntime, initialMenuBarVisibility)
@@ -169,6 +184,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             self.workspaceRuntime = workspaceRuntime
             self.windowManagerListener = windowManagerListener
             self.debugPingListener = debugPingListener
+            self.settingsListener = settingsListener
             self.menuBarController = menuBarController
             self.menuBarVisibilityListener = menuBarVisibilityListener
 
