@@ -11,7 +11,7 @@ struct SettingsViewModelTests {
     func loadSuccess() async {
         let seeded = Settings(
             launchAtLogin: true,
-            showMenuBarIcon: false,
+            showInMenuBar: false,
             forceAppsToQuit: true,
             analyticsEnabled: true,
             protectedApps: [
@@ -55,7 +55,7 @@ struct SettingsViewModelTests {
     func applySuccessSendsFullDraft() async {
         let seeded = Settings(
             launchAtLogin: false,
-            showMenuBarIcon: true,
+            showInMenuBar: true,
             forceAppsToQuit: false,
             analyticsEnabled: false,
             protectedApps: [
@@ -73,14 +73,14 @@ struct SettingsViewModelTests {
 
         await viewModel.load()
         viewModel.draft.launchAtLogin = true
-        viewModel.draft.showMenuBarIcon = false
+        viewModel.draft.showInMenuBar = false
         viewModel.draft.forceAppsToQuit = true
         viewModel.draft.analyticsEnabled = true
         await viewModel.setSettings()
 
         let expected = Settings(
             launchAtLogin: true,
-            showMenuBarIcon: false,
+            showInMenuBar: false,
             forceAppsToQuit: true,
             analyticsEnabled: true,
             protectedApps: seeded.protectedApps
@@ -174,7 +174,7 @@ struct SettingsViewModelTests {
     func applyFailure() async {
         let seeded = Settings(
             launchAtLogin: true,
-            showMenuBarIcon: false,
+            showInMenuBar: false,
             protectedApps: [
                 ProtectedApplication(
                     bundleIdentifier: "com.apple.Safari",
@@ -207,7 +207,7 @@ struct SettingsViewModelTests {
         let client = SettingsViewStoreClientSpy(
             settings: Settings(
                 launchAtLogin: true,
-                showMenuBarIcon: false,
+                showInMenuBar: false,
                 forceAppsToQuit: true,
                 analyticsEnabled: true,
                 protectedApps: [

@@ -38,7 +38,7 @@ struct SettingsViewStoreTests {
         let bus = SettingsEventBusSpy()
         let store = SettingsViewStore(bus: bus)
         let first = Settings(launchAtLogin: true)
-        let second = Settings(showMenuBarIcon: false, analyticsEnabled: true)
+        let second = Settings(showInMenuBar: false, analyticsEnabled: true)
 
         store.handle(
             .availableSettings(AvailableSettingsEvent(settings: first)),
