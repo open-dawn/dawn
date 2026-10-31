@@ -6,6 +6,7 @@
 //
 
 import Foundation
+import dawnLogging
 import libdawn
 
 actor SettingsStore {
@@ -13,6 +14,22 @@ actor SettingsStore {
     private var document: SettingsDocument
     private var mutationInProgress = false
     private var mutationWaiters: [CheckedContinuation<Void, Never>] = []
+
+    static func make(repository: any SettingsRepository) async throws -> SettingsStore {
+        do {
+            return try await SettingsStore(repository: repository)
+        } catch {
+            #log(
+                "Corrupted SettingsStore \(error.localizedDescription)",
+                level: .error,
+                category: .settings
+            )
+            #log("Reseting setting store", level: .info, category: .settings)
+
+            try await repository.save(.empty)
+            return try await SettingsStore(repository: repository)
+        }
+    }
 
     init(repository: any SettingsRepository) async throws {
         var document = try await repository.load() ?? .empty
@@ -94,11 +111,9 @@ actor SettingsStore {
         }
     }
 
-    func setLaunchAtLogin(
-        _ enabled: Bool
-    ) async throws {
+    func updateSettings(_ settings: Settings) async throws {
         try await mutate { candidate in
-            candidate.generalSettings.launchAtLogin = enabled
+            candidate.generalSettings = settings
         }
     }
 
@@ -165,75 +180,6 @@ actor SettingsStore {
 
         document = candidate
         return result
-    }
-
-    private static func validate(_ document: SettingsDocument) throws {
-        var contextIdentifiers = Set<UUID>()
-
-        for context in document.contexts {
-            guard contextIdentifiers.insert(context.id).inserted else {
-                throw SettingsStoreError.duplicateContextIdentifier(context.id)
-            }
-
-            try validate(context)
-        }
-    }
-
-    private static func validate(_ context: WorkspaceContext) throws {
-        let trimmedName = context.name.trimmingCharacters(
-            in: .whitespacesAndNewlines
-        )
-
-        guard !trimmedName.isEmpty else {
-            throw SettingsStoreError.emptyContextName
-        }
-
-        let trimmedSymbol = context.symbol.trimmingCharacters(
-            in: .whitespacesAndNewlines
-        )
-
-        guard !trimmedSymbol.isEmpty else {
-            throw SettingsStoreError.emptyContextSymbol
-        }
-
-        var applicationIdentifiers = Set<UUID>()
-        var bundleIdentifiers = Set<String>()
-
-        for application in context.applications {
-            try validate(application)
-
-            guard applicationIdentifiers.insert(application.id).inserted else {
-                throw SettingsStoreError.duplicateApplicationIdentifier(
-                    application.id
-                )
-            }
-
-            let normalizedBundleIdentifier = application.bundleIdentifier
-                .trimmingCharacters(in: .whitespacesAndNewlines)
-                .lowercased()
-
-            guard bundleIdentifiers.insert(normalizedBundleIdentifier).inserted else {
-                throw SettingsStoreError.duplicateApplication(
-                    bundleIdentifier: application.bundleIdentifier
-                )
-            }
-        }
-    }
-
-    private static func validate(_ application: WorkspaceApplication) throws {
-        let trimmedBundleIdentifier = application.bundleIdentifier
-            .trimmingCharacters(in: .whitespacesAndNewlines)
-
-        guard !trimmedBundleIdentifier.isEmpty else {
-            throw SettingsStoreError.emptyApplicationBundleIdentifier
-        }
-
-        let trimmedDisplayName = application.displayName
-            .trimmingCharacters(in: .whitespacesAndNewlines)
-
-        guard !trimmedDisplayName.isEmpty else {
-            throw SettingsStoreError.emptyApplicationDisplayName
-        }
     }
 
     func generalSettings() -> Settings {

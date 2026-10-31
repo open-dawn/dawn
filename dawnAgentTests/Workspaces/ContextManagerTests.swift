@@ -13,7 +13,7 @@ struct ContextManagerTests {
         let publisherSpy = SnapshotPublisherSpy()
 
         await #expect(throws: Never.self) {
-            try await ContextManager(repository: mockRepository, snapshotPublisher: publisherSpy)
+            _ = try await SettingsStore.make(repository: mockRepository)
         }
     }
 
@@ -21,7 +21,8 @@ struct ContextManagerTests {
     func corruptedRepository() async throws {
         let mockRepository = MockSettingsRepository(loadFailuresRemaining: 1)
         let publisherSpy = SnapshotPublisherSpy()
-        let manager = try await ContextManager(repository: mockRepository, snapshotPublisher: publisherSpy)
+        let store = try await SettingsStore.make(repository: mockRepository)
+        let manager = ContextManager(store: store, snapshotPublisher: publisherSpy)
 
         #expect(await manager.getAvailableContexts().isEmpty)
         #expect(await mockRepository.loadFailuresRemaining == 0)
@@ -36,7 +37,7 @@ struct ContextManagerTests {
         let publisherSpy = SnapshotPublisherSpy()
 
         await #expect(throws: SettingsRepositoryError.corruptedData(description: "save")) {
-            try await ContextManager(repository: mockRepository, snapshotPublisher: publisherSpy)
+            try await SettingsStore.make(repository: mockRepository)
         }
     }
 
@@ -50,7 +51,7 @@ struct ContextManagerTests {
         let publisherSpy = SnapshotPublisherSpy()
 
         let manager = try #require(
-            try? await ContextManager(repository: mockRepository, snapshotPublisher: publisherSpy)
+            try? await makeManager(repository: mockRepository, publisher: publisherSpy)
         )
         #expect(await manager.getAvailableContexts() == document.contexts)
     }
@@ -65,7 +66,7 @@ struct ContextManagerTests {
         let publisherSpy = SnapshotPublisherSpy()
 
         let manager = try #require(
-            try? await ContextManager(repository: mockRepository, snapshotPublisher: publisherSpy)
+            try? await makeManager(repository: mockRepository, publisher: publisherSpy)
         )
         let target = document.contexts[0]
         #expect(await manager.getContext(id: target.id) == target)
@@ -81,9 +82,17 @@ struct ContextManagerTests {
         let publisherSpy = SnapshotPublisherSpy()
 
         let manager = try #require(
-            try? await ContextManager(repository: mockRepository, snapshotPublisher: publisherSpy)
+            try? await makeManager(repository: mockRepository, publisher: publisherSpy)
         )
         #expect(await manager.getContext(id: UUID()) == nil)
+    }
+
+    private func makeManager(
+        repository: MockSettingsRepository,
+        publisher: SnapshotPublisherSpy
+    ) async throws -> ContextManager {
+        let store = try await SettingsStore.make(repository: repository)
+        return ContextManager(store: store, snapshotPublisher: publisher)
     }
 
     private func createMockWorkspaceContext(count: Int) -> [WorkspaceContext] {
@@ -100,7 +109,7 @@ struct ContextManagerTests {
         let publisherSpy = SnapshotPublisherSpy()
 
         let manager = try #require(
-            try? await ContextManager(repository: mockRepository, snapshotPublisher: publisherSpy)
+            try? await makeManager(repository: mockRepository, publisher: publisherSpy)
         )
 
         let createdContext = try await manager.createContext(name: "Placeholder", symbol: "book", applications: [])
@@ -120,7 +129,7 @@ struct ContextManagerTests {
         let mockRepository = MockSettingsRepository(document: document)
 
         let manager = try #require(
-            try? await ContextManager(repository: mockRepository, snapshotPublisher: publisherSpy)
+            try? await makeManager(repository: mockRepository, publisher: publisherSpy)
         )
 
         context.name = "Placeholder 2"
@@ -148,7 +157,7 @@ struct ContextManagerTests {
         let publisherSpy = SnapshotPublisherSpy()
 
         let manager = try #require(
-            try? await ContextManager(repository: mockRepository, snapshotPublisher: publisherSpy)
+            try? await makeManager(repository: mockRepository, publisher: publisherSpy)
         )
 
         try await manager.deleteContext(id: deletedContext.id)
@@ -160,9 +169,9 @@ struct ContextManagerTests {
     func validationFailureDoesNotPublish() async throws {
         let repository = MockSettingsRepository()
         let publisher = SnapshotPublisherSpy()
-        let manager = try await ContextManager(
+        let manager = try await makeManager(
             repository: repository,
-            snapshotPublisher: publisher
+            publisher: publisher
         )
 
         await #expect(throws: SettingsStoreError.emptyContextName) {
@@ -180,9 +189,9 @@ struct ContextManagerTests {
     func persistenceFailureDoesNotPublish() async throws {
         let repository = MockSettingsRepository()
         let publisher = SnapshotPublisherSpy()
-        let manager = try await ContextManager(
+        let manager = try await makeManager(
             repository: repository,
-            snapshotPublisher: publisher
+            publisher: publisher
         )
 
         await repository.setShouldFailSave(true)
@@ -216,9 +225,9 @@ struct ContextManagerTests {
 
         let repository = MockSettingsRepository(document: document)
         let publisher = SnapshotPublisherSpy()
-        let manager = try await ContextManager(
+        let manager = try await makeManager(
             repository: repository,
-            snapshotPublisher: publisher
+            publisher: publisher
         )
 
         _ = await manager.getAvailableContexts()
@@ -234,9 +243,9 @@ struct ContextManagerTests {
         let repository = MockSettingsRepository()
         let publisher = SnapshotPublisherSpy()
 
-        let manager = try await ContextManager(
+        let manager = try await makeManager(
             repository: repository,
-            snapshotPublisher: publisher
+            publisher: publisher
         )
 
         try await withThrowingTaskGroup(of: Void.self) { group in
@@ -286,9 +295,9 @@ struct ContextManagerTests {
         let repository = MockSettingsRepository(
             document: document
         )
-        let manager = try await ContextManager(
+        let manager = try await makeManager(
             repository: repository,
-            snapshotPublisher: SnapshotPublisherSpy()
+            publisher: SnapshotPublisherSpy()
         )
 
         let activity = await manager.getWorkspaceActivity()
@@ -313,9 +322,9 @@ struct ContextManagerTests {
         let repository = MockSettingsRepository(
             document: document
         )
-        let manager = try await ContextManager(
+        let manager = try await makeManager(
             repository: repository,
-            snapshotPublisher: SnapshotPublisherSpy()
+            publisher: SnapshotPublisherSpy()
         )
 
         let activity = try await manager.recordContextActivation(
@@ -351,9 +360,9 @@ struct ContextManagerTests {
         let repository = MockSettingsRepository(
             document: document
         )
-        let manager = try await ContextManager(
+        let manager = try await makeManager(
             repository: repository,
-            snapshotPublisher: SnapshotPublisherSpy()
+            publisher: SnapshotPublisherSpy()
         )
 
         let activity = try await manager.stopActiveContext(

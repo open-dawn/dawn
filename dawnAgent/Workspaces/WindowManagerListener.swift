@@ -187,16 +187,7 @@ final class WindowManagerListener: Listener {
         from error: Error
     ) -> ContextMutationAcknowledgement.Failure {
         if let error = error as? SettingsStoreError {
-            return switch error {
-            case .emptyContextName: .emptyContextName
-            case .emptyContextSymbol: .emptyContextSymbol
-            case .emptyApplicationBundleIdentifier: .emptyApplicationBundleIdentifier
-            case .emptyApplicationDisplayName: .emptyApplicationDisplayName
-            case let .duplicateApplication(bundleIdentifier): .duplicateApplication(bundleIdentifier: bundleIdentifier)
-            case let .duplicateContextIdentifier(id): .duplicateContextIdentifier(id)
-            case let .duplicateApplicationIdentifier(id): .duplicateApplicationIdentifier(id)
-            case let .contextNotFound(id): .contextNotFound(id)
-            }
+            return contextFailure(from: error)
         }
 
         if error is SettingsRepositoryError {
@@ -204,5 +195,20 @@ final class WindowManagerListener: Listener {
         }
 
         return .unexpected
+    }
+
+    private func contextFailure(
+        from error: SettingsStoreError
+    ) -> ContextMutationAcknowledgement.Failure {
+        switch error {
+        case .emptyContextName: .emptyContextName
+        case .emptyContextSymbol: .emptyContextSymbol
+        case .emptyApplicationBundleIdentifier: .emptyApplicationBundleIdentifier
+        case .emptyApplicationDisplayName: .emptyApplicationDisplayName
+        case let .duplicateApplication(bundleIdentifier): .duplicateApplication(bundleIdentifier: bundleIdentifier)
+        case let .duplicateContextIdentifier(id): .duplicateContextIdentifier(id)
+        case let .duplicateApplicationIdentifier(id): .duplicateApplicationIdentifier(id)
+        case let .contextNotFound(id): .contextNotFound(id)
+        }
     }
 }

@@ -85,10 +85,7 @@ public final class EventBus: @unchecked Sendable {
                 session.complete(with: response)
             }
 
-            Task {
-                try await Task.sleep(for: timeout)
-                session.fail(with: EventAskError.timeout)
-            }
+            session.armTimeout(timeout)
 
             Task { @MainActor in
                 for listener in matchingListeners(for: event.kind, includingPublishOnly: false) {

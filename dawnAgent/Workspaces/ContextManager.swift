@@ -1,6 +1,5 @@
 import Foundation
 import libdawn
-import dawnLogging
 
 final class ContextManager: WorkspaceManaging {
     private let store: SettingsStore
@@ -11,20 +10,11 @@ final class ContextManager: WorkspaceManaging {
     }
 
     init(
-        repository: any SettingsRepository = UserDefaultsSettingsRepository(),
+        store: SettingsStore,
         snapshotPublisher: ContextSnapshotPublishing
-    ) async throws {
+    ) {
+        self.store = store
         self.snapshotPublisher = snapshotPublisher
-
-        do {
-            store = try await SettingsStore(repository: repository)
-        } catch {
-            #log("Corrupted SettingsStore \(error.localizedDescription)", level: .error, category: .settings)
-            #log("Reseting setting store", level: .info, category: .settings)
-
-            try await repository.save(.empty)
-            store = try await SettingsStore(repository: repository)
-        }
     }
 
     func getAvailableContexts() async -> [WorkspaceContext] {
@@ -96,10 +86,7 @@ protocol ContextProviding {
         symbol: String,
         applications: [WorkspaceApplication]
     ) async throws -> WorkspaceContext
-
     func updateContext(_ context: WorkspaceContext) async throws
-
     func deleteContext(id: UUID) async throws
-
     func getContext(id: UUID) async -> WorkspaceContext?
 }

@@ -22,10 +22,11 @@ struct AppDelegateTests {
 
         let delegate = AppDelegate(
             eventBusService: service,
+            repository: MockSettingsRepository(),
             makeMenuBarController: { _, _ in
                 menuBarController
             },
-            makeAgentRuntime: { _ in
+            makeAgentRuntime: { _, _ in
                 makeAgentRuntimeComponents(
                     provider: provider
                 )
@@ -39,6 +40,7 @@ struct AppDelegateTests {
 
         #expect(service.bus.hasListeners(for: .getContexts(GetContextsEvent())))
         #expect(service.bus.hasListeners(for: .debugPing(DebugPingEvent())))
+        #expect(service.bus.hasListeners(for: .getSettings(GetSettingsEvent())))
     }
 
     @Test("Retained workspace listener answers context requests")
@@ -56,10 +58,11 @@ struct AppDelegateTests {
 
         let delegate = AppDelegate(
             eventBusService: service,
+            repository: MockSettingsRepository(),
             makeMenuBarController: { _, _ in
                 menuBarController
             },
-            makeAgentRuntime: { _ in
+            makeAgentRuntime: { _, _ in
                 makeAgentRuntimeComponents(
                     provider: provider
                 )
@@ -88,10 +91,11 @@ struct AppDelegateTests {
 
         let delegate = AppDelegate(
             eventBusService: service,
+            repository: MockSettingsRepository(),
             makeMenuBarController: { _, _ in
                 menuBarController
             },
-            makeAgentRuntime: { _ in
+            makeAgentRuntime: { _, _ in
                 throw StartupError.expected
             }
         )
@@ -112,10 +116,11 @@ struct AppDelegateTests {
 
         let delegate = AppDelegate(
             eventBusService: service,
+            repository: MockSettingsRepository(),
             makeMenuBarController: { _, _ in
                 menuBarController
             },
-            makeAgentRuntime: { _ in
+            makeAgentRuntime: { _, _ in
                 makeAgentRuntimeComponents(
                     provider: provider
                 )
@@ -133,6 +138,7 @@ struct AppDelegateTests {
         #expect(service.stopCallCount == 1)
         #expect(!service.bus.hasListeners(for: .getContexts(GetContextsEvent())))
         #expect(!service.bus.hasListeners(for: .debugPing(DebugPingEvent())))
+        #expect(!service.bus.hasListeners(for: .getSettings(GetSettingsEvent())))
         #expect(menuBarController.stopCallCount == 1)
         #expect(!service.bus.hasListeners(for: .getMenuBarVisibility(GetMenuBarVisibilityEvent())))
 
@@ -148,10 +154,11 @@ struct AppDelegateTests {
 
         let delegate = AppDelegate(
             eventBusService: service,
+            repository: MockSettingsRepository(),
             makeMenuBarController: { _, _ in
                 menuBarController
             },
-            makeAgentRuntime: { _ in
+            makeAgentRuntime: { _, _ in
                 factoryCallCount += 1
 
                 return makeAgentRuntimeComponents(
@@ -177,10 +184,11 @@ struct AppDelegateTests {
 
         let delegate = AppDelegate(
             eventBusService: service,
+            repository: MockSettingsRepository(),
             makeMenuBarController: { _, _ in
                 menuBarController
             },
-            makeAgentRuntime: { _ in
+            makeAgentRuntime: { _, _ in
                 AgentRuntimeComponents(
                     workspace: await factory.makeRuntime(),
                     menuBarVisibilityStore: visibilityStore
@@ -219,10 +227,11 @@ struct AppDelegateTests {
 
         let delegate = AppDelegate(
             eventBusService: service,
+            repository: MockSettingsRepository(),
             makeMenuBarController: { _, _ in
                 menuBarController
             },
-            makeAgentRuntime: { _ in
+            makeAgentRuntime: { _, _ in
                 attemptCount += 1
 
                 if attemptCount == 1 {
@@ -268,10 +277,11 @@ struct AppDelegateTests {
 
         let delegate = AppDelegate(
             eventBusService: service,
+            repository: MockSettingsRepository(),
             makeMenuBarController: { _, _ in
                 menuBarController
             },
-            makeAgentRuntime: { _ in
+            makeAgentRuntime: { _, _ in
                 AgentRuntimeComponents(
                     workspace: runtime,
                     menuBarVisibilityStore:
@@ -303,12 +313,13 @@ struct AppDelegateTests {
 
         let delegate = AppDelegate(
             eventBusService: service,
+            repository: MockSettingsRepository(),
             makeMenuBarController: { workspace, _ in
                 factoryCallCount += 1
                 receivedWorkspace = workspace
                 return menuBarController
             },
-            makeAgentRuntime: { _ in
+            makeAgentRuntime: { _, _ in
                 AgentRuntimeComponents(
                     workspace: runtime,
                     menuBarVisibilityStore:
@@ -352,13 +363,14 @@ struct AppDelegateTests {
 
         let delegate = AppDelegate(
             eventBusService: service,
+            repository: MockSettingsRepository(),
             makeMenuBarController: { workspace, _ in
                 activeContextReceivedByMenuBar =
                     workspace.activeContextID
 
                 return menuBarController
             },
-            makeAgentRuntime: { _ in
+            makeAgentRuntime: { _, _ in
                 AgentRuntimeComponents(
                     workspace: runtime,
                     menuBarVisibilityStore:
@@ -401,11 +413,12 @@ struct AppDelegateTests {
 
         let delegate = AppDelegate(
             eventBusService: service,
+            repository: MockSettingsRepository(),
             makeMenuBarController: { _, isVisible in
                 receivedVisibility = isVisible
                 return menuBarController
             },
-            makeAgentRuntime: { _ in
+            makeAgentRuntime: { _, _ in
                 makeAgentRuntimeComponents(
                     provider: provider,
                     visibilityStore: visibilityStore
@@ -436,10 +449,11 @@ struct AppDelegateTests {
 
         let delegate = AppDelegate(
             eventBusService: service,
+            repository: MockSettingsRepository(),
             makeMenuBarController: { _, _ in
                 menuBarController
             },
-            makeAgentRuntime: { _ in
+            makeAgentRuntime: { _, _ in
                 makeAgentRuntimeComponents(
                     provider: provider,
                     visibilityStore: visibilityStore
