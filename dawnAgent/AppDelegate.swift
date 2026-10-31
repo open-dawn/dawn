@@ -161,32 +161,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 category: .appLifecycle
             )
 
-            let windowManagerListener = WindowManagerListener(
-                bus: eventBusService.bus,
-                workspace: workspaceRuntime
+            registerListeners(
+                workspaceRuntime: workspaceRuntime,
+                store: store,
+                menuBarVisibilityStore: components.menuBarVisibilityStore,
+                initialMenuBarVisibility: initialMenuBarVisibility
             )
-
-            let settingsListener = SettingsListener(
-                bus: eventBusService.bus,
-                settingsProvider: SettingsCoordinator(store: store)
-            )
-
-            let debugPingListener = DebugPingListener(bus: eventBusService.bus)
-
-            let menuBarController = makeMenuBarController(workspaceRuntime, initialMenuBarVisibility)
-
-            let menuBarVisibilityListener = MenuBarVisibilityListener(
-                bus: eventBusService.bus,
-                store: components.menuBarVisibilityStore,
-                menuBarController: menuBarController
-            )
-
-            self.workspaceRuntime = workspaceRuntime
-            self.windowManagerListener = windowManagerListener
-            self.debugPingListener = debugPingListener
-            self.settingsListener = settingsListener
-            self.menuBarController = menuBarController
-            self.menuBarVisibilityListener = menuBarVisibilityListener
 
             #log(
                 "Starting dawnAgent event bus",
@@ -205,6 +185,40 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             isStartingOrStarted = false
             throw error
         }
+    }
+
+    private func registerListeners(
+        workspaceRuntime: WorkspaceRuntime,
+        store: SettingsStore,
+        menuBarVisibilityStore: any MenuBarVisibilityStoring,
+        initialMenuBarVisibility: Bool
+    ) {
+        let windowManagerListener = WindowManagerListener(
+            bus: eventBusService.bus,
+            workspace: workspaceRuntime
+        )
+
+        let settingsListener = SettingsListener(
+            bus: eventBusService.bus,
+            settingsProvider: SettingsCoordinator(store: store)
+        )
+
+        let debugPingListener = DebugPingListener(bus: eventBusService.bus)
+
+        let menuBarController = makeMenuBarController(workspaceRuntime, initialMenuBarVisibility)
+
+        let menuBarVisibilityListener = MenuBarVisibilityListener(
+            bus: eventBusService.bus,
+            store: menuBarVisibilityStore,
+            menuBarController: menuBarController
+        )
+
+        self.workspaceRuntime = workspaceRuntime
+        self.windowManagerListener = windowManagerListener
+        self.debugPingListener = debugPingListener
+        self.settingsListener = settingsListener
+        self.menuBarController = menuBarController
+        self.menuBarVisibilityListener = menuBarVisibilityListener
     }
 
     private func reconcileRestoredActivity(in workspace: WorkspaceRuntime) async throws {

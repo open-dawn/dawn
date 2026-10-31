@@ -35,7 +35,7 @@ private struct SettingsContent: View {
             Form {
                 Section("Global") {
                     Toggle("Open at login", isOn: $viewModel.draft.launchAtLogin)
-                    Toggle("Show menu bar icon", isOn: $viewModel.draft.showMenuBarIcon)
+                    Toggle("Show menu bar icon", isOn: $viewModel.draft.showInMenuBar)
                     Toggle("Force apps to quit", isOn: $viewModel.draft.forceAppsToQuit)
                     Toggle("Analytics", isOn: $viewModel.draft.analyticsEnabled)
                 }
