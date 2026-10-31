@@ -295,9 +295,9 @@ struct ContextManagerTests {
         let repository = MockSettingsRepository(
             document: document
         )
-        let manager = try await ContextManager(
+        let manager = try await makeManager(
             repository: repository,
-            snapshotPublisher: SnapshotPublisherSpy()
+            publisher: SnapshotPublisherSpy()
         )
 
         let activity = await manager.getWorkspaceActivity()
@@ -322,9 +322,9 @@ struct ContextManagerTests {
         let repository = MockSettingsRepository(
             document: document
         )
-        let manager = try await ContextManager(
+        let manager = try await makeManager(
             repository: repository,
-            snapshotPublisher: SnapshotPublisherSpy()
+            publisher: SnapshotPublisherSpy()
         )
 
         let activity = try await manager.recordContextActivation(
@@ -360,9 +360,9 @@ struct ContextManagerTests {
         let repository = MockSettingsRepository(
             document: document
         )
-        let manager = try await ContextManager(
+        let manager = try await makeManager(
             repository: repository,
-            snapshotPublisher: SnapshotPublisherSpy()
+            publisher: SnapshotPublisherSpy()
         )
 
         let activity = try await manager.stopActiveContext(
