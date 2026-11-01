@@ -107,7 +107,7 @@ jobs:
           RELEASE_NOTES_PATH="$ARTIFACT_DIRECTORY/DAWN-${RELEASE_VERSION}.html"
 
           DOWNLOAD_URL_PREFIX="https://github.com/${GITHUB_REPOSITORY}/releases/download/${RELEASE_TAG}/"
-          RELEASE_NOTES_URL_PREFIX="https://opendawn.github.io/releases/"
+          RELEASE_NOTES_URL_PREFIX="https://update.opendawn.app/releases/"
 
           mkdir -p "$ARTIFACT_DIRECTORY"
 
@@ -562,7 +562,7 @@ jobs:
         run: |
           set -euo pipefail
 
-          CURRENT_APPCAST_URL="https://opendawn.github.io/appcast.xml"
+          CURRENT_APPCAST_URL="https://update.opendawn.app/appcast.xml"
 
           if ! HTTP_STATUS="$(
             curl \

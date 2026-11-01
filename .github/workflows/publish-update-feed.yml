@@ -1,0 +1,279 @@
+name: Publish update feed
+
+on:
+  release:
+    types:
+      - published
+
+permissions:
+  contents: read
+
+concurrency:
+  group: publish-update-feed
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    name: Publish stable update feed
+    if: github.event.release.prerelease == false
+    runs-on: macos-26
+    timeout-minutes: 15
+    environment: release
+
+    env:
+      RELEASE_TAG: ${{ github.event.release.tag_name }}
+      SOURCE_REPOSITORY: ${{ github.repository }}
+      PAGES_REPOSITORY: open-dawn/open-dawn.github.io
+      PAGES_DIRECTORY: ${{ runner.temp }}/pages
+      ARTIFACT_DIRECTORY: ${{ runner.temp }}/update-feed
+
+    steps:
+      - name: Initialize publication
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          if [[ ! "$RELEASE_TAG" =~ ^v([0-9]+\.[0-9]+\.[0-9]+)$ ]]; then
+            echo "error: only stable releases can update the stable feed: $RELEASE_TAG" >&2
+            exit 1
+          fi
+
+          RELEASE_VERSION="${BASH_REMATCH[1]}"
+          RELEASE_NOTES_FILENAME="DAWN-${RELEASE_VERSION}.html"
+          DMG_FILENAME="DAWN-${RELEASE_VERSION}.dmg"
+          APPCAST_PATH="$ARTIFACT_DIRECTORY/appcast.xml"
+          RELEASE_NOTES_PATH="$ARTIFACT_DIRECTORY/$RELEASE_NOTES_FILENAME"
+
+          mkdir -p "$ARTIFACT_DIRECTORY"
+
+          {
+            echo "RELEASE_VERSION=$RELEASE_VERSION"
+            echo "RELEASE_NOTES_FILENAME=$RELEASE_NOTES_FILENAME"
+            echo "DMG_FILENAME=$DMG_FILENAME"
+            echo "APPCAST_PATH=$APPCAST_PATH"
+            echo "RELEASE_NOTES_PATH=$RELEASE_NOTES_PATH"
+          } >> "$GITHUB_ENV"
+
+      - name: Download release assets
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+
+          gh release download \
+            "$RELEASE_TAG" \
+            --repo "$SOURCE_REPOSITORY" \
+            --dir "$ARTIFACT_DIRECTORY" \
+            --pattern "appcast.xml" \
+            --pattern "$RELEASE_NOTES_FILENAME"
+
+          if [[ ! -s "$APPCAST_PATH" ]]; then
+            echo "error: release is missing appcast.xml" >&2
+            exit 1
+          fi
+
+          if [[ ! -s "$RELEASE_NOTES_PATH" ]]; then
+            echo "error: release is missing $RELEASE_NOTES_FILENAME" >&2
+            exit 1
+          fi
+
+      - name: Validate publication assets
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          /usr/bin/xmllint --noout "$APPCAST_PATH"
+
+          ITEM_XPATH="(//*[local-name()='item'])[1]"
+
+          xml_value() {
+            /usr/bin/xmllint \
+              --xpath "string($1)" \
+              "$APPCAST_PATH"
+          }
+
+          BUILD_VERSION="$(
+            xml_value "$ITEM_XPATH/*[local-name()='enclosure']/@*[local-name()='version']"
+          )"
+          MARKETING_VERSION="$(
+            xml_value "$ITEM_XPATH/*[local-name()='enclosure']/@*[local-name()='shortVersionString']"
+          )"
+          DOWNLOAD_URL="$(
+            xml_value "$ITEM_XPATH/*[local-name()='enclosure']/@url"
+          )"
+          CONTENT_LENGTH="$(
+            xml_value "$ITEM_XPATH/*[local-name()='enclosure']/@length"
+          )"
+          ED_SIGNATURE="$(
+            xml_value "$ITEM_XPATH/*[local-name()='enclosure']/@*[local-name()='edSignature']"
+          )"
+          MINIMUM_SYSTEM_VERSION="$(
+            xml_value "$ITEM_XPATH/*[local-name()='minimumSystemVersion']"
+          )"
+          RELEASE_NOTES_URL="$(
+            xml_value "$ITEM_XPATH/*[local-name()='releaseNotesLink']"
+          )"
+
+          EXPECTED_DOWNLOAD_URL="https://github.com/${SOURCE_REPOSITORY}/releases/download/${RELEASE_TAG}/${DMG_FILENAME}"
+          EXPECTED_RELEASE_NOTES_URL="https://update.opendawn.app/releases/${RELEASE_NOTES_FILENAME}"
+
+          if [[ ! "$BUILD_VERSION" =~ ^[1-9][0-9]*$ ]]; then
+            echo "error: invalid appcast build: $BUILD_VERSION" >&2
+            exit 1
+          fi
+
+          if [[ "$MARKETING_VERSION" != "$RELEASE_VERSION" ]]; then
+            echo "error: expected version $RELEASE_VERSION, found $MARKETING_VERSION" >&2
+            exit 1
+          fi
+
+          if [[ "$DOWNLOAD_URL" != "$EXPECTED_DOWNLOAD_URL" ]]; then
+            echo "error: unexpected download URL: $DOWNLOAD_URL" >&2
+            exit 1
+          fi
+
+          if [[ ! "$CONTENT_LENGTH" =~ ^[1-9][0-9]*$ ]]; then
+            echo "error: invalid content length: $CONTENT_LENGTH" >&2
+            exit 1
+          fi
+
+          if [[ -z "$ED_SIGNATURE" ]]; then
+            echo "error: appcast is missing the EdDSA signature" >&2
+            exit 1
+          fi
+
+          if [[ -z "$MINIMUM_SYSTEM_VERSION" ]]; then
+            echo "error: appcast is missing the minimum system version" >&2
+            exit 1
+          fi
+
+          if [[ "$RELEASE_NOTES_URL" != "$EXPECTED_RELEASE_NOTES_URL" ]]; then
+            echo "error: unexpected release notes URL: $RELEASE_NOTES_URL" >&2
+            exit 1
+          fi
+
+          if ! grep -Eiq '<(html|body)([[:space:]>])' "$RELEASE_NOTES_PATH"; then
+            echo "error: release notes are not a complete HTML document" >&2
+            exit 1
+          fi
+
+          echo "PUBLISHED_BUILD_VERSION=$BUILD_VERSION" >> "$GITHUB_ENV"
+
+      - name: Check out Pages repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          repository: ${{ env.PAGES_REPOSITORY }}
+          ref: main
+          path: ${{ runner.temp }}/pages
+          ssh-key: ${{ secrets.PAGES_DEPLOY_KEY }}
+          persist-credentials: true
+          fetch-depth: 0
+
+      - name: Stage Pages update
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          CURRENT_APPCAST_PATH="$PAGES_DIRECTORY/appcast.xml"
+          PUBLISHED_NOTES_PATH="$PAGES_DIRECTORY/releases/$RELEASE_NOTES_FILENAME"
+
+          if [[ -f "$CURRENT_APPCAST_PATH" ]]; then
+            /usr/bin/xmllint --noout "$CURRENT_APPCAST_PATH"
+
+            CURRENT_BUILD="$(
+              /usr/bin/xmllint \
+                --xpath "string((//*[local-name()='item'])[1]/*[local-name()='enclosure']/@*[local-name()='version'])" \
+                "$CURRENT_APPCAST_PATH"
+            )"
+
+            if [[ ! "$CURRENT_BUILD" =~ ^[1-9][0-9]*$ ]]; then
+              echo "error: invalid build in published appcast: $CURRENT_BUILD" >&2
+              exit 1
+            fi
+
+            if (( 10#$PUBLISHED_BUILD_VERSION < 10#$CURRENT_BUILD )); then
+              echo "error: refusing to roll back from build $CURRENT_BUILD to $PUBLISHED_BUILD_VERSION" >&2
+              exit 1
+            fi
+
+            if (( 10#$PUBLISHED_BUILD_VERSION == 10#$CURRENT_BUILD )) &&
+              ! cmp -s "$APPCAST_PATH" "$CURRENT_APPCAST_PATH"; then
+              echo "error: build $PUBLISHED_BUILD_VERSION is already published with different content" >&2
+              exit 1
+            fi
+          fi
+
+          mkdir -p "$(dirname "$PUBLISHED_NOTES_PATH")"
+
+          cp "$APPCAST_PATH" "$CURRENT_APPCAST_PATH"
+          cp "$RELEASE_NOTES_PATH" "$PUBLISHED_NOTES_PATH"
+
+      - name: Commit Pages update
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          git -C "$PAGES_DIRECTORY" config \
+            user.name "github-actions[bot]"
+          git -C "$PAGES_DIRECTORY" config \
+            user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          git -C "$PAGES_DIRECTORY" add \
+            appcast.xml \
+            "releases/$RELEASE_NOTES_FILENAME"
+
+          if git -C "$PAGES_DIRECTORY" diff --cached --quiet; then
+            echo "Update feed is already published"
+            exit 0
+          fi
+
+          git -C "$PAGES_DIRECTORY" diff --cached --check
+
+          git -C "$PAGES_DIRECTORY" commit \
+            -m "Publish DAWN $RELEASE_VERSION update feed"
+
+          git -C "$PAGES_DIRECTORY" push origin HEAD:main
+
+      - name: Verify Pages deployment
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          LIVE_APPCAST="$RUNNER_TEMP/live-appcast.xml"
+          LIVE_NOTES_URL="https://update.opendawn.app/releases/$RELEASE_NOTES_FILENAME"
+
+          for attempt in {1..30}; do
+            if curl \
+              --fail \
+              --silent \
+              --show-error \
+              --location \
+              --output "$LIVE_APPCAST" \
+              "https://update.opendawn.app/appcast.xml" &&
+              /usr/bin/xmllint --noout "$LIVE_APPCAST" 2>/dev/null; then
+
+              LIVE_BUILD="$(
+                /usr/bin/xmllint \
+                  --xpath "string((//*[local-name()='item'])[1]/*[local-name()='enclosure']/@*[local-name()='version'])" \
+                  "$LIVE_APPCAST"
+              )"
+
+              if [[ "$LIVE_BUILD" == "$PUBLISHED_BUILD_VERSION" ]] &&
+                curl \
+                  --fail \
+                  --silent \
+                  --show-error \
+                  --head \
+                  "$LIVE_NOTES_URL" > /dev/null; then
+                echo "Published build $LIVE_BUILD is live"
+                exit 0
+              fi
+            fi
+
+            echo "Waiting for GitHub Pages deployment ($attempt/30)"
+            sleep 10
+          done
+
+          echo "error: published feed did not become available" >&2
+          exit 1
