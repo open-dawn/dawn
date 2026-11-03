@@ -222,9 +222,7 @@ extension SparkleUpdateClient: SPUUserDriver {
         )
     }
 
-    func showReadyToInstallAndRelaunch()
-        async -> SPUUserUpdateChoice
-    {
+    func showReadyToInstallAndRelaunch() async -> SPUUserUpdateChoice {
         delegate?.appUpdateClientDidBecomeReadyToInstall(self)
 
         return await withCheckedContinuation { continuation in
@@ -239,9 +237,7 @@ extension SparkleUpdateClient: SPUUserDriver {
         delegate?.appUpdateClientDidBeginInstalling(self)
     }
 
-    func showUpdateInstalledAndRelaunched(
-        _ relaunched: Bool
-    ) async {
+    func showUpdateInstalledAndRelaunched(_ relaunched: Bool) async {
     }
 
     func dismissUpdateInstallation() {

@@ -29,11 +29,11 @@ final class AppUpdaterService: AppUpdating {
             return false
         }
 
-        switch state {
+        return switch state {
         case .idle, .upToDate, .failed:
-            return true
+            true
         case .checking, .updateAvailable, .downloading, .extracting, .readyToInstall, .installing:
-            return false
+            false
         }
     }
 
