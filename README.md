@@ -109,7 +109,7 @@ Contributions are welcome. Please read the [Code of Conduct](CODE_OF_CONDUCT.md)
    ```
 4. Open a pull request into `main`
 
-### 6.1. Contributors
+### 5.1. Contributors
 
 <a href="https://github.com/open-dawn/dawn/graphs/contributors">
   <img src="https://contrib.rocks/image?repo=open-dawn/dawn" alt="Contributors" />
