@@ -1,11 +1,3 @@
-[![Contributors][contributors-shield]][contributors-url]
-[![Forks][forks-shield]][forks-url]
-[![Stargazers][stars-shield]][stars-url]
-[![Issues][issues-shield]][issues-url]
-[![GPL-3.0 License][license-shield]][license-url]
-
-<!-- PROJECT LOGO -->
-<br />
 <div align="center">
   <a href="https://github.com/open-dawn/dawn">
     <h1>DAWN</h1>
