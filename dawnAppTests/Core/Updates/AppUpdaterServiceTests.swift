@@ -67,24 +67,37 @@ struct AppUpdaterServiceTests {
         service.installAvailableUpdate()
 
         #expect(
-            service.state == .downloading(
-                update,
-                progress: .indeterminate
-            )
+            service.state
+                == .downloading(
+                    update,
+                    progress: .indeterminate
+                )
         )
         #expect(client.installCallCount == 1)
     }
 
-    @Test("No update produces the up-to-date result")
-    func noUpdateFound() {
+    @Test(
+        "No update exposes its unavailability reason",
+        arguments: [
+            AppUpdateUnavailabilityReason.currentVersionIsLatest,
+            AppUpdateUnavailabilityReason.currentVersionIsNewer,
+            AppUpdateUnavailabilityReason.systemIsTooOld,
+            AppUpdateUnavailabilityReason.systemIsTooNew,
+            AppUpdateUnavailabilityReason.unsupportedHardware,
+            AppUpdateUnavailabilityReason.unknown,
+        ]
+    )
+    func noUpdateFound(reason: AppUpdateUnavailabilityReason) {
         let client = FakeAppUpdateClient()
         let service = AppUpdaterService(client: client)
 
         service.start()
         service.checkForUpdates()
-        client.sendNoUpdate()
+        client.sendNoUpdate(reason)
 
-        #expect(service.state == .upToDate)
+        #expect(
+            service.state == .updateUnavailable(reason: reason)
+        )
         #expect(service.canCheckForUpdates)
     }
 
@@ -97,9 +110,10 @@ struct AppUpdaterServiceTests {
         service.start()
 
         #expect(
-            service.state == .failed(
-                message: "Updates are temporarily unavailable"
-            )
+            service.state
+                == .failed(
+                    reason: .updaterUnavailable
+                )
         )
         #expect(!service.canCheckForUpdates)
     }
@@ -116,19 +130,21 @@ struct AppUpdaterServiceTests {
 
         client.sendDownloadProgress(.fraction(0.25))
         #expect(
-            service.state == .downloading(
-                update,
-                progress: .fraction(0.25)
-            )
+            service.state
+                == .downloading(
+                    update,
+                    progress: .fraction(0.25)
+                )
         )
 
         client.sendExtractionStarted()
         client.sendExtractionProgress(.fraction(0.75))
         #expect(
-            service.state == .extracting(
-                update,
-                progress: .fraction(0.75)
-            )
+            service.state
+                == .extracting(
+                    update,
+                    progress: .fraction(0.75)
+                )
         )
 
         client.sendReadyToInstall()
@@ -165,6 +181,28 @@ struct AppUpdaterServiceTests {
         #expect(!service.canCheckForUpdates)
 
         client.canCheckForUpdates = true
+        #expect(service.canCheckForUpdates)
+    }
+
+    @Test(
+        "Updater failures expose their reason and permit retrying",
+        arguments: [
+            AppUpdateFailureReason.updaterUnavailable,
+            AppUpdateFailureReason.networkUnavailable,
+            AppUpdateFailureReason.invalidFeed,
+            AppUpdateFailureReason.invalidMetadata,
+            AppUpdateFailureReason.unknown
+        ]
+    )
+    func updaterFailure(reason: AppUpdateFailureReason) {
+        let client = FakeAppUpdateClient()
+        let service = AppUpdaterService(client: client)
+
+        service.start()
+        service.checkForUpdates()
+        client.sendFailure(reason)
+
+        #expect(service.state == .failed(reason: reason))
         #expect(service.canCheckForUpdates)
     }
 }
@@ -215,8 +253,11 @@ private final class FakeAppUpdateClient: AppUpdateClient {
         delegate?.appUpdateClient(self, didFind: update)
     }
 
-    func sendNoUpdate() {
-        delegate?.appUpdateClientDidFindNoUpdate(self)
+    func sendNoUpdate(_ reason: AppUpdateUnavailabilityReason) {
+        delegate?.appUpdateClient(
+            self,
+            didFindNoUpdate: reason
+        )
     }
 
     func sendDownloadProgress(_ progress: AppUpdateProgress) {
@@ -238,8 +279,8 @@ private final class FakeAppUpdateClient: AppUpdateClient {
         delegate?.appUpdateClientDidBecomeReadyToInstall(self)
     }
 
-    func sendFailure(_ error: any Error) {
-        delegate?.appUpdateClient(self, didFailWithError: error)
+    func sendFailure(_ reason: AppUpdateFailureReason) {
+        delegate?.appUpdateClient(self, didFailWith: reason)
     }
 }
 

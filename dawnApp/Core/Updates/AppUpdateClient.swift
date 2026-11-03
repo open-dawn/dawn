@@ -16,8 +16,9 @@ protocol AppUpdateClientDelegate: AnyObject {
         didFind update: AvailableAppUpdate
     )
 
-    func appUpdateClientDidFindNoUpdate(
-        _ client: any AppUpdateClient
+    func appUpdateClient(
+        _ client: any AppUpdateClient,
+        didFindNoUpdate reason: AppUpdateUnavailabilityReason
     )
 
     func appUpdateClient(
@@ -53,7 +54,7 @@ protocol AppUpdateClientDelegate: AnyObject {
 
     func appUpdateClient(
         _ client: any AppUpdateClient,
-        didFailWithError error: any Error
+        didFailWith reason: AppUpdateFailureReason
     )
 }
 
