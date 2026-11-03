@@ -6,6 +6,8 @@ public enum Event: Codable, Sendable, Equatable {
     case createContext(CreateContextEvent)
     case updateContext(UpdateContextEvent)
     case deleteContext(DeleteContextEvent)
+    case archiveContext(ArchiveContextEvent)
+    case unarchiveContext(UnarchiveContextEvent)
     case switchContext(SwitchContextEvent)
     case contextsFetched(ContextsFetchedEvent)
 
@@ -28,6 +30,8 @@ public enum Event: Codable, Sendable, Equatable {
         case .createContext: .createContext
         case .updateContext: .updateContext
         case .deleteContext: .deleteContext
+        case .archiveContext: .archiveContext
+        case .unarchiveContext: .unarchiveContext
         case .switchContext: .switchContext
         case .contextMutationAcknowledged: .contextMutationAcknowledged
         case .availableContexts: .availableContexts

@@ -71,8 +71,18 @@ actor SettingsStore {
                 )
             }
 
-            candidate.contexts[contextIndex] = updatedContext
+            var replacement = updatedContext
+            replacement.isArchived = candidate.contexts[contextIndex].isArchived
+            candidate.contexts[contextIndex] = replacement
         }
+    }
+
+    func archiveContext(id: UUID) async throws {
+        try await setArchived(true, id: id)
+    }
+
+    func unarchiveContext(id: UUID) async throws {
+        try await setArchived(false, id: id)
     }
 
     func deleteContext(
@@ -100,6 +110,33 @@ actor SettingsStore {
         try await mutate { candidate in
             candidate.generalSettings.launchAtLogin = enabled
         }
+    }
+
+    private func setArchived(_ isArchived: Bool, id: UUID) async throws {
+        await acquireMutationAccess()
+        defer { releaseMutationAccess() }
+
+        try Task.checkCancellation()
+
+        guard let index = document.contexts.firstIndex(where: { $0.id == id }) else {
+            throw SettingsStoreError.contextNotFound(id)
+        }
+
+        guard document.contexts[index].isArchived != isArchived else {
+            return
+        }
+
+        var candidate = document
+        candidate.contexts[index].isArchived = isArchived
+
+        if isArchived, candidate.workspaceActivity.activeContextID == id {
+            candidate.workspaceActivity.clearActiveSession(for: id)
+        }
+
+        try Self.validate(candidate)
+        try await repository.save(candidate)
+
+        document = candidate
     }
 
     private func acquireMutationAccess() async {

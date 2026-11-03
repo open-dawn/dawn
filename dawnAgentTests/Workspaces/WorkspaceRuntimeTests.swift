@@ -121,6 +121,63 @@ struct WorkspaceRuntimeTests {
         #expect(runtime.activeContextID == nil)
     }
 
+    @Test("Activating an archived context fails without switching")
+    func activatingArchivedContextFails() async {
+        let context = WorkspaceContext(
+            name: "Old",
+            symbol: "archivebox",
+            isArchived: true
+        )
+
+        let contextManager = FakeContextManager()
+        contextManager.contexts = [context]
+        let switcher = ContextSwitchingSpy()
+
+        let runtime = WorkspaceRuntime(
+            contextManager: contextManager,
+            contextSwitching: switcher
+        )
+
+        await #expect(
+            throws: SettingsStoreError.contextArchived(context.id)
+        ) {
+            try await runtime.activateContext(id: context.id)
+        }
+
+        #expect(switcher.switchedContexts.isEmpty)
+        #expect(runtime.activeContextID == nil)
+    }
+
+    @Test("Archiving the requested context clears it on refresh")
+    func archivingRequestedContextClearsSelection() async throws {
+        let context = WorkspaceContext(
+            name: "Work",
+            symbol: "briefcase"
+        )
+
+        let contextManager = FakeContextManager()
+        contextManager.contexts = [context]
+
+        let runtime = WorkspaceRuntime(
+            contextManager: contextManager,
+            contextSwitching: ContextSwitchingSpy()
+        )
+
+        try await runtime.activateContext(id: context.id)
+        try await runtime.archiveContext(id: context.id)
+
+        #expect(runtime.contexts.map(\.isArchived) == [true])
+        #expect(runtime.activeContextID == nil)
+        #expect(contextManager.contexts == [
+            WorkspaceContext(
+                id: context.id,
+                name: context.name,
+                symbol: context.symbol,
+                isArchived: true
+            )
+        ])
+    }
+
     @Test("Older refresh cannot overwrite a newer snapshot")
     func olderRefreshCannotOverwriteNewerSnapshot() async throws {
         let oldContexts = [
@@ -379,6 +436,14 @@ private final class OutOfOrderContextProvider: WorkspaceManaging {
 
     func getContext(id: UUID) async -> WorkspaceContext? {
         contexts.first { $0.id == id }
+    }
+
+    func archiveContext(id: UUID) async throws {
+        fatalError("Not used by this test")
+    }
+
+    func unarchiveContext(id: UUID) async throws {
+        fatalError("Not used by this test")
     }
 
     func createContext(

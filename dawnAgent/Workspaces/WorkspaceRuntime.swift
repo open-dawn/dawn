@@ -96,9 +96,23 @@ final class WorkspaceRuntime: WorkspaceCoordinating {
         await refresh()
     }
 
+    func archiveContext(id: UUID) async throws {
+        try await contextManager.archiveContext(id: id)
+        await refresh()
+    }
+
+    func unarchiveContext(id: UUID) async throws {
+        try await contextManager.unarchiveContext(id: id)
+        await refresh()
+    }
+
     func activateContext(id: UUID) async throws {
         guard let context = await contextManager.getContext(id: id) else {
             throw SettingsStoreError.contextNotFound(id)
+        }
+
+        guard !context.isArchived else {
+            throw SettingsStoreError.contextArchived(id)
         }
 
         try await contextSwitching.switchToContext(to: context)

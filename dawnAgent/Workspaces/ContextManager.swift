@@ -28,8 +28,7 @@ final class ContextManager: WorkspaceManaging {
     }
 
     func getAvailableContexts() async -> [WorkspaceContext] {
-        let storeSnapshot = await store.snapshot()
-        return storeSnapshot.contexts
+        await store.snapshot().contexts
     }
 
     func getWorkspaceSnapshot() async -> WorkspaceSnapshot {
@@ -51,7 +50,7 @@ final class ContextManager: WorkspaceManaging {
     }
 
     func getContext(id: UUID) async -> WorkspaceContext? {
-        let contexts = await getAvailableContexts()
+        let contexts = await store.snapshot().contexts
         return contexts.first(where: { $0.id == id })
     }
 
@@ -65,9 +64,19 @@ final class ContextManager: WorkspaceManaging {
         await publishAvailableContexts()
     }
 
+    func archiveContext(id: UUID) async throws {
+        try await store.archiveContext(id: id)
+        await publishAvailableContexts()
+    }
+
+    func unarchiveContext(id: UUID) async throws {
+        try await store.unarchiveContext(id: id)
+        await publishAvailableContexts()
+    }
+
     private func publishAvailableContexts() async {
-        let snapshot = await store.snapshot()
-        snapshotPublisher.publishAvailableContexts(snapshot.contexts)
+        let contexts = await store.snapshot().contexts
+        snapshotPublisher.publishAvailableContexts(contexts)
     }
 
     func getWorkspaceActivity() async -> WorkspaceActivityState {
@@ -100,6 +109,10 @@ protocol ContextProviding {
     func updateContext(_ context: WorkspaceContext) async throws
 
     func deleteContext(id: UUID) async throws
+
+    func archiveContext(id: UUID) async throws
+
+    func unarchiveContext(id: UUID) async throws
 
     func getContext(id: UUID) async -> WorkspaceContext?
 }

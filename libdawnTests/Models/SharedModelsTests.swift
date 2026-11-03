@@ -28,7 +28,8 @@ struct SharedModelsTests {
             transition: WorkspaceTransition(
                 activationPolicy: .merge,
                 terminalCommand: "echo study"
-            )
+            ),
+            isArchived: true
         )
 
         let data = try JSONEncoder().encode(context)
@@ -55,6 +56,14 @@ struct SharedModelsTests {
 
         #expect(decoded.transition == .default)
         #expect(decoded.transition.activationPolicy == .hide)
+        #expect(decoded.isArchived == false)
+    }
+
+    @Test("Workspace context is active by default")
+    func workspaceContextIsActiveByDefault() {
+        let context = WorkspaceContext(name: "Study", symbol: "book")
+
+        #expect(context.isArchived == false)
     }
 
     @Test("General settings disable launch at login by default")

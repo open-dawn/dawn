@@ -51,6 +51,14 @@ struct AppShellView: View {
             )
         }
 
+        private var activeContexts: [WorkspaceContext] {
+            store.contexts.filter { !$0.isArchived }
+        }
+
+        private var archivedContexts: [WorkspaceContext] {
+            store.contexts.filter(\.isArchived)
+        }
+
         init(store: SettingsContextStore, availableUpdate: AppUpdateAvailability?) {
             self.store = store
             self.availableUpdate = availableUpdate
@@ -65,7 +73,8 @@ struct AppShellView: View {
             HSplitView {
                 SidebarView(
                     content: SidebarContent(
-                        contexts: store.contexts,
+                        contexts: activeContexts,
+                        archivedContexts: archivedContexts,
                         activeContextID: viewModel.activeContextID,
                         busyContextID: viewModel.operationInProgress,
                         isLoading: store.isLoading,
@@ -102,7 +111,7 @@ struct AppShellView: View {
             .preferredColorScheme(.dark)
             .onChange(of: store.contexts) { _, contexts in
                 navigation.contextsDidChange(contexts)
-                viewModel.reconcileActiveContext(with: contexts)
+                viewModel.reconcileActiveContext(with: contexts.filter { !$0.isArchived })
             }
             .onOpenURL(perform: handleOpenURL)
             .task(id: eventBusService.isConnected) {

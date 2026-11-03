@@ -186,7 +186,7 @@ extension MenuBarContextListView {
 
     @ViewBuilder
     private func contextsContent(relativeTo now: Date) -> some View {
-        if viewModel.workspace.contexts.isEmpty {
+        if viewModel.inactiveContexts.isEmpty && viewModel.activeContext == nil {
             ContentUnavailableView(
                 "No Contexts",
                 systemImage: "square.stack",

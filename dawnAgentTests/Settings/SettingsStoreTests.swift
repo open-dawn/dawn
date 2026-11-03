@@ -302,6 +302,7 @@ struct SettingsStoreTests {
         #expect(created.name == "Study")
         #expect(created.symbol == "book")
         #expect(created.applications == [applications])
+        #expect(created.isArchived == false)
         #expect(snapshot.contexts == [created])
         #expect(savedDocuments == [snapshot])
     }
@@ -1037,6 +1038,203 @@ struct SettingsStoreTests {
 
         #expect(await sut.snapshot() == initialDocument)
         #expect(await repository.savedDocuments.isEmpty)
+    }
+
+    @Test("Archive context persists the flag and preserves order")
+    func archiveContextPreservesOrder() async throws {
+        let study = WorkspaceContext(name: "Study", symbol: "book")
+        let games = WorkspaceContext(name: "Games", symbol: "gamecontroller")
+        let work = WorkspaceContext(name: "Work", symbol: "briefcase")
+        let repository = SettingsRepositorySpy(
+            storedDocument: makeDocument(contexts: [study, games, work])
+        )
+        let sut = try await SettingsStore(repository: repository)
+
+        try await sut.archiveContext(id: games.id)
+
+        let archivedGames = WorkspaceContext(
+            id: games.id,
+            name: games.name,
+            symbol: games.symbol,
+            isArchived: true
+        )
+        let snapshot = await sut.snapshot()
+
+        #expect(snapshot.contexts == [study, archivedGames, work])
+        #expect(await repository.savedDocuments == [snapshot])
+    }
+
+    @Test("Unarchive context clears the flag and preserves order")
+    func unarchiveContextPreservesOrder() async throws {
+        let study = WorkspaceContext(name: "Study", symbol: "book")
+        let games = WorkspaceContext(
+            name: "Games",
+            symbol: "gamecontroller",
+            isArchived: true
+        )
+        let repository = SettingsRepositorySpy(
+            storedDocument: makeDocument(contexts: [study, games])
+        )
+        let sut = try await SettingsStore(repository: repository)
+
+        try await sut.unarchiveContext(id: games.id)
+
+        let restoredGames = WorkspaceContext(
+            id: games.id,
+            name: games.name,
+            symbol: games.symbol
+        )
+        let snapshot = await sut.snapshot()
+
+        #expect(snapshot.contexts == [study, restoredGames])
+        #expect(await repository.savedDocuments == [snapshot])
+    }
+
+    @Test("Archive and unarchive reject an unknown identifier without saving")
+    func unknownContextArchiveIsRejected() async throws {
+        let existing = WorkspaceContext(name: "Study", symbol: "book")
+        let initialDocument = makeDocument(contexts: [existing])
+        let repository = SettingsRepositorySpy(storedDocument: initialDocument)
+        let sut = try await SettingsStore(repository: repository)
+        let unknownID = UUID()
+
+        do {
+            try await sut.archiveContext(id: unknownID)
+            Issue.record("Expected archive to throw")
+        } catch let error as SettingsStoreError {
+            #expect(error == .contextNotFound(unknownID))
+        } catch {
+            Issue.record("Unexpected error: \(error)")
+        }
+
+        do {
+            try await sut.unarchiveContext(id: unknownID)
+            Issue.record("Expected unarchive to throw")
+        } catch let error as SettingsStoreError {
+            #expect(error == .contextNotFound(unknownID))
+        } catch {
+            Issue.record("Unexpected error: \(error)")
+        }
+
+        #expect(await sut.snapshot() == initialDocument)
+        #expect(await repository.savedDocuments.isEmpty)
+    }
+
+    @Test("Repeating archive or unarchive does not save again")
+    func repeatedArchiveDoesNotSave() async throws {
+        let study = WorkspaceContext(name: "Study", symbol: "book")
+        let repository = SettingsRepositorySpy(
+            storedDocument: makeDocument(contexts: [study])
+        )
+        let sut = try await SettingsStore(repository: repository)
+
+        try await sut.unarchiveContext(id: study.id)
+        try await sut.archiveContext(id: study.id)
+        try await sut.archiveContext(id: study.id)
+
+        let savedDocuments = await repository.savedDocuments
+        #expect(savedDocuments.count == 1)
+        #expect(savedDocuments[0].contexts.map(\.isArchived) == [true])
+
+        try await sut.unarchiveContext(id: study.id)
+        try await sut.unarchiveContext(id: study.id)
+
+        #expect(await repository.savedDocuments.count == 2)
+        #expect(await sut.snapshot().contexts.map(\.isArchived) == [false])
+    }
+
+    @Test("Update context preserves archival state")
+    func updateContextPreservesArchivalState() async throws {
+        let study = WorkspaceContext(
+            name: "Study",
+            symbol: "book",
+            isArchived: true
+        )
+        let games = WorkspaceContext(name: "Games", symbol: "gamecontroller")
+        let repository = SettingsRepositorySpy(
+            storedDocument: makeDocument(contexts: [study, games])
+        )
+        let sut = try await SettingsStore(repository: repository)
+
+        let updatedStudy = WorkspaceContext(
+            id: study.id,
+            name: "University",
+            symbol: "graduationcap"
+        )
+        let archivedGames = WorkspaceContext(
+            id: games.id,
+            name: "Play",
+            symbol: "gamecontroller.fill",
+            isArchived: true
+        )
+
+        try await sut.updateContext(updatedStudy)
+        try await sut.updateContext(archivedGames)
+
+        let snapshot = await sut.snapshot()
+        #expect(snapshot.contexts.map(\.name) == ["University", "Play"])
+        #expect(snapshot.contexts.map(\.isArchived) == [true, false])
+    }
+
+    @Test("Delete context removes an archived context")
+    func deleteArchivedContext() async throws {
+        let study = WorkspaceContext(name: "Study", symbol: "book")
+        let archived = WorkspaceContext(
+            name: "Old",
+            symbol: "archivebox",
+            isArchived: true
+        )
+        let repository = SettingsRepositorySpy(
+            storedDocument: makeDocument(contexts: [study, archived])
+        )
+        let sut = try await SettingsStore(repository: repository)
+
+        try await sut.deleteContext(id: archived.id)
+
+        let snapshot = await sut.snapshot()
+        #expect(snapshot.contexts == [study])
+        #expect(await repository.savedDocuments == [snapshot])
+    }
+
+    @Test("Archive context leaves the cache unchanged when persistence fails")
+    func failedArchiveDoesNotMutate() async throws {
+        let existing = WorkspaceContext(name: "Study", symbol: "book")
+        let initialDocument = makeDocument(contexts: [existing])
+        let repository = SettingsRepositorySpy(
+            storedDocument: initialDocument,
+            saveError: TestError.saveFailed
+        )
+        let sut = try await SettingsStore(repository: repository)
+
+        do {
+            try await sut.archiveContext(id: existing.id)
+            Issue.record("Expected archive to throw")
+        } catch let error as TestError {
+            #expect(error == .saveFailed)
+        } catch {
+            Issue.record("Unexpected error: \(error)")
+        }
+
+        #expect(await sut.snapshot() == initialDocument)
+        #expect(await repository.savedDocuments.isEmpty)
+    }
+
+    @Test("Archiving the active context clears the active session")
+    func archiveClearsActiveSession() async throws {
+        let study = WorkspaceContext(name: "Study", symbol: "book")
+        var document = makeDocument(contexts: [study])
+        document.workspaceActivity.activate(
+            contextID: study.id,
+            at: Date(timeIntervalSince1970: 100)
+        )
+        let repository = SettingsRepositorySpy(storedDocument: document)
+        let sut = try await SettingsStore(repository: repository)
+
+        try await sut.archiveContext(id: study.id)
+
+        let snapshot = await sut.snapshot()
+        #expect(snapshot.workspaceActivity.activeContextID == nil)
+        #expect(snapshot.contexts.map(\.isArchived) == [true])
     }
 
     private func makeDocument(

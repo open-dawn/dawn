@@ -32,6 +32,11 @@ struct EventTests {
                 kind: EventKind.updateContext
             ),
             (event: Event.deleteContext(DeleteContextEvent(contextID: UUID())), kind: EventKind.deleteContext),
+            (event: Event.archiveContext(ArchiveContextEvent(contextID: UUID())), kind: EventKind.archiveContext),
+            (
+                event: Event.unarchiveContext(UnarchiveContextEvent(contextID: UUID())),
+                kind: EventKind.unarchiveContext
+            ),
             (
                 event: Event.switchContext(SwitchContextEvent(contextID: UUID())),
                 kind: EventKind.switchContext
@@ -76,12 +81,17 @@ struct EventTests {
             .createContext(CreateContextEvent(name: "placeholder", symbol: "book", applications: [])),
             .updateContext(UpdateContextEvent(context: WorkspaceContext(name: "placeholder", symbol: "book"))),
             .deleteContext(DeleteContextEvent(contextID: UUID())),
+            .archiveContext(ArchiveContextEvent(contextID: UUID())),
+            .unarchiveContext(UnarchiveContextEvent(contextID: UUID())),
             .switchContext(SwitchContextEvent(contextID: UUID())),
             .contextMutationAcknowledged(ContextMutationAcknowledgement.success(contextID: UUID())),
             .contextMutationAcknowledged(ContextMutationAcknowledgement.failure(failure: .emptyContextName)),
             .contextMutationAcknowledged(ContextMutationAcknowledgement.failure(failure: .contextNotFound(UUID()))),
             .availableContexts(
-                AvailableContextsEvent(contexts: [WorkspaceContext(name: "Placeholder", symbol: "book")])
+                AvailableContextsEvent(contexts: [
+                    WorkspaceContext(name: "Placeholder", symbol: "book"),
+                    WorkspaceContext(name: "Old", symbol: "archivebox", isArchived: true)
+                ])
             ),
             .getMenuBarVisibility(GetMenuBarVisibilityEvent()),
             .setMenuBarVisibility(SetMenuBarVisibilityEvent(isVisible: false)),

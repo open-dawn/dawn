@@ -24,6 +24,8 @@ struct WindowManagerListenerTests {
                 ), afterResult: true
             ),
             (event: Event.deleteContext(DeleteContextEvent(contextID: UUID())), afterResult: true),
+            (event: Event.archiveContext(ArchiveContextEvent(contextID: UUID())), afterResult: true),
+            (event: Event.unarchiveContext(UnarchiveContextEvent(contextID: UUID())), afterResult: true),
             (event: Event.switchContext(SwitchContextEvent(contextID: UUID())), afterResult: true),
         ]
 
@@ -394,6 +396,143 @@ struct WindowManagerListenerTests {
         _ = listener
     }
 
+    @Test("Archive routes ID and replies with success")
+    func archiveRoutesIDAndRepliesWithSuccess() async throws {
+        let context = WorkspaceContext(
+            name: "Work",
+            symbol: "briefcase",
+            applications: []
+        )
+
+        let contextManager = FakeContextManager()
+        contextManager.contexts = [context]
+
+        let workspace = WorkspaceRuntime(contextManager: contextManager)
+        let bus = EventBus()
+        let listener = WindowManagerListener(
+            bus: bus,
+            workspace: workspace
+        )
+
+        let response = try await bus.ask(
+            .archiveContext(ArchiveContextEvent(contextID: context.id))
+        )
+
+        #expect(contextManager.archivedContextIDs == [context.id])
+        #expect(workspace.contexts.map(\.isArchived) == [true])
+        #expect(
+            response
+                == .contextMutationAcknowledged(
+                    .success(contextID: context.id)
+                )
+        )
+
+        _ = listener
+    }
+
+    @Test("Archive replies with context-not-found failure")
+    func archiveRepliesWithMissingContextFailure() async throws {
+        let missingID = UUID()
+
+        let contextManager = FakeContextManager()
+        contextManager.archiveError = SettingsStoreError.contextNotFound(missingID)
+
+        let workspace = WorkspaceRuntime(contextManager: contextManager)
+        let bus = EventBus()
+        let listener = WindowManagerListener(
+            bus: bus,
+            workspace: workspace
+        )
+
+        let response = try await bus.ask(
+            .archiveContext(ArchiveContextEvent(contextID: missingID))
+        )
+
+        #expect(contextManager.archivedContextIDs == [missingID])
+        #expect(
+            response
+                == .contextMutationAcknowledged(
+                    .failure(failure: .contextNotFound(missingID))
+                )
+        )
+
+        _ = listener
+    }
+
+    @Test("Unarchive routes ID and replies with success")
+    func unarchiveRoutesIDAndRepliesWithSuccess() async throws {
+        let context = WorkspaceContext(
+            name: "Work",
+            symbol: "briefcase",
+            isArchived: true
+        )
+
+        let contextManager = FakeContextManager()
+        contextManager.contexts = [context]
+
+        let workspace = WorkspaceRuntime(contextManager: contextManager)
+        let bus = EventBus()
+        let listener = WindowManagerListener(
+            bus: bus,
+            workspace: workspace
+        )
+
+        let response = try await bus.ask(
+            .unarchiveContext(UnarchiveContextEvent(contextID: context.id))
+        )
+
+        #expect(contextManager.unarchivedContextIDs == [context.id])
+        #expect(workspace.contexts.map(\.id) == [context.id])
+        #expect(workspace.contexts.allSatisfy { !$0.isArchived })
+        #expect(
+            response
+                == .contextMutationAcknowledged(
+                    .success(contextID: context.id)
+                )
+        )
+
+        _ = listener
+    }
+
+    @Test("Switch context replies with context-archived failure")
+    func switchContextRepliesWithArchivedContextFailure() async throws {
+        let context = WorkspaceContext(
+            name: "Old",
+            symbol: "archivebox",
+            isArchived: true
+        )
+
+        let contextManager = FakeContextManager()
+        contextManager.contexts = [context]
+        let switcher = ContextSwitchingSpy()
+
+        let workspace = WorkspaceRuntime(
+            contextManager: contextManager,
+            contextSwitching: switcher
+        )
+
+        let bus = EventBus()
+        let listener = WindowManagerListener(
+            bus: bus,
+            workspace: workspace
+        )
+
+        let response = try await bus.ask(
+            .switchContext(SwitchContextEvent(contextID: context.id))
+        )
+
+        #expect(switcher.switchedContexts.isEmpty)
+        #expect(workspace.activeContextID == nil)
+        #expect(
+            response
+                == .contextMutationAcknowledged(
+                    .failure(failure: .contextArchived(context.id))
+                )
+        )
+
+        _ = listener
+    }
+
     private func createMockWorkspaceContext(_ count: Int) -> [WorkspaceContext] {
         var res: [WorkspaceContext] = []
         for index in 1...count {
@@ -417,6 +556,12 @@ final class FakeContextManager: WorkspaceManaging {
 
     private(set) var deletedContextIDs: [UUID] = []
     var deleteError: Error?
+
+    private(set) var archivedContextIDs: [UUID] = []
+    var archiveError: Error?
+
+    private(set) var unarchivedContextIDs: [UUID] = []
+    var unarchiveError: Error?
 
     func getAvailableContexts() -> [WorkspaceContext] {
         contexts
@@ -476,6 +621,35 @@ final class FakeContextManager: WorkspaceManaging {
 
         workspaceActivity.removeContext(id: id)
         contexts.removeAll { $0.id == id }
+    }
+
+    func archiveContext(id: UUID) async throws {
+        archivedContextIDs.append(id)
+
+        if let archiveError {
+            throw archiveError
+        }
+
+        guard let index = contexts.firstIndex(where: { $0.id == id }) else {
+            throw SettingsStoreError.contextNotFound(id)
+        }
+
+        contexts[index].isArchived = true
+        workspaceActivity.clearActiveSession(for: id)
+    }
+
+    func unarchiveContext(id: UUID) async throws {
+        unarchivedContextIDs.append(id)
+
+        if let unarchiveError {
+            throw unarchiveError
+        }
+
+        guard let index = contexts.firstIndex(where: { $0.id == id }) else {
+            throw SettingsStoreError.contextNotFound(id)
+        }
+
+        contexts[index].isArchived = false
     }
 
     func getContext(id: UUID) async -> WorkspaceContext? {

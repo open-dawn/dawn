@@ -40,6 +40,8 @@ final class WindowManagerListener: Listener {
                 .createContext,
                 .updateContext,
                 .deleteContext,
+                .archiveContext,
+                .unarchiveContext,
                 .switchContext,
             ]
         )
@@ -68,6 +70,12 @@ final class WindowManagerListener: Listener {
 
         case let .deleteContext(payload):
             handleDeleteContext(payload, reply: reply)
+
+        case let .archiveContext(payload):
+            handleArchiveContext(payload, reply: reply)
+
+        case let .unarchiveContext(payload):
+            handleUnarchiveContext(payload, reply: reply)
 
         case let .switchContext(payload):
             handleSwitchContext(payload, reply: reply)
@@ -159,6 +167,50 @@ final class WindowManagerListener: Listener {
         }
     }
 
+    private func handleArchiveContext(_ payload: ArchiveContextEvent, reply: (@Sendable (Event) -> Void)?) {
+        guard let reply else { return }
+
+        Task { @MainActor in
+            do {
+                try await workspace.archiveContext(id: payload.contextID)
+
+                reply(
+                    .contextMutationAcknowledged(
+                        .success(contextID: payload.contextID)
+                    )
+                )
+            } catch {
+                reply(
+                    .contextMutationAcknowledged(
+                        .failure(failure: mutationFailure(from: error))
+                    )
+                )
+            }
+        }
+    }
+
+    private func handleUnarchiveContext(_ payload: UnarchiveContextEvent, reply: (@Sendable (Event) -> Void)?) {
+        guard let reply else { return }
+
+        Task { @MainActor in
+            do {
+                try await workspace.unarchiveContext(id: payload.contextID)
+
+                reply(
+                    .contextMutationAcknowledged(
+                        .success(contextID: payload.contextID)
+                    )
+                )
+            } catch {
+                reply(
+                    .contextMutationAcknowledged(
+                        .failure(failure: mutationFailure(from: error))
+                    )
+                )
+            }
+        }
+    }
+
     private func handleSwitchContext(_ payload: SwitchContextEvent, reply: (@Sendable (Event) -> Void)?) {
         guard let reply else { return }
 
@@ -187,16 +239,7 @@ final class WindowManagerListener: Listener {
         from error: Error
     ) -> ContextMutationAcknowledgement.Failure {
         if let error = error as? SettingsStoreError {
-            return switch error {
-            case .emptyContextName: .emptyContextName
-            case .emptyContextSymbol: .emptyContextSymbol
-            case .emptyApplicationBundleIdentifier: .emptyApplicationBundleIdentifier
-            case .emptyApplicationDisplayName: .emptyApplicationDisplayName
-            case let .duplicateApplication(bundleIdentifier): .duplicateApplication(bundleIdentifier: bundleIdentifier)
-            case let .duplicateContextIdentifier(id): .duplicateContextIdentifier(id)
-            case let .duplicateApplicationIdentifier(id): .duplicateApplicationIdentifier(id)
-            case let .contextNotFound(id): .contextNotFound(id)
-            }
+            return error.mutationFailure
         }
 
         if error is SettingsRepositoryError {
