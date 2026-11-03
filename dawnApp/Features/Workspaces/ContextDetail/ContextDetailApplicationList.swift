@@ -50,10 +50,10 @@ struct ContextDetailApplicationList: View {
                 }
 
                 if applications.isEmpty {
-                    Text("No applications added to this context.")
+                    Text("Nothing selected yet. Click the 􀅼 button or drag an app here to add it.")
                         .font(DawnTextStyle.primary)
                         .foregroundStyle(DawnColors.secondaryForeground)
-                        .padding()
+                        .padding(.vertical)
                 }
             }
         }
