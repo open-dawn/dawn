@@ -81,8 +81,9 @@ final class ContextDetailViewModel {
         }
     }
 
-    func deleteContext(_ context: WorkspaceContext) async {
-        guard operationInProgress == nil else { return }
+    @discardableResult
+    func deleteContext(_ context: WorkspaceContext) async -> Bool {
+        guard operationInProgress == nil else { return false }
 
         operationInProgress = context.id
         defer { operationInProgress = nil }
@@ -93,10 +94,13 @@ final class ContextDetailViewModel {
                 activeContextID = nil
             }
             error = nil
+            return true
         } catch let error as SettingsContextStoreError {
             self.error = error
+            return false
         } catch {
             self.error = .unknown
+            return false
         }
     }
 

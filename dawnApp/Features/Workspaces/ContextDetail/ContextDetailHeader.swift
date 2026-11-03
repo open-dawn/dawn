@@ -1,3 +1,4 @@
+import dawnLogging
 import libdawnUI
 import SwiftUI
 
@@ -7,6 +8,9 @@ struct ContextDetailHeader: View {
     let isActive: Bool
     let interactionsDisabled: Bool
     let onActivate: () -> Void
+    let onDelete: () -> Void
+
+    @State private var isDeleteConfirmationPresented = false
 
     var body: some View {
         HStack(spacing: 24) {
@@ -38,12 +42,50 @@ struct ContextDetailHeader: View {
                 .disabled(interactionsDisabled)
             }
 
-            // swiftlint:disable:next todo
-            // FIXME: This should be a menu with Delete (trash) and Archive (shippingbox).
-            DButton(style: .icon) {
+            Menu {
+                Button {
+                    // PIN-172 Implement Context Archival
+                    #log(
+                        "Context archival is a stub",
+                        level: .warning,
+                        category: .userInterface
+                    )
+                } label: {
+                    Label("Archive", systemImage: "shippingbox")
+                        .labelStyle(.titleAndIcon)
+                }
 
-            } content: {
-                Image(systemName: "ellipsis.circle")
+                Button(role: .destructive) {
+                    isDeleteConfirmationPresented = true
+                } label: {
+                    Label("Delete", systemImage: "trash")
+                        .labelStyle(.titleAndIcon)
+                        .foregroundStyle(DawnColors.dangerForeground)
+                }
+            } label: {
+                DButton(style: .icon) {
+                } content: {
+                    Image(systemName: "ellipsis.circle")
+                }
+                .allowsHitTesting(false)
+            }
+            .menuStyle(.borderlessButton)
+            .menuIndicator(.hidden)
+            .buttonStyle(.plain)
+            .fixedSize()
+            .disabled(interactionsDisabled)
+            .accessibilityLabel("Context actions")
+            .confirmationDialog(
+                "Delete \(name)?",
+                isPresented: $isDeleteConfirmationPresented,
+                titleVisibility: .visible
+            ) {
+                Button("Delete", role: .destructive) {
+                    onDelete()
+                }
+                Button("Cancel", role: .cancel) {}
+            } message: {
+                Text("\(name) will be permanently deleted.")
             }
         }
         .padding(.horizontal, 32)

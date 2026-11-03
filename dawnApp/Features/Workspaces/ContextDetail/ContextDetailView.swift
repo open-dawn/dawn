@@ -30,6 +30,14 @@ struct ContextDetailView: View {
                         Task {
                             await viewModel.runContext(context)
                         }
+                    },
+                    onDelete: {
+                        Task {
+                            let deleted = await viewModel.deleteContext(context)
+                            if deleted {
+                                onDelete(context)
+                            }
+                        }
                     }
                 )
 
