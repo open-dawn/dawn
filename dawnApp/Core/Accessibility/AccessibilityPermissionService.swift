@@ -1,7 +1,7 @@
-import Foundation
-import Observation
-import libdawn
 import dawnLogging
+import Foundation
+import libdawn
+import Observation
 
 @Observable
 @MainActor
@@ -37,7 +37,6 @@ final class AccessibilityPermissionService {
         }
     }
 
-    /// Shows the Accessibility permission popup via dawnAgent.
     @discardableResult
     func promptTrust() async -> Bool {
         isLoading = true

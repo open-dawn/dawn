@@ -4,7 +4,6 @@ import Foundation
 protocol AccessibilityTrustChecking: Sendable {
     func isProcessTrusted() -> Bool
 
-    /// Shows the system Accessibility permission prompt when the process is not trusted.
     @discardableResult
     func promptForTrust() -> Bool
 }

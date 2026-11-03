@@ -1,8 +1,6 @@
 import Foundation
 import libdawn
 
-/// Asks dawnAgent to show the system Accessibility permission popup.
-/// Safe to call from Settings, onboarding, or other dawnApp flows.
 @MainActor
 @discardableResult
 func promptAccessibilityTrust(
@@ -26,7 +24,6 @@ func promptAccessibilityTrust(
     return payload.isTrusted
 }
 
-/// Asks dawnAgent whether it currently has Accessibility trust.
 @MainActor
 func fetchAccessibilityTrustStatus(
     using bus: any SettingsContextEventBus,

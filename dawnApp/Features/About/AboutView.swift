@@ -1,6 +1,6 @@
 import AppKit
-import SwiftUI
 import libdawnUI
+import SwiftUI
 
 struct AboutView: View {
     let content: AboutContent
@@ -29,7 +29,6 @@ struct AboutView: View {
 
     var body: some View {
         VStack(spacing: 24) {
-
             Spacer()
 
             VStack(spacing: 8) {
@@ -48,7 +47,6 @@ struct AboutView: View {
                     .onTapGesture {
                         NSWorkspace.shared.open(content.ticket.commit.url)
                     }
-
             }
 
             VStack(spacing: 4) {
@@ -111,12 +109,7 @@ struct AboutView: View {
                     }
                 } else {
                     VStack {
-
-                        /// this empty button is here to take enough
-                        /// space so the layout doesn't shift when
-                        /// an actual changelog button is shown
-                        DButton(style: .link) {
-                        } content: {
+                        DButton(style: .link) {} content: {
                             Text(" ")
                         }
 
@@ -144,6 +137,5 @@ struct AboutView: View {
         .background {
             DawnColors.primaryBackground
         }
-
     }
 }
