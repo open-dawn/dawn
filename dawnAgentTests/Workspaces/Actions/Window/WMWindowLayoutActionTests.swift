@@ -186,4 +186,45 @@ struct WMWindowLayoutActionTests {
         #expect(windows.fullscreenStates.map(\.1) == [true])
         #expect(windows.raised.count == 1)
     }
+
+    @Test("prefers an explicit process identifier over the first matching bundle")
+    func prefersExplicitProcessIdentifier() async throws {
+        let app = WorkspaceApplication(
+            bundleIdentifier: "com.apple.Terminal",
+            displayName: "Terminal",
+            windowLayout: .window
+        )
+        let older = FakeRunningApp(bundleIdentifier: app.bundleIdentifier, processIdentifier: 100)
+        let provider = FakeAppProvider()
+        provider.appsByBundleIdentifier[app.bundleIdentifier] = [older]
+
+        let olderWindow = AccessibilityWindow(
+            processID: 100,
+            title: "Old",
+            element: FakeAccessibilityElement()
+        )
+        let newerWindow = AccessibilityWindow(
+            processID: 200,
+            title: "New",
+            element: FakeAccessibilityElement()
+        )
+        let windows = FakeAccessibilityWindowService()
+        windows.windowsByPID[100] = [olderWindow]
+        windows.windowsByPID[200] = [newerWindow]
+
+        let trust = FakeAccessibilityTrustChecker()
+        trust.isTrusted = true
+
+        let action = WMWindowLayoutAction(
+            app: app,
+            processIdentifier: 200,
+            provider: provider,
+            windows: windows,
+            trustChecker: trust
+        )
+
+        try await action.execute()
+
+        #expect(windows.raised.map(\.processID) == [200])
+    }
 }

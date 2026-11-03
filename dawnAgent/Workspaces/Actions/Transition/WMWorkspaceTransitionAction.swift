@@ -1,46 +1,57 @@
+import AppKit
 import dawnLogging
 import Foundation
 import libdawn
 
 protocol WorkspaceTransitionPerforming {
     func resetWindows(policy: WorkspaceActivationPolicy, keepApplications: [WorkspaceApplication]) async throws
-    func openApp(_ app: WorkspaceApplication) async throws
-    func waitForWindows(bundleIdentifier: String) async
-    func applyWindowLayout(_ app: WorkspaceApplication) async throws
+    func openApp(_ app: WorkspaceApplication) async throws -> pid_t
+    func waitForWindows(processIdentifier: pid_t) async
+    func applyWindowLayout(_ app: WorkspaceApplication, processIdentifier: pid_t?) async throws
     func runTerminalCommand(_ command: String) async throws
 }
 
 struct DefaultWorkspaceTransitionPerformer: WorkspaceTransitionPerforming {
     private let provider: ApplicationProvider
+    private let workspace: WorkspaceOpener
     private let windows: any AccessibilityWindowServing
+    private let trustChecker: any AccessibilityTrustChecking
     private let windowWaitTimeout: Duration
     private let windowPollInterval: Duration
 
     init(
         provider: ApplicationProvider = SystemApplicationProvider(),
+        workspace: WorkspaceOpener = NSWorkspace.shared,
         windows: any AccessibilityWindowServing = SystemAccessibilityWindowService(),
+        trustChecker: any AccessibilityTrustChecking = SystemAccessibilityTrustChecker(),
         windowWaitTimeout: Duration = .seconds(3),
         windowPollInterval: Duration = .milliseconds(100)
     ) {
         self.provider = provider
+        self.workspace = workspace
         self.windows = windows
+        self.trustChecker = trustChecker
         self.windowWaitTimeout = windowWaitTimeout
         self.windowPollInterval = windowPollInterval
     }
 
     func resetWindows(policy: WorkspaceActivationPolicy, keepApplications: [WorkspaceApplication]) async throws {
-        try WMResetWindowsAction(activationPolicy: policy, keepApplications: keepApplications).execute()
+        try WMResetWindowsAction(
+            activationPolicy: policy,
+            keepApplications: keepApplications,
+            provider: provider
+        ).execute()
     }
 
-    func openApp(_ app: WorkspaceApplication) async throws {
-        try await WMOpenAppAction(app: app).execute()
+    func openApp(_ app: WorkspaceApplication) async throws -> pid_t {
+        try await WMOpenAppAction(app: app, workspace: workspace, provider: provider).open()
     }
 
-    func waitForWindows(bundleIdentifier: String) async {
+    func waitForWindows(processIdentifier: pid_t) async {
         let deadline = ContinuousClock.now + windowWaitTimeout
 
         while ContinuousClock.now < deadline {
-            if hasWindows(forBundleIdentifier: bundleIdentifier) {
+            if hasWindows(forProcessIdentifier: processIdentifier) {
                 return
             }
 
@@ -48,27 +59,29 @@ struct DefaultWorkspaceTransitionPerformer: WorkspaceTransitionPerforming {
         }
 
         #log(
-            "Timed out waiting for windows of \(bundleIdentifier) after \(windowWaitTimeout)",
+            "Timed out waiting for windows of pid \(processIdentifier) after \(windowWaitTimeout)",
             level: .warning,
             category: .general
         )
     }
 
-    func applyWindowLayout(_ app: WorkspaceApplication) async throws {
-        try await WMWindowLayoutAction(app: app).execute()
+    func applyWindowLayout(_ app: WorkspaceApplication, processIdentifier: pid_t?) async throws {
+        try await WMWindowLayoutAction(
+            app: app,
+            processIdentifier: processIdentifier,
+            provider: provider,
+            windows: windows,
+            trustChecker: trustChecker
+        ).execute()
     }
 
     func runTerminalCommand(_ command: String) async throws {
         try await WMTerminalCommandAction(command: command).execute()
     }
 
-    private func hasWindows(forBundleIdentifier bundleIdentifier: String) -> Bool {
-        guard let runningApp = provider.runningApplications(withBundleIdentifier: bundleIdentifier).first else {
-            return false
-        }
-
+    private func hasWindows(forProcessIdentifier processIdentifier: pid_t) -> Bool {
         do {
-            return try !windows.windows(forProcessID: runningApp.processIdentifier).isEmpty
+            return try !windows.windows(forProcessID: processIdentifier).isEmpty
         } catch {
             return false
         }
@@ -116,8 +129,9 @@ struct WMWorkspaceTransitionAction: WMAction {
         let openedIDs = Set(appsToOpen.map(\.id))
 
         for app in appsToOpen {
+            let processIdentifier: pid_t
             do {
-                try await performer.openApp(app)
+                processIdentifier = try await performer.openApp(app)
             } catch {
                 #log(
                     "Error opening app \(app.bundleIdentifier) (\(error))",
@@ -129,13 +143,13 @@ struct WMWorkspaceTransitionAction: WMAction {
 
             guard canApplyLayout else { continue }
 
-            await performer.waitForWindows(bundleIdentifier: app.bundleIdentifier)
-            await applyWindowLayout(app)
+            await performer.waitForWindows(processIdentifier: processIdentifier)
+            await applyWindowLayout(app, processIdentifier: processIdentifier)
         }
 
         if canApplyLayout {
             for app in applications where !openedIDs.contains(app.id) {
-                await applyWindowLayout(app)
+                await applyWindowLayout(app, processIdentifier: nil)
             }
         }
 
@@ -152,9 +166,9 @@ struct WMWorkspaceTransitionAction: WMAction {
         }
     }
 
-    private func applyWindowLayout(_ app: WorkspaceApplication) async {
+    private func applyWindowLayout(_ app: WorkspaceApplication, processIdentifier: pid_t?) async {
         do {
-            try await performer.applyWindowLayout(app)
+            try await performer.applyWindowLayout(app, processIdentifier: processIdentifier)
         } catch {
             #log(
                 "Error applying window layout for \(app.bundleIdentifier) (\(error))",

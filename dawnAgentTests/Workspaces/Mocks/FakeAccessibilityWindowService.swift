@@ -14,11 +14,13 @@ final class FakeAccessibilityWindowService: AccessibilityWindowServing {
     var windowsByPID: [pid_t: [AccessibilityWindow]] = [:]
     var windowsError: AccessibilityError?
 
+    private(set) var requestedProcessIDs: [pid_t] = []
     private(set) var raised: [AccessibilityWindow] = []
     private(set) var minimizedStates: [(AccessibilityWindow, Bool)] = []
     private(set) var fullscreenStates: [(AccessibilityWindow, Bool)] = []
 
     func windows(forProcessID processID: pid_t) throws(AccessibilityError) -> [AccessibilityWindow] {
+        requestedProcessIDs.append(processID)
         if let windowsError {
             throw windowsError
         }

@@ -9,11 +9,15 @@ struct WMOpenAppAction: WMAppAction {
     private let provider: ApplicationProvider
 
     func execute() async throws(WMActionError) {
+        _ = try await open()
+    }
+
+    func open() async throws(WMActionError) -> pid_t {
         if shouldRestoreRunningApplication,
            let runningApp = provider.runningApplications(withBundleIdentifier: app.bundleIdentifier).first
         {
             try restore(runningApp)
-            return
+            return runningApp.processIdentifier
         }
 
         guard let appUrl: URL = app.applicationURL else {
@@ -38,7 +42,11 @@ struct WMOpenAppAction: WMAppAction {
         configuration.promptsUserIfNeeded = app.promptsUserIfNeeded
 
         do {
-            try await workspace.openApplication(at: appUrl, configuration: configuration)
+            let launchedApp = try await workspace.openRunningApplication(
+                at: appUrl,
+                configuration: configuration
+            )
+            return launchedApp.processIdentifier
         } catch {
             let actionError = map(workspaceError: error, filePath: appUrl.path())
 
@@ -98,7 +106,17 @@ struct WMOpenAppAction: WMAppAction {
 
 protocol WorkspaceOpener {
     @discardableResult
-    func openApplication(at url: URL, configuration: NSWorkspace.OpenConfiguration) async throws -> NSRunningApplication
+    func openRunningApplication(
+        at url: URL,
+        configuration: NSWorkspace.OpenConfiguration
+    ) async throws -> any RunningApplicationControlling
 }
 
-extension NSWorkspace: WorkspaceOpener {}
+extension NSWorkspace: WorkspaceOpener {
+    func openRunningApplication(
+        at url: URL,
+        configuration: NSWorkspace.OpenConfiguration
+    ) async throws -> any RunningApplicationControlling {
+        try await openApplication(at: url, configuration: configuration)
+    }
+}

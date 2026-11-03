@@ -5,6 +5,7 @@ import libdawn
 
 struct WMWindowLayoutAction: WMAppAction {
     private(set) var app: WorkspaceApplication
+    private let processIdentifier: pid_t?
     private let provider: ApplicationProvider
     private let windows: any AccessibilityWindowServing
     private let trustChecker: any AccessibilityTrustChecking
@@ -19,14 +20,13 @@ struct WMWindowLayoutAction: WMAppAction {
             throw .accessibilityNotTrusted
         }
 
-        guard let runningApp = provider.runningApplications(withBundleIdentifier: app.bundleIdentifier).first
-        else {
+        guard let processID = resolvedProcessIdentifier() else {
             throw .notRunning
         }
 
         let targetWindows: [AccessibilityWindow]
         do {
-            targetWindows = try windows.windows(forProcessID: runningApp.processIdentifier)
+            targetWindows = try windows.windows(forProcessID: processID)
         } catch {
             throw map(accessibilityError: error)
         }
@@ -105,13 +105,23 @@ struct WMWindowLayoutAction: WMAppAction {
         }
     }
 
+    private func resolvedProcessIdentifier() -> pid_t? {
+        if let processIdentifier {
+            return processIdentifier
+        }
+
+        return provider.runningApplications(withBundleIdentifier: app.bundleIdentifier).first?.processIdentifier
+    }
+
     init(
         app: WorkspaceApplication,
+        processIdentifier: pid_t? = nil,
         provider: ApplicationProvider = SystemApplicationProvider(),
         windows: any AccessibilityWindowServing = SystemAccessibilityWindowService(),
         trustChecker: any AccessibilityTrustChecking = SystemAccessibilityTrustChecker()
     ) {
         self.app = app
+        self.processIdentifier = processIdentifier
         self.provider = provider
         self.windows = windows
         self.trustChecker = trustChecker

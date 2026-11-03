@@ -182,19 +182,41 @@ struct WMOpenAppActionTests {
             applicationURL: URL(filePath: "Applications/Safari.app"),
             createsNewApplicationInstance: true
         )
-        let runningApp = FakeRunningApp(bundleIdentifier: mockApp.bundleIdentifier)
+        let runningApp = FakeRunningApp(bundleIdentifier: mockApp.bundleIdentifier, processIdentifier: 100)
         runningApp.isHidden = true
 
         let provider = FakeAppProvider()
         provider.appsByBundleIdentifier[mockApp.bundleIdentifier] = [runningApp]
         let fakeWorkspace = FakeWorkspace()
+        fakeWorkspace.applicationToReturn = FakeRunningApp(
+            bundleIdentifier: mockApp.bundleIdentifier,
+            processIdentifier: 200
+        )
 
         let action = WMOpenAppAction(app: mockApp, workspace: fakeWorkspace, provider: provider)
-        try await action.execute()
+        let processIdentifier = try await action.open()
 
         #expect(!runningApp.didUnhide)
         #expect(!runningApp.didActivate)
         #expect(fakeWorkspace.didCallOpenApplication)
+        #expect(processIdentifier == 200)
+    }
+
+    @Test("open returns the restored running process identifier")
+    func openReturnsRestoredProcessIdentifier() async throws {
+        let mockApp = WorkspaceApplication(
+            bundleIdentifier: "com.apple.Safari",
+            displayName: "Safari",
+            applicationURL: URL(filePath: "Applications/Safari.app")
+        )
+        let runningApp = FakeRunningApp(bundleIdentifier: mockApp.bundleIdentifier, processIdentifier: 100)
+        let provider = FakeAppProvider()
+        provider.appsByBundleIdentifier[mockApp.bundleIdentifier] = [runningApp]
+
+        let action = WMOpenAppAction(app: mockApp, workspace: FakeWorkspace(), provider: provider)
+        let processIdentifier = try await action.open()
+
+        #expect(processIdentifier == 100)
     }
 
     @Test("relaunches when substitution is disallowed even if running")
@@ -247,16 +269,18 @@ final class FakeWorkspace: WorkspaceOpener {
     var didCallOpenApplication: Bool = false
     var lastConfiguration: NSWorkspace.OpenConfiguration?
     var errorToThrow: Error?
+    var applicationToReturn: any RunningApplicationControlling = FakeRunningApp(processIdentifier: -1)
 
-    func openApplication(at _: URL,
-                         configuration: NSWorkspace.OpenConfiguration) async throws -> NSRunningApplication
-    {
+    func openRunningApplication(
+        at _: URL,
+        configuration: NSWorkspace.OpenConfiguration
+    ) async throws -> any RunningApplicationControlling {
         didCallOpenApplication = true
         lastConfiguration = configuration
         if let error = errorToThrow {
             throw error
         }
 
-        return NSRunningApplication()
+        return applicationToReturn
     }
 }
