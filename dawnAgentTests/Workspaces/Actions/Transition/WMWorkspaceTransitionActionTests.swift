@@ -105,6 +105,59 @@ struct WMWorkspaceTransitionActionTests {
         )
     }
 
+    @Test("merge still opens running apps that create a new instance")
+    func mergeOpensNewInstanceAppsEvenWhenRunning() async throws {
+        let terminal = WorkspaceApplication(
+            bundleIdentifier: "com.apple.Terminal",
+            displayName: "Terminal",
+            applicationURL: URL(fileURLWithPath: "/System/Applications/Utilities/Terminal.app"),
+            createsNewApplicationInstance: true
+        )
+        let notes = WorkspaceApplication(
+            bundleIdentifier: "com.apple.Notes",
+            displayName: "Notes",
+            applicationURL: URL(fileURLWithPath: "/Applications/Notes.app")
+        )
+        let context = WorkspaceContext(
+            name: "MergeNewInstance",
+            symbol: "square.on.square",
+            applications: [terminal, notes],
+            transition: WorkspaceTransition(activationPolicy: .merge)
+        )
+
+        let runningTerminal = FakeRunningApp(bundleIdentifier: "com.apple.Terminal")
+        let runningNotes = FakeRunningApp(bundleIdentifier: "com.apple.Notes")
+        let provider = FakeAppProvider()
+        provider.appsByBundleIdentifier = [
+            "com.apple.Terminal": [runningTerminal],
+            "com.apple.Notes": [runningNotes],
+        ]
+
+        let performer = FakeWorkspaceTransitionPerformer()
+        let trust = FakeAccessibilityTrustChecker()
+        trust.isTrusted = true
+        let action = WMWorkspaceTransitionAction(
+            context: context,
+            provider: provider,
+            performer: performer,
+            trustChecker: trust
+        )
+
+        try await action.execute()
+
+        #expect(performer.resetPolicies == [.merge])
+        #expect(performer.openedApps.map(\.bundleIdentifier) == ["com.apple.Terminal"])
+        #expect(performer.laidOutApps.map(\.bundleIdentifier) == ["com.apple.Terminal", "com.apple.Notes"])
+        #expect(
+            performer.steps == [
+                .open("com.apple.Terminal"),
+                .wait("com.apple.Terminal"),
+                .layout("com.apple.Terminal"),
+                .layout("com.apple.Notes"),
+            ]
+        )
+    }
+
     @Test("skips window layout when Accessibility is not trusted")
     func skipsLayoutWhenUntrusted() async throws {
         let safari = WorkspaceApplication(

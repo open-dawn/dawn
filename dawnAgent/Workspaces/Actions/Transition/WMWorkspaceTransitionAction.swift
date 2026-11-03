@@ -173,7 +173,12 @@ struct WMWorkspaceTransitionAction: WMAction {
             return applications
         case .merge:
             return applications.filter { app in
-                provider.runningApplications(withBundleIdentifier: app.bundleIdentifier).isEmpty
+                app.createsNewApplicationInstance ||
+                    provider
+                    .runningApplications(
+                        withBundleIdentifier: app.bundleIdentifier
+                    )
+                    .isEmpty
             }
         }
     }
