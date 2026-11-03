@@ -30,7 +30,7 @@ Commit messages follow [.github/.gitmessage](.github/.gitmessage):
 <tag>(scope): <short description>
 
 <Long description: explain the what and the why of the change>
-Part of PIN-0
+Part of ISSUE-ID
 ```
 
 Tags:
