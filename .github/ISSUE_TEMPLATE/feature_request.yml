@@ -1,0 +1,26 @@
+name: Feature request
+description: Suggest an idea for DAWN
+title: "[Feature]: "
+body:
+  - type: textarea
+    id: request
+    attributes:
+      label: What would you like
+      description: The change or capability you want.
+    validations:
+      required: true
+  - type: textarea
+    id: why
+    attributes:
+      label: Why is this needed
+      description: The problem this solves, or the workflow it improves.
+    validations:
+      required: true
+  - type: input
+    id: macos
+    attributes:
+      label: macOS version
+      description: Optional. Include it when the request depends on a macOS version.
+      placeholder: "26.0"
+    validations:
+      required: false
