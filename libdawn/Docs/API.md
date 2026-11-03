@@ -28,7 +28,7 @@ public enum Event: Codable, Sendable, Equatable {
 | `debugPong` | `DebugPongEvent(message:)` | Default message `"pong"` |
 | `initialized` | `InitializedEvent()` | |
 | `getAccessibilityStatus` | `GetAccessibilityStatusEvent()` | Ask dawnAgent AX trust |
-| `promptAccessibilityTrust` | `PromptAccessibilityTrustEvent()` | Ask dawnAgent to show AX prompt |
+| `promptAccessibilityTrust` | `PromptAccessibilityTrustEvent()` | Ask dawnAgent to show AX prompt (async; reply is current trust, not the user's decision) |
 | `accessibilityStatus` | `AccessibilityStatusEvent(isTrusted:)` | Reply for accessibility asks |
 
 ### How to Create an Event

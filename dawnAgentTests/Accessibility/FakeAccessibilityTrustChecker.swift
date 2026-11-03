@@ -2,17 +2,17 @@
 
 final class FakeAccessibilityTrustChecker: AccessibilityTrustChecking, @unchecked Sendable {
     var isTrusted = false
-    var promptResult = false
+    var promptResult: Bool?
     private(set) var didPrompt = false
 
     func isProcessTrusted() -> Bool {
         isTrusted
     }
 
-    @discardableResult
-    func promptForTrust() -> Bool {
+    func promptForTrust() {
         didPrompt = true
-        isTrusted = promptResult
-        return promptResult
+        if let promptResult {
+            isTrusted = promptResult
+        }
     }
 }

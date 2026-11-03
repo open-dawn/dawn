@@ -25,9 +25,11 @@ final class AccessibilityTrustListener: Listener {
             reply?(statusEvent())
 
         case .promptAccessibilityTrust:
-            let isTrusted = trustChecker.promptForTrust()
+            trustChecker.promptForTrust()
+            // The system prompt is asynchronous; report the current trust state only.
+            let isTrusted = trustChecker.isProcessTrusted()
             #log(
-                "Accessibility trust prompt finished; trusted=\(isTrusted)",
+                "Accessibility trust prompt requested; current trusted=\(isTrusted)",
                 level: .info,
                 category: .general
             )

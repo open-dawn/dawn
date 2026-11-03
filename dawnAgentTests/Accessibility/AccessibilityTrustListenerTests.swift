@@ -23,10 +23,30 @@ struct AccessibilityTrustListenerTests {
         _ = listener
     }
 
-    @Test("promptAccessibilityTrust shows prompt and replies with result")
-    func promptTrustRepliesWithResult() async throws {
+    @Test("promptAccessibilityTrust shows prompt and replies with current trust")
+    func promptTrustRepliesWithCurrentTrust() async throws {
         let bus = EventBus()
         let checker = FakeAccessibilityTrustChecker()
+        checker.isTrusted = false
+        checker.promptResult = nil
+        let listener = AccessibilityTrustListener(bus: bus, trustChecker: checker)
+
+        let reply = try await bus.ask(
+            .promptAccessibilityTrust(PromptAccessibilityTrustEvent()),
+            timeout: .seconds(1)
+        )
+
+        #expect(checker.didPrompt)
+        // Prompting does not imply a grant; reply reflects current trust only.
+        #expect(reply == .accessibilityStatus(AccessibilityStatusEvent(isTrusted: false)))
+        _ = listener
+    }
+
+    @Test("promptAccessibilityTrust reply reflects trust updated during prompt")
+    func promptTrustRepliesWithUpdatedTrust() async throws {
+        let bus = EventBus()
+        let checker = FakeAccessibilityTrustChecker()
+        checker.isTrusted = false
         checker.promptResult = true
         let listener = AccessibilityTrustListener(bus: bus, trustChecker: checker)
 

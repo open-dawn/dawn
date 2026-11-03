@@ -3,9 +3,7 @@ import Foundation
 
 protocol AccessibilityTrustChecking: Sendable {
     func isProcessTrusted() -> Bool
-
-    @discardableResult
-    func promptForTrust() -> Bool
+    func promptForTrust()
 }
 
 struct SystemAccessibilityTrustChecker: AccessibilityTrustChecking {
@@ -13,9 +11,8 @@ struct SystemAccessibilityTrustChecker: AccessibilityTrustChecking {
         AXIsProcessTrusted()
     }
 
-    @discardableResult
-    func promptForTrust() -> Bool {
+    func promptForTrust() {
         let options = ["AXTrustedCheckOptionPrompt": true] as CFDictionary
-        return AXIsProcessTrustedWithOptions(options)
+        _ = AXIsProcessTrustedWithOptions(options)
     }
 }

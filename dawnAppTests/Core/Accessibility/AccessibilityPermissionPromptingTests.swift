@@ -91,4 +91,54 @@ struct AccessibilityPermissionServiceTests {
         #expect(!result)
         #expect(service.error == .requestFailed("offline"))
     }
+
+    @Test("promptTrust polls until Accessibility becomes trusted")
+    func promptTrustPollsUntilTrusted() async {
+        let bus = FakeAccessibilityEventBus()
+        var statusChecks = 0
+        bus.askHandler = { event in
+            switch event.kind {
+            case .promptAccessibilityTrust:
+                return .accessibilityStatus(AccessibilityStatusEvent(isTrusted: false))
+            case .getAccessibilityStatus:
+                statusChecks += 1
+                return .accessibilityStatus(
+                    AccessibilityStatusEvent(isTrusted: statusChecks >= 2)
+                )
+            default:
+                throw AccessibilityPermissionError.requestFailed("unexpected \(event.kind)")
+            }
+        }
+
+        let service = AccessibilityPermissionService(
+            bus: bus,
+            trustPollDuration: .seconds(2),
+            trustPollInterval: .milliseconds(1)
+        )
+        let result = await service.promptTrust()
+
+        #expect(result)
+        #expect(service.isTrusted == true)
+        #expect(statusChecks >= 2)
+        #expect(service.error == nil)
+    }
+
+    @Test("promptTrust keeps false when trust is never granted during poll")
+    func promptTrustTimesOutUntrusted() async {
+        let bus = FakeAccessibilityEventBus()
+        bus.askHandler = { _ in
+            .accessibilityStatus(AccessibilityStatusEvent(isTrusted: false))
+        }
+
+        let service = AccessibilityPermissionService(
+            bus: bus,
+            trustPollDuration: .milliseconds(20),
+            trustPollInterval: .milliseconds(5)
+        )
+        let result = await service.promptTrust()
+
+        #expect(!result)
+        #expect(service.isTrusted == false)
+        #expect(service.error == nil)
+    }
 }
