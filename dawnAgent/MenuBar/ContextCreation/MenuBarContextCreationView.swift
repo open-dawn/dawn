@@ -11,7 +11,7 @@ import libdawnUI
 
 struct MenuBarContextCreationView: View {
     let workspace: WorkspaceRuntime
-    let onExit: () -> Void
+    let onExit: @MainActor () -> Void
 
     private let applicationProvider: any InstalledApplicationProviding
     private let modalPresentationState: MenuBarModalPresentationState
@@ -20,7 +20,7 @@ struct MenuBarContextCreationView: View {
         workspace: WorkspaceRuntime,
         modalPresentationState: MenuBarModalPresentationState,
         applicationProvider: any InstalledApplicationProviding = ApplicationsDirectoryProvider(),
-        onExit: @escaping () -> Void
+        onExit: @escaping @MainActor () -> Void
     ) {
         self.workspace = workspace
         self.modalPresentationState = modalPresentationState
