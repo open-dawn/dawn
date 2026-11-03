@@ -1,6 +1,6 @@
 import Foundation
 
-public enum WorkspaceActivationPolicy: String, Codable, Sendable, Equatable {
+public enum WorkspaceActivationPolicy: String, Codable, Sendable, Equatable, CaseIterable {
     case hide
     case merge
     case close

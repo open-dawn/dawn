@@ -65,7 +65,11 @@ struct ContextDetailView: View {
 
                 ContextDetailApplicationList(applications: context.applications)
 
-                ContextDetailActivationPolicyPicker()
+                ContextDetailActivationPolicyPicker(
+                    policy: editedContext.transition.activationPolicy
+                ) { policy in
+                    viewModel.setActivationPolicy(policy)
+                }
 
                 Spacer()
             }

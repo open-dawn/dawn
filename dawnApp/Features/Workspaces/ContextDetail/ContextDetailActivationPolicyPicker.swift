@@ -1,12 +1,10 @@
+import libdawn
 import libdawnUI
 import SwiftUI
 
-// swiftlint:disable:next todo
-// FIXME: Placeholder while the activation-policy model is built on another branch.
-// DeprActivationPolicy lets this screen compile in parallel. The choice is not saved,
-// and Activate does not use it.
 struct ContextDetailActivationPolicyPicker: View {
-    @State private var selectedActivationPolicy: DeprActivationPolicy = .merge
+    let policy: WorkspaceActivationPolicy
+    let onPolicyChange: (WorkspaceActivationPolicy) -> Void
 
     var body: some View {
         VStack(alignment: .leading) {
@@ -14,44 +12,44 @@ struct ContextDetailActivationPolicyPicker: View {
                 .font(DawnTextStyle.sectionLabel)
 
             HStack(alignment: .top) {
-                ForEach(DeprActivationPolicy.allCases, id: \.self) { policy in
+                ForEach(WorkspaceActivationPolicy.allCases, id: \.self) { candidate in
                     DButton(style: .plain) {
-                        selectedActivationPolicy = policy
+                        onPolicyChange(candidate)
                     } content: {
                         VStack(alignment: .leading, spacing: 4) {
                             HStack(spacing: 2) {
-                                Image(systemName: policy.displaySymbol)
+                                Image(systemName: candidate.displaySymbol)
                                     .font(DawnTextStyle.primary)
                                     .foregroundStyle(
-                                        selectedActivationPolicy == policy ?
+                                        policy == candidate ?
                                         DawnColors.primaryForeground :
                                             DawnColors.secondaryForeground
                                     )
-                                Text(policy.displayName)
+                                Text(candidate.displayName)
                                     .font(DawnTextStyle.primary)
                                     .foregroundStyle(
-                                        selectedActivationPolicy == policy ?
+                                        policy == candidate ?
                                         DawnColors.primaryForeground :
                                             DawnColors.secondaryForeground
                                     )
                             }
-                            Text(policy.displayDescription)
+                            Text(candidate.displayDescription)
                                 .font(DawnTextStyle.secondaryCaption)
                                 .foregroundStyle(DawnColors.secondaryForeground)
                         }
                         .padding(24)
-                        .frame(maxHeight: .infinity, alignment: .topLeading)
+                        .frame( maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
                         .background {
                             DawnColors.secondaryBackground
                         }
                         .overlay {
                             RoundedRectangle(cornerRadius: 8)
                                 .stroke(DawnColors.primaryForeground,
-                                        lineWidth: selectedActivationPolicy == policy ? 3 : 0)
-                                .opacity(selectedActivationPolicy == policy ? 1 : 0)
+                                        lineWidth: policy == candidate ? 3 : 0)
+                                .opacity(policy == candidate ? 1 : 0)
                         }
                         .clipShape(RoundedRectangle(cornerRadius: 8))
-                        .animation(.spring, value: selectedActivationPolicy)
+                        .animation(.spring, value: policy)
                     }
                 }
             }
@@ -61,33 +59,28 @@ struct ContextDetailActivationPolicyPicker: View {
     }
 }
 
-@available(*, deprecated)
-enum DeprActivationPolicy: String, Codable, Sendable, Equatable, CaseIterable {
-    case hide
-    case merge
-    case close
-
-    public var displaySymbol: String {
+private extension WorkspaceActivationPolicy {
+    var displaySymbol: String {
         switch self {
-        case .hide: return "eye.slash"
-        case .merge: return "interface.window.on.rectangle"
-        case .close: return "xmark.seal"
+        case .hide: "eye.slash"
+        case .merge: "interface.window.on.rectangle"
+        case .close: "xmark.seal"
         }
     }
 
-    public var displayName: String {
+    var displayName: String {
         switch self {
-        case .hide: return "Hide others"
-        case .merge: return "Merge with others"
-        case .close: return "Close others"
+        case .hide: "Hide others"
+        case .merge: "Merge with others"
+        case .close: "Close others"
         }
     }
 
-    public var displayDescription: String {
+    var displayDescription: String {
         switch self {
-        case .hide: return "hide other apps windows and remove them from the dock"
-        case .merge: return "open this workspaces apps while keeping the others open"
-        case .close: return "close all other apps open on your mac"
+        case .hide: "hide other apps windows and remove them from the dock"
+        case .merge: "open this workspaces apps while keeping the others open"
+        case .close: "close all other apps open on your mac"
         }
     }
 }

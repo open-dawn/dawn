@@ -24,6 +24,7 @@ final class ContextDetailViewModel {
     private var saveInFlight = false
     private var saveAgain = false
     private var isChangingArchival = false
+    private var saveIdleWaiters: [CheckedContinuation<Void, Never>] = []
 
     init(
         contextManager: any WorkspaceContextManaging,
@@ -69,6 +70,11 @@ final class ContextDetailViewModel {
 
         operationInProgress = context.id
         defer { operationInProgress = nil }
+
+        await flushEdits(for: context.id)
+        guard draft?.id != context.id || payloadToSave() == nil else {
+            return
+        }
 
         // PIN-145 Fixs it in future
         do {
@@ -165,6 +171,10 @@ extension ContextDetailViewModel {
         if current.symbol == committed?.symbol {
             current.symbol = snapshot.symbol
         }
+        if current.transition.activationPolicy == committed?.transition.activationPolicy {
+            current.transition.activationPolicy = snapshot.transition.activationPolicy
+        }
+        current.transition.terminalCommand = snapshot.transition.terminalCommand
         current.applications = snapshot.applications
         current.isArchived = snapshot.isArchived
         draft = current
@@ -175,11 +185,15 @@ extension ContextDetailViewModel {
 
         committed.applications = snapshot.applications
         committed.isArchived = snapshot.isArchived
+        committed.transition.terminalCommand = snapshot.transition.terminalCommand
         if current.name == snapshot.name {
             committed.name = snapshot.name
         }
         if current.symbol == snapshot.symbol {
             committed.symbol = snapshot.symbol
+        }
+        if current.transition.activationPolicy == snapshot.transition.activationPolicy {
+            committed.transition.activationPolicy = snapshot.transition.activationPolicy
         }
         self.committed = committed
     }
@@ -200,6 +214,16 @@ extension ContextDetailViewModel {
         }
 
         current.symbol = symbol
+        draft = current
+        scheduleSave(after: .zero)
+    }
+
+    func setActivationPolicy(_ policy: WorkspaceActivationPolicy) {
+        guard var current = draft, current.transition.activationPolicy != policy else {
+            return
+        }
+
+        current.transition.activationPolicy = policy
         draft = current
         scheduleSave(after: .zero)
     }
@@ -230,18 +254,25 @@ extension ContextDetailViewModel {
         }
 
         guard let saving = payloadToSave() else {
+            saveAgain = false
             return
         }
 
         let savingID = saving.id
+        saveAgain = false
         saveInFlight = true
         defer {
             saveInFlight = false
             let shouldRepeat = saveAgain
             saveAgain = false
-            if shouldRepeat {
+            let waiters = saveIdleWaiters
+            saveIdleWaiters.removeAll()
+            if shouldRepeat, waiters.isEmpty {
                 scheduleSave(after: .zero)
+            } else if shouldRepeat {
+                saveAgain = true
             }
+            waiters.forEach { $0.resume() }
         }
 
         do {
@@ -285,13 +316,17 @@ extension ContextDetailViewModel {
 
         if let latestSnapshot, latestSnapshot.id == saving.id {
             saving.applications = latestSnapshot.applications
+            saving.transition.terminalCommand = latestSnapshot.transition.terminalCommand
         }
 
         guard let committed, committed.id == saving.id else {
             return saving
         }
 
-        guard saving.name != committed.name || saving.symbol != committed.symbol else {
+        guard saving.name != committed.name
+            || saving.symbol != committed.symbol
+            || saving.transition.activationPolicy != committed.transition.activationPolicy
+        else {
             return nil
         }
 
@@ -303,6 +338,25 @@ extension ContextDetailViewModel {
             return false
         }
 
-        return draft.name != saving.name || draft.symbol != saving.symbol
+        return draft.name != saving.name
+            || draft.symbol != saving.symbol
+            || draft.transition.activationPolicy != saving.transition.activationPolicy
+    }
+
+    private func flushEdits(for contextID: UUID) async {
+        guard draft?.id == contextID else {
+            return
+        }
+
+        if saveInFlight {
+            saveAgain = true
+            await withCheckedContinuation { continuation in
+                saveIdleWaiters.append(continuation)
+            }
+        }
+
+        pendingSave?.cancel()
+        pendingSave = nil
+        await commit()
     }
 }

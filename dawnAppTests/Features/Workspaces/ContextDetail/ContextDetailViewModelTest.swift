@@ -300,7 +300,11 @@ struct ContextDetailViewModelTests {
             id: context.id,
             name: "Workspace",
             symbol: "star",
-            applications: [sampleApplication]
+            applications: [sampleApplication],
+            transition: WorkspaceTransition(
+                activationPolicy: .merge,
+                terminalCommand: "echo hi"
+            )
         )
         viewModel.adopt(refreshed)
 
@@ -380,6 +384,87 @@ struct ContextDetailViewModelTests {
         #expect(contextManager.updatedContexts.first?.symbol == "briefcase")
         #expect(contextManager.updatedContexts.first?.applications == [sampleApplication])
         #expect(viewModel.operationInProgress == nil)
+    }
+
+    @Test("An activation policy change saves immediately without dropping the terminal command")
+    func activationPolicySaveKeepsTerminalCommand() async {
+        let context = WorkspaceContext(name: "Work", symbol: "briefcase")
+        let contextManager = WorkspaceContextManagerSpy()
+        let viewModel = ContextDetailViewModel(
+            contextManager: contextManager,
+            saveDebounce: .zero
+        )
+
+        viewModel.adopt(context)
+        viewModel.adopt(
+            WorkspaceContext(
+                id: context.id,
+                name: context.name,
+                symbol: context.symbol,
+                applications: [sampleApplication],
+                transition: WorkspaceTransition(
+                    activationPolicy: .hide,
+                    terminalCommand: "echo remote"
+                )
+            )
+        )
+        viewModel.setActivationPolicy(.close)
+        await viewModel.pendingSave?.value
+
+        let saved = contextManager.updatedContexts.first
+        #expect(saved?.transition.activationPolicy == .close)
+        #expect(saved?.transition.terminalCommand == "echo remote")
+        #expect(saved?.applications == [sampleApplication])
+        #expect(saved?.name == "Work")
+        #expect(viewModel.operationInProgress == nil)
+    }
+
+    @Test("Adopting a snapshot keeps a dirty activation policy and refreshes the terminal command")
+    func adoptKeepsDirtyActivationPolicy() async {
+        let context = WorkspaceContext(name: "Work", symbol: "briefcase")
+        let viewModel = ContextDetailViewModel(
+            contextManager: WorkspaceContextManagerSpy(),
+            saveDebounce: .zero
+        )
+        viewModel.adopt(context)
+        viewModel.setActivationPolicy(.merge)
+
+        var remote = context
+        remote.transition = WorkspaceTransition(
+            activationPolicy: .close,
+            terminalCommand: "echo remote"
+        )
+        viewModel.adopt(remote)
+
+        #expect(viewModel.draft?.transition.activationPolicy == .merge)
+        #expect(viewModel.draft?.transition.terminalCommand == "echo remote")
+
+        await viewModel.pendingSave?.value
+        #expect(viewModel.draft?.transition.activationPolicy == .merge)
+    }
+
+    @Test("Activate saves a pending activation policy before switching")
+    func runContextFlushesActivationPolicy() async {
+        let context = WorkspaceContext(name: "Work", symbol: "briefcase")
+        let contextManager = WorkspaceContextManagerSpy()
+        let viewModel = ContextDetailViewModel(
+            contextManager: contextManager,
+            saveDebounce: .zero
+        )
+
+        viewModel.adopt(context)
+        viewModel.setActivationPolicy(.close)
+
+        var savedBeforeSwitch = false
+        contextManager.onSwitch = {
+            savedBeforeSwitch = contextManager.updatedContexts.last?.transition.activationPolicy == .close
+        }
+
+        await viewModel.runContext(context)
+
+        #expect(savedBeforeSwitch)
+        #expect(contextManager.switchedContextIDs == [context.id])
+        #expect(viewModel.activeContextID == context.id)
     }
 
     @Test("A failed update sets the error and leaves operation state clear")
