@@ -21,6 +21,9 @@ settings:
 packages:
   dawnLogging:
     path: LocalPackages/dawnLogging
+  Sparkle:
+    url: https://github.com/sparkle-project/Sparkle
+    exactVersion: 2.10.0
 
 targets:
 
@@ -44,6 +47,13 @@ targets:
         CFBundleDisplayName: DAWN
         CFBundleShortVersionString: "$(MARKETING_VERSION)"
         CFBundleVersion: "$(CURRENT_PROJECT_VERSION)"
+        SUFeedURL: "https://update.opendawn.app"
+        SUPublicEDKey: "F62epeumzInQi+a4UM0k9lQF8xOWyXZNCDtBm5J5QT0="
+        SUEnableAutomaticChecks: false
+        SUAllowsAutomaticUpdates: false
+        SUAutomaticallyUpdate: false
+        SURequireSignedFeed: true
+        SUVerifyUpdateBeforeExtraction: true
         CFBundleURLTypes:
           - CFBundleTypeRole: Viewer
             CFBundleURLName: app.opendawn.route
@@ -71,6 +81,7 @@ targets:
           destination: wrapper
           subpath: Contents/Library/LoginItems
       - package: dawnLogging
+      - package: Sparkle
     postCompileScripts:
       - &swiftlint
         name: SwiftLint
