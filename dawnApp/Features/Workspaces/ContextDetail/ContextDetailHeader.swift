@@ -1,4 +1,3 @@
-import dawnLogging
 import libdawnUI
 import SwiftUI
 
@@ -6,8 +5,11 @@ struct ContextDetailHeader: View {
     let name: String
     let symbol: String
     let isActive: Bool
+    let isArchived: Bool
     let interactionsDisabled: Bool
     let onActivate: () -> Void
+    let onArchive: () -> Void
+    let onUnarchive: () -> Void
     let onDelete: () -> Void
 
     @State private var isDeleteConfirmationPresented = false
@@ -21,38 +23,40 @@ struct ContextDetailHeader: View {
 
             Spacer()
 
-            if isActive {
-                // swiftlint:disable:next todo
-                // FIXME: Stop has no action yet. There is no stop event on the agent.
-                DButton(style: .danger) {
-                } content: {
-                    Text("Stop")
-                } leading: {
-                    Image(systemName: "stop.fill")
+            if !isArchived {
+                if isActive {
+                    // swiftlint:disable:next todo
+                    // FIXME: Stop has no action yet. There is no stop event on the agent.
+                    DButton(style: .danger) {
+                    } content: {
+                        Text("Stop")
+                    } leading: {
+                        Image(systemName: "stop.fill")
+                    }
+                    .disabled(interactionsDisabled)
+                } else {
+                    DButton(style: .success) {
+                        onActivate()
+                    } content: {
+                        Text("Activate")
+                    } leading: {
+                        Image(systemName: "play.fill")
+                    }
+                    .disabled(interactionsDisabled)
                 }
-                .disabled(interactionsDisabled)
-            } else {
-                DButton(style: .success) {
-                    onActivate()
-                } content: {
-                    Text("Activate")
-                } leading: {
-                    Image(systemName: "play.fill")
-                }
-                .disabled(interactionsDisabled)
             }
 
             Menu {
-                Button {
-                    // PIN-172 Implement Context Archival
-                    #log(
-                        "Context archival is a stub",
-                        level: .warning,
-                        category: .userInterface
-                    )
-                } label: {
-                    Label("Archive", systemImage: "shippingbox")
-                        .labelStyle(.titleAndIcon)
+                if isArchived {
+                    Button(action: onUnarchive) {
+                        Label("Unarchive", systemImage: "arrow.uturn.backward")
+                            .labelStyle(.titleAndIcon)
+                    }
+                } else {
+                    Button(action: onArchive) {
+                        Label("Archive", systemImage: "shippingbox")
+                            .labelStyle(.titleAndIcon)
+                    }
                 }
 
                 Button(role: .destructive) {

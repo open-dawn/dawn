@@ -182,6 +182,78 @@ struct ContextDetailViewModelTests {
         #expect(viewModel.error == nil)
     }
 
+    @Test("Archiving the active context clears the active marker")
+    func archiveClearsActiveContext() async {
+        let context = WorkspaceContext(name: "Work", symbol: "briefcase")
+        let contextManager = WorkspaceContextManagerSpy()
+        let viewModel = ContextDetailViewModel(contextManager: contextManager)
+
+        await viewModel.runContext(context)
+        let archived = await viewModel.archiveContext(context)
+
+        #expect(archived)
+        #expect(contextManager.archivedContextIDs == [context.id])
+        #expect(viewModel.activeContextID == nil)
+        #expect(viewModel.operationInProgress == nil)
+        #expect(viewModel.error == nil)
+    }
+
+    @Test("Unarchiving delegates the context identifier")
+    func unarchiveContext() async {
+        var context = WorkspaceContext(name: "Work", symbol: "briefcase")
+        context.isArchived = true
+        let contextManager = WorkspaceContextManagerSpy()
+        let viewModel = ContextDetailViewModel(contextManager: contextManager)
+
+        var operationDuringUnarchive: UUID?
+        contextManager.onUnarchive = {
+            operationDuringUnarchive = viewModel.operationInProgress
+        }
+
+        let restored = await viewModel.unarchiveContext(context)
+
+        #expect(restored)
+        #expect(contextManager.unarchivedContextIDs == [context.id])
+        #expect(operationDuringUnarchive == nil)
+        #expect(viewModel.operationInProgress == nil)
+        #expect(viewModel.error == nil)
+    }
+
+    @Test("A failed archive sets the error and leaves operation state clear")
+    func archiveFailureSetsError() async {
+        let context = WorkspaceContext(name: "Work", symbol: "briefcase")
+        let contextManager = WorkspaceContextManagerSpy()
+        contextManager.error = SettingsContextStoreError.notConnected
+        let viewModel = ContextDetailViewModel(contextManager: contextManager)
+
+        let archived = await viewModel.archiveContext(context)
+
+        #expect(!archived)
+        #expect(contextManager.archivedContextIDs == [context.id])
+        #expect(viewModel.error == .notConnected)
+        #expect(viewModel.operationInProgress == nil)
+    }
+
+    @Test("Adopting a snapshot refreshes archival without dropping a dirty name")
+    func adoptRefreshesArchival() async {
+        let context = WorkspaceContext(name: "Work", symbol: "briefcase")
+        let viewModel = ContextDetailViewModel(
+            contextManager: WorkspaceContextManagerSpy(),
+            saveDebounce: .zero
+        )
+        viewModel.adopt(context)
+        viewModel.setName("Dirty")
+
+        var archived = context
+        archived.isArchived = true
+        viewModel.adopt(archived)
+
+        #expect(viewModel.draft?.name == "Dirty")
+        #expect(viewModel.draft?.isArchived == true)
+
+        await viewModel.pendingSave?.value
+    }
+
     @Test("Deleting the active context clears the active marker")
     func deleteClearsActiveContext() async {
         let context = WorkspaceContext(name: "Work", symbol: "briefcase")
@@ -341,10 +413,13 @@ struct ContextDetailViewModelTests {
 private final class WorkspaceContextManagerSpy: WorkspaceContextManaging {
     private(set) var switchedContextIDs: [UUID] = []
     private(set) var deletedContextIDs: [UUID] = []
+    private(set) var archivedContextIDs: [UUID] = []
+    private(set) var unarchivedContextIDs: [UUID] = []
     private(set) var updatedContexts: [WorkspaceContext] = []
 
     var error: Error?
     var onSwitch: (() -> Void)?
+    var onUnarchive: (() -> Void)?
 
     func switchContext(id: UUID) async throws {
         switchedContextIDs.append(id)
@@ -357,6 +432,23 @@ private final class WorkspaceContextManagerSpy: WorkspaceContextManaging {
 
     func deleteContext(id: UUID) async throws {
         deletedContextIDs.append(id)
+
+        if let error {
+            throw error
+        }
+    }
+
+    func archiveContext(id: UUID) async throws {
+        archivedContextIDs.append(id)
+
+        if let error {
+            throw error
+        }
+    }
+
+    func unarchiveContext(id: UUID) async throws {
+        unarchivedContextIDs.append(id)
+        onUnarchive?()
 
         if let error {
             throw error

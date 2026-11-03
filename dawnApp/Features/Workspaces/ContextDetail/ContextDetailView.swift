@@ -25,10 +25,21 @@ struct ContextDetailView: View {
                     name: editedContext.name,
                     symbol: editedContext.symbol,
                     isActive: isActive,
+                    isArchived: context.isArchived,
                     interactionsDisabled: interactionsDisabled,
                     onActivate: {
                         Task {
                             await viewModel.runContext(context)
+                        }
+                    },
+                    onArchive: {
+                        Task {
+                            await viewModel.archiveContext(context)
+                        }
+                    },
+                    onUnarchive: {
+                        Task {
+                            await viewModel.unarchiveContext(context)
                         }
                     },
                     onDelete: {

@@ -23,6 +23,7 @@ final class ContextDetailViewModel {
     private var latestSnapshot: WorkspaceContext?
     private var saveInFlight = false
     private var saveAgain = false
+    private var isChangingArchival = false
 
     init(
         contextManager: any WorkspaceContextManaging,
@@ -64,7 +65,7 @@ final class ContextDetailViewModel {
     }
 
     func runContext(_ context: WorkspaceContext) async {
-        guard operationInProgress == nil else { return }
+        guard operationInProgress == nil, !isChangingArchival else { return }
 
         operationInProgress = context.id
         defer { operationInProgress = nil }
@@ -83,7 +84,7 @@ final class ContextDetailViewModel {
 
     @discardableResult
     func deleteContext(_ context: WorkspaceContext) async -> Bool {
-        guard operationInProgress == nil else { return false }
+        guard operationInProgress == nil, !isChangingArchival else { return false }
 
         operationInProgress = context.id
         defer { operationInProgress = nil }
@@ -104,6 +105,48 @@ final class ContextDetailViewModel {
         }
     }
 
+    @discardableResult
+    func archiveContext(_ context: WorkspaceContext) async -> Bool {
+        await changeArchival(of: context, archived: true)
+    }
+
+    @discardableResult
+    func unarchiveContext(_ context: WorkspaceContext) async -> Bool {
+        await changeArchival(of: context, archived: false)
+    }
+
+    private func changeArchival(of context: WorkspaceContext, archived: Bool) async -> Bool {
+        guard operationInProgress == nil, !isChangingArchival else { return false }
+
+        // Archival must not use operationInProgress. The agent publishes the
+        // updated list before it acknowledges the ask, so the row moves into
+        // the visible section while that id is still busy and the sidebar
+        // paints a ProgressView on a context that is already restored.
+        isChangingArchival = true
+        defer { isChangingArchival = false }
+
+        do {
+            if archived {
+                try await contextManager.archiveContext(id: context.id)
+                if activeContextID == context.id {
+                    activeContextID = nil
+                }
+            } else {
+                try await contextManager.unarchiveContext(id: context.id)
+            }
+            error = nil
+            return true
+        } catch let error as SettingsContextStoreError {
+            self.error = error
+            return false
+        } catch {
+            self.error = .unknown
+            return false
+        }
+    }
+}
+
+extension ContextDetailViewModel {
     func adopt(_ snapshot: WorkspaceContext) {
         latestSnapshot = snapshot
 
@@ -123,6 +166,7 @@ final class ContextDetailViewModel {
             current.symbol = snapshot.symbol
         }
         current.applications = snapshot.applications
+        current.isArchived = snapshot.isArchived
         draft = current
 
         guard var committed, committed.id == snapshot.id else {
@@ -130,6 +174,7 @@ final class ContextDetailViewModel {
         }
 
         committed.applications = snapshot.applications
+        committed.isArchived = snapshot.isArchived
         if current.name == snapshot.name {
             committed.name = snapshot.name
         }
