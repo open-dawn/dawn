@@ -7,7 +7,6 @@
 
 import Foundation
 import SwiftUI
-import libdawnUI
 
 struct ContextIdentityStepView: View {
     private static let symbols = [

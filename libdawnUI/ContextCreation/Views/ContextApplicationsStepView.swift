@@ -7,10 +7,9 @@
 
 import Foundation
 import SwiftUI
-import libdawnUI
 
 struct ContextApplicationsStepView: View {
-    let applications: [ContextCreationApplication]
+    let applications: [ContextCreationApplicationItem]
     let isLoadingApplications: Bool
 
     @Binding var selectedApplicationIDs: [UUID]
@@ -20,7 +19,7 @@ struct ContextApplicationsStepView: View {
 
     @State private var searchQuery = ""
 
-    private var filteredApplications: [ContextCreationApplication] {
+    private var filteredApplications: [ContextCreationApplicationItem] {
         let query = searchQuery.trimmingCharacters(in: .whitespacesAndNewlines)
 
         guard !query.isEmpty else {
@@ -32,7 +31,7 @@ struct ContextApplicationsStepView: View {
         }
     }
 
-    private var selectedApplications: [ContextCreationApplication] {
+    private var selectedApplications: [ContextCreationApplicationItem] {
         selectedApplicationIDs.compactMap { selectedID in
             applications.first {
                 $0.id == selectedID
@@ -147,7 +146,7 @@ struct ContextApplicationsStepView: View {
         }
     }
 
-    private func applicationButton(_ application: ContextCreationApplication) -> some View {
+    private func applicationButton(_ application: ContextCreationApplicationItem) -> some View {
         let isSelected = selectedApplicationIDs.contains(application.id)
 
         return DButton(
@@ -175,7 +174,7 @@ struct ContextApplicationsStepView: View {
         .accessibilityAddTraits(isSelected ? .isSelected : [])
     }
 
-    private func selectedApplicationButton(_ application: ContextCreationApplication) -> some View {
+    private func selectedApplicationButton(_ application: ContextCreationApplicationItem) -> some View {
         DButton(
             style: .plain,
             action: {

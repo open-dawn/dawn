@@ -6,7 +6,6 @@
 //
 
 import SwiftUI
-import libdawnUI
 
 struct ContextCreationStepHeader: View {
     enum Style {

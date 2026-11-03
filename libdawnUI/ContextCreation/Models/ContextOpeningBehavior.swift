@@ -5,7 +5,7 @@
 //  Created by Rafael Venetikides on 21/10/26.
 //
 
-enum ContextOpeningBehavior: CaseIterable, Hashable {
+public enum ContextOpeningBehavior: CaseIterable, Hashable, Sendable {
     case onlyOpen
     case hideOthers
     case closeOthers

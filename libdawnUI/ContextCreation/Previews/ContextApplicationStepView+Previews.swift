@@ -9,10 +9,9 @@
 
 import AppKit
 import SwiftUI
-import libdawn
 
 private struct ContextApplicationsStepPreview: View {
-    private let applications: [ContextCreationApplication]
+    private let applications: [ContextCreationApplicationItem]
 
     @State private var selectedApplicationIDs: [UUID]
 
@@ -78,7 +77,7 @@ private struct ContextApplicationsStepPreview: View {
 private func previewApplication(
     name: String,
     bundleIdentifier: String
-) -> ContextCreationApplication {
+) -> ContextCreationApplicationItem {
     let applicationURL = NSWorkspace.shared.urlForApplication(
         withBundleIdentifier: bundleIdentifier
     )
@@ -93,14 +92,14 @@ private func previewApplication(
         ) ??
         NSImage(size: NSSize(width: 43, height: 43))
 
-    let workspaceApplication = WorkspaceApplication(
+    let application = ContextCreationApplication(
         bundleIdentifier: bundleIdentifier,
         displayName: name,
         applicationURL: applicationURL
     )
 
-    return ContextCreationApplication(
-        application: workspaceApplication,
+    return ContextCreationApplicationItem(
+        application: application,
         icon: icon
     )
 }
