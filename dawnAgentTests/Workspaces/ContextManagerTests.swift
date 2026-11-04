@@ -393,9 +393,9 @@ struct ContextManagerTests {
         var document: SettingsDocument = .empty
         document.contexts = [study, archived, games]
 
-        let manager = try await ContextManager(
+        let manager = try await makeManager(
             repository: MockSettingsRepository(document: document),
-            snapshotPublisher: SnapshotPublisherSpy()
+            publisher: SnapshotPublisherSpy()
         )
 
         #expect(await manager.getAvailableContexts() == [study, archived, games])
@@ -411,9 +411,9 @@ struct ContextManagerTests {
         document.contexts = [study, games]
 
         let publisher = SnapshotPublisherSpy()
-        let manager = try await ContextManager(
+        let manager = try await makeManager(
             repository: MockSettingsRepository(document: document),
-            snapshotPublisher: publisher
+            publisher: publisher
         )
 
         try await manager.archiveContext(id: study.id)
@@ -441,9 +441,9 @@ struct ContextManagerTests {
         document.contexts = [study, archived]
 
         let publisher = SnapshotPublisherSpy()
-        let manager = try await ContextManager(
+        let manager = try await makeManager(
             repository: MockSettingsRepository(document: document),
-            snapshotPublisher: publisher
+            publisher: publisher
         )
 
         try await manager.unarchiveContext(id: archived.id)
@@ -460,9 +460,9 @@ struct ContextManagerTests {
     @Test("Missing archive does not publish")
     func missingArchiveDoesNotPublish() async throws {
         let publisher = SnapshotPublisherSpy()
-        let manager = try await ContextManager(
+        let manager = try await makeManager(
             repository: MockSettingsRepository(),
-            snapshotPublisher: publisher
+            publisher: publisher
         )
         let missingID = UUID()
 
@@ -519,6 +519,7 @@ actor MockSettingsRepository: SettingsRepository {
     }
 }
 
+@MainActor
 final class SnapshotPublisherSpy: ContextSnapshotPublishing {
     private(set) var publishedSnapshots: [[WorkspaceContext]] = []
 
