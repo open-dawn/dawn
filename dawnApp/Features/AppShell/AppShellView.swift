@@ -31,6 +31,9 @@ struct AppShellView: View {
         @Environment(SettingsEventBusService.self)
         private var eventBusService
 
+        @Environment(SettingsViewStore.self)
+        private var settingsStore
+
         @State private var viewModel: ContextDetailViewModel
         @State private var navigation: AppNavigationModel
 
@@ -81,7 +84,9 @@ struct AppShellView: View {
                         isAgentRunning: eventBusService.isConnected,
                         interactionsDisabled: interactionsDisabled,
                         update: availableUpdate,
-                        errorMessage: (viewModel.error ?? store.error)?.localizedDescription
+                        errorMessage: viewModel.error?.localizedDescription
+                            ?? store.error?.localizedDescription
+                            ?? settingsStore.error?.localizedDescription
                     ),
                     selectedDestination: $navigation.selectedDestination,
                     onCreateContext: { viewModel.presentContextCreator() },
@@ -153,6 +158,7 @@ struct AppShellView: View {
         private func dismissSidebarError() {
             viewModel.dismissError()
             store.dismissError()
+            settingsStore.dismissError()
         }
 
         @ViewBuilder

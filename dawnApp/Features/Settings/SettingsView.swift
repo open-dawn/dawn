@@ -71,12 +71,6 @@ private struct SettingsContent: View {
                     .frame(maxWidth: .infinity, alignment: .leading)
             }
 
-            if let errorMessage = viewModel.errorMessage {
-                Text(errorMessage)
-                    .foregroundStyle(.red)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-            }
-
             Spacer()
 
             HStack {
