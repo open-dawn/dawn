@@ -563,7 +563,7 @@ final class FakeContextManager: WorkspaceManaging {
     private(set) var unarchivedContextIDs: [UUID] = []
     var unarchiveError: Error?
 
-    func getAvailableContexts() -> [WorkspaceContext] {
+    func getAvailableContexts() async -> [WorkspaceContext] {
         contexts
     }
 
