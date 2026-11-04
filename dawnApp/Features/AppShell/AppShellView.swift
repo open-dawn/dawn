@@ -103,7 +103,6 @@ struct AppShellView: View {
                 }
 
                 detail(for: navigation.selectedDestination)
-                    .padding(24)
                     .frame(
                         minWidth: SidebarMetrics.minimumDetailWidth,
                         maxWidth: .infinity,
