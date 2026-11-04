@@ -1,6 +1,6 @@
-import SwiftUI
 import libdawn
 import libdawnUI
+import SwiftUI
 
 struct AppShellView: View {
     @Environment(SettingsContextStore.self)
@@ -29,6 +29,9 @@ struct AppShellView: View {
 
         @Environment(AppUpdaterService.self)
         private var updaterService
+
+        @Environment(SettingsViewStore.self)
+        private var settingsStore
 
         @State private var viewModel: ContextDetailViewModel
         @State private var navigation: AppNavigationModel
@@ -129,7 +132,7 @@ struct AppShellView: View {
 
                 await refreshContextsAndResolvePendingRoute()
             }
-            .sheet(  // PIN-139 Change in future with new creation sheet
+            .sheet( // PIN-139 Change in future with new creation sheet
                 isPresented: Binding<Bool>(
                     get: { viewModel.isCreatingOrEditing },
                     set: { isPresented in
@@ -159,23 +162,23 @@ struct AppShellView: View {
         }
 
         private var sidebarErrorMessage: String? {
-            if let message = (viewModel.error ?? store.error)?.localizedDescription {
-                return message
-            }
-
-            return accessibilityPermissionService.error?.errorDescription
+            viewModel.error?.localizedDescription
+                ?? store.error?.localizedDescription
+                ?? settingsStore.error?.localizedDescription
+                ?? accessibilityPermissionService.error?.errorDescription
         }
 
         private func dismissSidebarError() {
             viewModel.dismissError()
             store.dismissError()
+            settingsStore.dismissError()
             accessibilityPermissionService.dismissError()
         }
 
         @ViewBuilder
         private func detail(for destination: SidebarDestination?) -> some View {
             switch destination {
-            case .context(let contextID):
+            case let .context(contextID):
                 if let context = store.contexts.first(where: { $0.id == contextID }) {
                     ContextDetailView(
                         context: context,
@@ -196,8 +199,8 @@ struct AppShellView: View {
                 }
 
             #if DEBUG
-            case .debug:
-                WorkspaceTransitionDebugView()
+                case .debug:
+                    WorkspaceTransitionDebugView()
             #endif
 
             case .settings:

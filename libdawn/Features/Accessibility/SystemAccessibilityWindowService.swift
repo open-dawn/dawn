@@ -102,7 +102,7 @@ public final class SystemAccessibilityWindowService: AccessibilityWindowServing 
                 guard CFGetTypeID(cfObject) == AXUIElementGetTypeID() else {
                     throw .unexpectedValue(AccessibilityAttribute.windows.rawValue)
                 }
-                return unsafeBitCast(cfObject, to: AXUIElement.self)
+                return unsafeDowncast(cfObject, to: AXUIElement.self)
             }
         }
 
