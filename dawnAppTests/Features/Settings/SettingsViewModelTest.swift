@@ -140,6 +140,31 @@ struct SettingsViewModelTests {
         #expect(viewModel.applicationSelectionError == nil)
     }
 
+    @Test("add protected app from running uses the running application selector")
+    func addProtectedAppFromRunningSelector() async {
+        let application = WorkspaceApplication(
+            bundleIdentifier: "com.nordvpn.macos",
+            displayName: "NordVPN",
+            applicationURL: URL(fileURLWithPath: "/Applications/NordVPN.app")
+        )
+        let runningSelector = ApplicationSelectorSpy(result: application)
+        let openPanelSelector = ApplicationSelectorSpy()
+        let viewModel = SettingsViewModel(
+            client: SettingsViewStoreClientSpy(),
+            applicationSelector: openPanelSelector,
+            runningApplicationSelector: runningSelector
+        )
+
+        await viewModel.load()
+        await viewModel.addProtectedAppFromRunning()
+
+        #expect(runningSelector.callCount == 1)
+        #expect(openPanelSelector.callCount == 0)
+        #expect(viewModel.draft.protectedApps.count == 1)
+        #expect(viewModel.draft.protectedApps[0].bundleIdentifier == "com.nordvpn.macos")
+        #expect(viewModel.applicationSelectionError == nil)
+    }
+
     @Test("add protected app ignores a duplicate bundle identifier")
     func addProtectedAppIgnoresDuplicate() async {
         let existing = ProtectedApplication(

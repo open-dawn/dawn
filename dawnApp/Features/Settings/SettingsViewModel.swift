@@ -26,6 +26,7 @@ final class SettingsViewModel {
     private var baseline = Settings()
     private let client: any SettingsViewStoreClient
     private let applicationSelector: any ApplicationSelecting
+    private let runningApplicationSelector: any ApplicationSelecting
 
     var hasUnsavedChanges: Bool {
         draft != baseline
@@ -33,10 +34,12 @@ final class SettingsViewModel {
 
     init(
         client: any SettingsViewStoreClient,
-        applicationSelector: any ApplicationSelecting = SystemApplicationSelector()
+        applicationSelector: any ApplicationSelecting = SystemApplicationSelector(),
+        runningApplicationSelector: any ApplicationSelecting = SystemRunningApplicationSelector()
     ) {
         self.client = client
         self.applicationSelector = applicationSelector
+        self.runningApplicationSelector = runningApplicationSelector
     }
 
     func load() async {
@@ -77,6 +80,18 @@ final class SettingsViewModel {
     }
 
     func addProtectedApp() async {
+        await addProtectedApp(using: applicationSelector)
+    }
+
+    func addProtectedAppFromRunning() async {
+        await addProtectedApp(using: runningApplicationSelector)
+    }
+
+    func removeProtectedApp(id: UUID) {
+        draft.protectedApps.removeAll { $0.id == id }
+    }
+
+    private func addProtectedApp(using selector: any ApplicationSelecting) async {
         guard !isLoading else {
             return
         }
@@ -86,7 +101,7 @@ final class SettingsViewModel {
         defer { isLoading = false }
 
         do {
-            guard let application = try await applicationSelector.selectApplication() else {
+            guard let application = try await selector.selectApplication() else {
                 return
             }
 
@@ -109,9 +124,5 @@ final class SettingsViewModel {
         } catch {
             applicationSelectionError = .unknown
         }
-    }
-
-    func removeProtectedApp(id: UUID) {
-        draft.protectedApps.removeAll { $0.id == id }
     }
 }
