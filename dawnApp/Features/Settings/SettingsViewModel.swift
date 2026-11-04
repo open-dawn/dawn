@@ -23,8 +23,13 @@ final class SettingsViewModel {
     private(set) var applicationSelectionError: ApplicationSelectionError?
     private(set) var isLoading = false
 
+    private var baseline = Settings()
     private let client: any SettingsViewStoreClient
     private let applicationSelector: any ApplicationSelecting
+
+    var hasUnsavedChanges: Bool {
+        draft != baseline
+    }
 
     init(
         client: any SettingsViewStoreClient,
@@ -48,6 +53,7 @@ final class SettingsViewModel {
         }
 
         draft = client.settings
+        baseline = client.settings
         error = nil
         errorMessage = nil
         applicationSelectionError = nil
@@ -56,6 +62,7 @@ final class SettingsViewModel {
     func setSettings() async {
         do {
             try await client.updateSettings(draft)
+            baseline = draft
             error = nil
             errorMessage = nil
         } catch {
