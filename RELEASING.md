@@ -130,9 +130,9 @@ A release must not be considered complete unless:
 - Known limitations and uninstallation instructions are included in the release notes.
 - The appcast contains the expected display version, build version, download URL, file size, EdDSA signature, minimum macOS version and release notes.
 - The published build number is greater than the previous appcast build.
-- The update-feed publication workflow succeeds.
-- The appcast and release notes are accessible through `https://update.opendawn.app`.
-- An older signed build discovers the published update.
+- For stable releases, the update-feed publication workflow succeeds.
+- For stable releases, the appcast and release notes are accessible through `https://update.opendawn.app`.
+- For stable releases, an older signed build discovers the published update.
 
 ## Alpha Releases
 
@@ -155,9 +155,8 @@ Prereleases do not update the stable feed. Sparkle channels must be implemented 
 
 ## Release Environment
 
-The `release` GitHub environment contains:
+The `release` GitHub environment defines the `APPLE_TEAM_ID` variable and the following secrets:
 
-- `APPLE_TEAM_ID`
 - `MACOS_CERTIFICATE_P12_BASE64`
 - `MACOS_CERTIFICATE_PASSWORD`
 - `APP_STORE_CONNECT_API_KEY_P8_BASE64`

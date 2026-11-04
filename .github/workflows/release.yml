@@ -52,6 +52,11 @@ jobs:
         run: |
           set -euo pipefail
 
+          if [[ ! "$APPLE_TEAM_ID" =~ ^[A-Z0-9]{10}$ ]]; then
+            echo "error: APPLE_TEAM_ID must be a 10-character Apple team identifier" >&2
+            exit 1
+          fi
+
           if [[ -n "$(git status --porcelain)" ]]; then
             echo "error: checkout is not clean" >&2
             exit 1
@@ -573,6 +578,12 @@ jobs:
               --write-out "%{http_code}" \
               "$CURRENT_APPCAST_URL"
           )"; then
+            if [[ "$GITHUB_EVENT_NAME" == "workflow_dispatch" ]]; then
+              echo "::warning::The production appcast could not be downloaded; continuing the dry run without feed history"
+              rm -f "$APPCAST_PATH"
+              exit 0
+            fi
+
             echo "error: failed to download the current appcast" >&2
             exit 1
           fi
@@ -604,8 +615,13 @@ jobs:
               ;;
 
             *)
-              echo "error: appcast request returned HTTP $HTTP_STATUS" >&2
-              exit 1
+              if [[ "$GITHUB_EVENT_NAME" == "workflow_dispatch" ]]; then
+                echo "::warning::The production appcast returned HTTP $HTTP_STATUS; continuing the dry run without feed history"
+                rm -f "$APPCAST_PATH"
+              else
+                echo "error: appcast request returned HTTP $HTTP_STATUS" >&2
+                exit 1
+              fi
               ;;
           esac
 
