@@ -443,6 +443,128 @@ struct ContextDetailViewModelTests {
         #expect(viewModel.draft?.transition.activationPolicy == .merge)
     }
 
+    @Test("An application edit saves that list and keeps the snapshot terminal command")
+    func applicationEditSavesDraftList() async {
+        let context = WorkspaceContext(name: "Work", symbol: "briefcase")
+        let contextManager = WorkspaceContextManagerSpy()
+        let viewModel = ContextDetailViewModel(
+            contextManager: contextManager,
+            saveDebounce: .zero
+        )
+
+        viewModel.adopt(context)
+        viewModel.adopt(
+            WorkspaceContext(
+                id: context.id,
+                name: context.name,
+                symbol: context.symbol,
+                applications: [sampleApplication],
+                transition: WorkspaceTransition(
+                    activationPolicy: .hide,
+                    terminalCommand: "echo remote"
+                )
+            )
+        )
+        viewModel.setApplications([otherApplication])
+        await viewModel.pendingSave?.value
+
+        let saved = contextManager.updatedContexts.first
+        #expect(contextManager.updatedContexts.count == 1)
+        #expect(saved?.applications == [otherApplication])
+        #expect(saved?.name == "Work")
+        #expect(saved?.symbol == "briefcase")
+        #expect(saved?.transition.activationPolicy == .hide)
+        #expect(saved?.transition.terminalCommand == "echo remote")
+        #expect(viewModel.operationInProgress == nil)
+    }
+
+    @Test("Adopting a snapshot keeps dirty applications and refreshes a clean name")
+    func adoptKeepsDirtyApplications() async {
+        let context = WorkspaceContext(name: "Work", symbol: "briefcase")
+        let contextManager = WorkspaceContextManagerSpy()
+        let viewModel = ContextDetailViewModel(
+            contextManager: contextManager,
+            saveDebounce: .zero
+        )
+        viewModel.adopt(context)
+        viewModel.setApplications([otherApplication])
+
+        let refreshed = WorkspaceContext(
+            id: context.id,
+            name: "Remote",
+            symbol: "star",
+            applications: [sampleApplication],
+            transition: WorkspaceTransition(
+                activationPolicy: .close,
+                terminalCommand: "echo remote"
+            )
+        )
+        viewModel.adopt(refreshed)
+
+        #expect(viewModel.draft?.applications == [otherApplication])
+        #expect(viewModel.draft?.name == "Remote")
+        #expect(viewModel.draft?.symbol == "star")
+        #expect(viewModel.draft?.transition.terminalCommand == "echo remote")
+
+        await viewModel.pendingSave?.value
+        let saved = contextManager.updatedContexts.first
+        #expect(contextManager.updatedContexts.count == 1)
+        #expect(saved?.applications == [otherApplication])
+        #expect(saved?.name == "Remote")
+        #expect(saved?.symbol == "star")
+        #expect(saved?.transition.terminalCommand == "echo remote")
+    }
+
+    @Test("A later name edit keeps applications saved ahead of the snapshot")
+    func nameEditKeepsApplicationsSavedAheadOfSnapshot() async {
+        let context = WorkspaceContext(
+            name: "Work",
+            symbol: "briefcase",
+            applications: [sampleApplication]
+        )
+        let contextManager = WorkspaceContextManagerSpy()
+        let viewModel = ContextDetailViewModel(
+            contextManager: contextManager,
+            saveDebounce: .zero
+        )
+
+        viewModel.adopt(context)
+        viewModel.setApplications([otherApplication])
+        await viewModel.pendingSave?.value
+        viewModel.setName("Workspace")
+        await viewModel.pendingSave?.value
+
+        #expect(contextManager.updatedContexts.map(\.applications) == [
+            [otherApplication],
+            [otherApplication]
+        ])
+        #expect(contextManager.updatedContexts.last?.name == "Workspace")
+    }
+
+    @Test("Activate saves a pending application edit before switching")
+    func runContextFlushesApplications() async {
+        let context = WorkspaceContext(name: "Work", symbol: "briefcase")
+        let contextManager = WorkspaceContextManagerSpy()
+        let viewModel = ContextDetailViewModel(
+            contextManager: contextManager,
+            saveDebounce: .zero
+        )
+
+        viewModel.adopt(context)
+        viewModel.setApplications([otherApplication])
+
+        var savedBeforeSwitch = false
+        contextManager.onSwitch = {
+            savedBeforeSwitch = contextManager.updatedContexts.last?.applications == [otherApplication]
+        }
+
+        await viewModel.runContext(context)
+
+        #expect(savedBeforeSwitch)
+        #expect(contextManager.switchedContextIDs == [context.id])
+        #expect(viewModel.activeContextID == context.id)
+    }
+
     @Test("Activate saves a pending activation policy before switching")
     func runContextFlushesActivationPolicy() async {
         let context = WorkspaceContext(name: "Work", symbol: "briefcase")
@@ -489,6 +611,11 @@ struct ContextDetailViewModelTests {
     private let sampleApplication = WorkspaceApplication(
         bundleIdentifier: "com.apple.Safari",
         displayName: "Safari"
+    )
+
+    private let otherApplication = WorkspaceApplication(
+        bundleIdentifier: "com.apple.mail",
+        displayName: "Mail"
     )
 
     private enum TestError: Error { case expected }

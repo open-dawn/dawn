@@ -63,7 +63,7 @@ struct ContextDetailView: View {
                 }
                 .padding(.horizontal, 32)
 
-                ContextDetailApplicationList(applications: context.applications)
+                ContextDetailApplicationList(applications: editedContext.applications)
 
                 ContextDetailActivationPolicyPicker(
                     policy: editedContext.transition.activationPolicy

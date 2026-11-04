@@ -174,8 +174,10 @@ extension ContextDetailViewModel {
         if current.transition.activationPolicy == committed?.transition.activationPolicy {
             current.transition.activationPolicy = snapshot.transition.activationPolicy
         }
+        if current.applications == committed?.applications {
+            current.applications = snapshot.applications
+        }
         current.transition.terminalCommand = snapshot.transition.terminalCommand
-        current.applications = snapshot.applications
         current.isArchived = snapshot.isArchived
         draft = current
 
@@ -183,7 +185,6 @@ extension ContextDetailViewModel {
             return
         }
 
-        committed.applications = snapshot.applications
         committed.isArchived = snapshot.isArchived
         committed.transition.terminalCommand = snapshot.transition.terminalCommand
         if current.name == snapshot.name {
@@ -194,6 +195,9 @@ extension ContextDetailViewModel {
         }
         if current.transition.activationPolicy == snapshot.transition.activationPolicy {
             committed.transition.activationPolicy = snapshot.transition.activationPolicy
+        }
+        if current.applications == snapshot.applications {
+            committed.applications = snapshot.applications
         }
         self.committed = committed
     }
@@ -224,6 +228,16 @@ extension ContextDetailViewModel {
         }
 
         current.transition.activationPolicy = policy
+        draft = current
+        scheduleSave(after: .zero)
+    }
+
+    func setApplications(_ applications: [WorkspaceApplication]) {
+        guard var current = draft, current.applications != applications else {
+            return
+        }
+
+        current.applications = applications
         draft = current
         scheduleSave(after: .zero)
     }
@@ -315,7 +329,6 @@ extension ContextDetailViewModel {
         }
 
         if let latestSnapshot, latestSnapshot.id == saving.id {
-            saving.applications = latestSnapshot.applications
             saving.transition.terminalCommand = latestSnapshot.transition.terminalCommand
         }
 
@@ -326,6 +339,7 @@ extension ContextDetailViewModel {
         guard saving.name != committed.name
             || saving.symbol != committed.symbol
             || saving.transition.activationPolicy != committed.transition.activationPolicy
+            || saving.applications != committed.applications
         else {
             return nil
         }
@@ -341,6 +355,7 @@ extension ContextDetailViewModel {
         return draft.name != saving.name
             || draft.symbol != saving.symbol
             || draft.transition.activationPolicy != saving.transition.activationPolicy
+            || draft.applications != saving.applications
     }
 
     private func flushEdits(for contextID: UUID) async {
