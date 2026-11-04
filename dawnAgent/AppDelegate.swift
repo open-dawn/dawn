@@ -22,6 +22,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var workspaceRuntime: WorkspaceRuntime?
     private var windowManagerListener: WindowManagerListener?
     private var debugPingListener: DebugPingListener?
+    private var accessibilityTrustListener: AccessibilityTrustListener?
     private var startupTask: Task<Void, Never>?
     private var isStartingOrStarted = false
 
@@ -92,6 +93,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         windowManagerListener = nil
         debugPingListener = nil
+        accessibilityTrustListener = nil
         workspaceRuntime = nil
         menuBarVisibilityListener = nil
     }
@@ -157,6 +159,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             )
 
             let debugPingListener = DebugPingListener(bus: eventBusService.bus)
+            let accessibilityTrustListener = AccessibilityTrustListener(bus: eventBusService.bus)
 
             let menuBarController = makeMenuBarController(workspaceRuntime, initialMenuBarVisibility)
 
@@ -169,6 +172,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             self.workspaceRuntime = workspaceRuntime
             self.windowManagerListener = windowManagerListener
             self.debugPingListener = debugPingListener
+            self.accessibilityTrustListener = accessibilityTrustListener
             self.menuBarController = menuBarController
             self.menuBarVisibilityListener = menuBarVisibilityListener
 

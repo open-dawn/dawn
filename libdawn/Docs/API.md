@@ -26,8 +26,10 @@ public enum Event: Codable, Sendable, Equatable {
 |------|---------|--------|
 | `debugPing` | `DebugPingEvent()` | Smoke `ask` |
 | `debugPong` | `DebugPongEvent(message:)` | Default message `"pong"` |
-| `switchSpace` | `SwitchSpaceEvent(spaceIndex:)` | |
-| `initializedEvent` | `InitializedEvent()` | |
+| `initialized` | `InitializedEvent()` | |
+| `getAccessibilityStatus` | `GetAccessibilityStatusEvent()` | Ask dawnAgent AX trust |
+| `promptAccessibilityTrust` | `PromptAccessibilityTrustEvent()` | Ask dawnAgent to show AX prompt |
+| `accessibilityStatus` | `AccessibilityStatusEvent(isTrusted:)` | Reply for accessibility asks |
 
 ### How to Create an Event
 To create an event: 
