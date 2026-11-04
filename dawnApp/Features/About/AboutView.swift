@@ -32,9 +32,8 @@ struct AboutView: View {
 
             Spacer()
 
-            VStack(spacing: 0) {
-                Image(systemName: "sun.horizon")
-                    .font(.system(size: 64))
+            VStack(spacing: 8) {
+                DawnSymbol.image(height: 56)
                 Text("dawn")
                     .font(.system(size: 32))
             }

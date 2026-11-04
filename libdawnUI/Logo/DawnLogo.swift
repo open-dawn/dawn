@@ -30,8 +30,7 @@ public struct DawnLogo: View {
     private var content: some View {
         switch variant {
         case .symbol:
-            symbol
-                .font(DawnTextStyle.sidebarLogoSymbol)
+            symbol(height: 12)
         case .wordmark:
             wordmark
         case .stacked:
@@ -39,15 +38,13 @@ public struct DawnLogo: View {
         }
     }
 
-    private var symbol: some View {
-        Image(systemName: "sun.horizon")
-            .accessibilityHidden(true)
+    private func symbol(height: CGFloat) -> some View {
+        DawnSymbol.image(height: height)
     }
 
     private var wordmark: some View {
         HStack(spacing: 5) {
-            symbol
-                .font(DawnTextStyle.sidebarLogoSymbol)
+            symbol(height: 12)
 
             Text("dawn")
                 .font(DawnTextStyle.sidebarLogo)
@@ -56,8 +53,7 @@ public struct DawnLogo: View {
 
     private var stacked: some View {
         VStack(spacing: 6) {
-            symbol
-                .font(DawnTextStyle.sidebarLogoStackedSymbol)
+            symbol(height: 26)
 
             Text("dawn")
                 .font(DawnTextStyle.sidebarLogoStackedTitle)

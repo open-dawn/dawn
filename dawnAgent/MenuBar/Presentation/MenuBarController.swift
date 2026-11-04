@@ -7,6 +7,7 @@
 
 import AppKit
 import SwiftUI
+import libdawnUI
 
 @MainActor
 protocol MenuBarControlling: AnyObject {
@@ -114,12 +115,13 @@ final class MenuBarController: NSObject, MenuBarControlling {
             return
         }
 
-        let image = NSImage(
+        let image = DawnSymbol.nsImage ?? NSImage(
             systemSymbolName: "sunrise.fill",
             accessibilityDescription: "DAWN"
         )
 
         image?.isTemplate = true
+        image?.accessibilityDescription = "DAWN"
 
         button.image = image
         button.toolTip = "DAWN"

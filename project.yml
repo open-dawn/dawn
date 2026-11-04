@@ -4,6 +4,10 @@ options:
   deploymentTarget:
     macOS: &deployversion "26.0"
   preGenCommand: bash Scripts/generate_build_ticket.sh
+  fileTypes:
+    icon:
+      file: true
+      buildPhase: resources
 
 settings:
   base:
@@ -34,6 +38,7 @@ targets:
     sources:
       - dawnApp
       - path: Generated/BuildTicket+Current.swift
+      - path: Resources/AppIcon.icon
     preBuildScripts:
       - name: Generate Build Ticket
         basedOnDependencyAnalysis: false
@@ -109,6 +114,7 @@ targets:
     deploymentTarget: *deployversion
     sources:
       - dawnAgent
+      - path: Resources/AppIcon.icon
     info:
       path: dawnAgent/Info.plist
       properties:
