@@ -89,6 +89,9 @@ struct SettingsContent: View {
                 }
 
                 addProtectedAppCard
+                #if DEBUG
+                addRunningAppsPickerCard
+                #endif
             }
             .padding(.horizontal, 12)
 
@@ -165,6 +168,27 @@ struct SettingsContent: View {
         }
         .disabled(viewModel.isLoading)
         .accessibilityLabel("Add new App")
+    }
+
+    private var addRunningAppsPickerCard: some View {
+        DButton(style: .plain) {
+            Task {
+                await viewModel.addProtectedAppFromRunning()
+            }
+        } content: {
+            HStack(spacing: 8) {
+                Image(systemName: "plus")
+                    .font(DawnTextStyle.buttonIcon)
+                Text("running-apps picker")
+                    .font(DawnTextStyle.body)
+            }
+            .foregroundStyle(DawnColors.secondaryForeground)
+            .frame(maxWidth: .infinity)
+            .padding(.horizontal, 12)
+            .padding(.vertical, 10)
+        }
+        .disabled(viewModel.isLoading)
+        .accessibilityLabel("running-apps picker")
     }
 
     private func protectedAppCard(_ app: ProtectedApplication) -> some View {
