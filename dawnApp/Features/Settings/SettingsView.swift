@@ -81,27 +81,14 @@ struct SettingsContent: View {
 
     private var protectedAppsSection: some View {
         VStack(alignment: .leading, spacing: 16) {
-            HStack {
-                sectionTitle("Protected Apps")
-
-                Spacer()
-
-                DButton(style: .linkSecondary) {
-                    Task {
-                        await viewModel.addProtectedApp()
-                    }
-                } content: {
-                    Text("Add New App")
-                        .font(DawnTextStyle.sectionLabel)
-                }
-                .disabled(viewModel.isLoading)
-                .accessibilityLabel("Add New App")
-            }
+            sectionTitle("Protected Apps")
 
             LazyVGrid(columns: protectedAppsColumns, spacing: 12) {
                 ForEach(viewModel.draft.protectedApps) { app in
                     protectedAppCard(app)
                 }
+
+                addProtectedAppCard
             }
             .padding(.horizontal, 12)
 
@@ -157,6 +144,27 @@ struct SettingsContent: View {
                 .toggleStyle(.switch)
         }
         .accessibilityElement(children: .combine)
+    }
+
+    private var addProtectedAppCard: some View {
+        DButton(style: .plain) {
+            Task {
+                await viewModel.addProtectedApp()
+            }
+        } content: {
+            HStack(spacing: 8) {
+                Image(systemName: "plus")
+                    .font(DawnTextStyle.buttonIcon)
+                Text("Add new App")
+                    .font(DawnTextStyle.body)
+            }
+            .foregroundStyle(DawnColors.secondaryForeground)
+            .frame(maxWidth: .infinity)
+            .padding(.horizontal, 12)
+            .padding(.vertical, 10)
+        }
+        .disabled(viewModel.isLoading)
+        .accessibilityLabel("Add new App")
     }
 
     private func protectedAppCard(_ app: ProtectedApplication) -> some View {
