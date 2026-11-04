@@ -29,6 +29,15 @@ public struct DawnBrand: View {
                 4
             }
         }
+
+        var symbolHeight: CGFloat {
+            switch self {
+            case .proeminent:
+                16
+            case .compact:
+                14
+            }
+        }
     }
 
     private let style: Style
@@ -39,8 +48,7 @@ public struct DawnBrand: View {
 
     public var body: some View {
         HStack(spacing: style.spacing) {
-            Image(systemName: "sun.horizon")
-                .accessibilityHidden(true)
+            DawnSymbol.image(height: style.symbolHeight)
 
             Text("dawn")
         }

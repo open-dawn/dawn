@@ -1,5 +1,6 @@
 <div align="center">
   <a href="https://github.com/open-dawn/dawn">
+    <img src="docs/media/icon.png" alt="DAWN" width="128" height="128">
     <h1>DAWN</h1>
   </a>
 
