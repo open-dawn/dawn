@@ -49,6 +49,13 @@
         )
     }
 
+    #Preview("Sidebar / Accessibility required") {
+        SidebarPreview(
+            content: SidebarPreviewData.accessibilityRequired,
+            selection: .context(SidebarPreviewData.academy.id)
+        )
+    }
+
     #Preview("Sidebar / Long names") {
         SidebarPreview(
             content: SidebarPreviewData.longNames,
@@ -316,6 +323,12 @@
             content.isAgentRunning = false
             content.interactionsDisabled = true
             content.update = nil
+            return content
+        }
+
+        static var accessibilityRequired: SidebarContent {
+            var content = populated
+            content.needsAccessibilityPermission = true
             return content
         }
 

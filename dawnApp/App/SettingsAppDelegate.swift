@@ -5,21 +5,25 @@ final class SettingsAppDelegate: NSObject, NSApplicationDelegate {
     let eventBusService: SettingsEventBusService
     let contextStore: SettingsContextStore
     let updaterService: AppUpdaterService
+    let accessibilityPermissionService: AccessibilityPermissionService
 
     override init() {
         let eventBusService = SettingsEventBusService()
         let updateClient = SparkleUpdateClient()
 
         self.eventBusService = eventBusService
-        self.contextStore = SettingsContextStore(
+        contextStore = SettingsContextStore(
             bus: eventBusService.bus
         )
-        self.updaterService = AppUpdaterService(client: updateClient)
+        updaterService = AppUpdaterService(client: updateClient)
+        accessibilityPermissionService = AccessibilityPermissionService(
+            bus: eventBusService.bus
+        )
 
         super.init()
     }
 
-    func applicationDidFinishLaunching(_ notification: Notification) {
+    func applicationDidFinishLaunching(_: Notification) {
         guard ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"] == nil else {
             return
         }
@@ -30,7 +34,7 @@ final class SettingsAppDelegate: NSObject, NSApplicationDelegate {
         SettingsLoginItem.registerIfNeeded()
     }
 
-    func applicationWillTerminate(_ notification: Notification) {
+    func applicationWillTerminate(_: Notification) {
         contextStore.stop()
         eventBusService.stop()
     }

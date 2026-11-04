@@ -64,6 +64,18 @@ struct EventTests {
                 ),
                 kind: .menuBarVisibilityMutationAcknowledged
             ),
+            (
+                event: Event.getAccessibilityStatus(GetAccessibilityStatusEvent()),
+                kind: EventKind.getAccessibilityStatus
+            ),
+            (
+                event: Event.promptAccessibilityTrust(PromptAccessibilityTrustEvent()),
+                kind: EventKind.promptAccessibilityTrust
+            ),
+            (
+                event: Event.accessibilityStatus(AccessibilityStatusEvent(isTrusted: true)),
+                kind: EventKind.accessibilityStatus
+            ),
         ]
     )
     func exposesKind(_ eventWithKind: (event: Event, kind: EventKind)) {
@@ -99,6 +111,9 @@ struct EventTests {
             .menuBarVisibilityMutationAcknowledged(.success(isVisible: false)),
             .menuBarVisibilityMutationAcknowledged(.failure(.persistence)),
             .menuBarVisibilityMutationAcknowledged(.failure(.unexpected)),
+            .getAccessibilityStatus(GetAccessibilityStatusEvent()),
+            .promptAccessibilityTrust(PromptAccessibilityTrustEvent()),
+            .accessibilityStatus(AccessibilityStatusEvent(isTrusted: false)),
         ]
     )
     func roundTripsThroughJSON(_ event: Event) throws {

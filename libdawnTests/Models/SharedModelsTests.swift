@@ -18,7 +18,13 @@ struct SharedModelsTests {
             displayName: "Safari",
             applicationURL: URL(
                 fileURLWithPath: "/Applications/Safari.app"
-            )
+            ),
+            allowsRunningApplicationSubstitution: false,
+            createsNewApplicationInstance: true,
+            arguments: ["--args"],
+            environment: ["FOO": "bar"],
+            promptsUserIfNeeded: true,
+            windowLayout: .minimized
         )
 
         let context = WorkspaceContext(
