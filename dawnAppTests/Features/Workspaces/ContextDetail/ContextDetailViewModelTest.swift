@@ -565,6 +565,124 @@ struct ContextDetailViewModelTests {
         #expect(viewModel.activeContextID == context.id)
     }
 
+    @Test("Dropping application bundles appends them and keeps the terminal command")
+    func dropImportsApplications() async throws {
+        let mail = try makeApplicationBundle(
+            name: "Mail",
+            bundleIdentifier: "com.example.mail",
+            displayName: "Example Mail"
+        )
+        let notes = try makeApplicationBundle(
+            name: "Notes",
+            bundleIdentifier: "com.example.notes",
+            displayName: "Example Notes"
+        )
+        defer {
+            try? FileManager.default.removeItem(at: mail.deletingLastPathComponent())
+            try? FileManager.default.removeItem(at: notes.deletingLastPathComponent())
+        }
+
+        let context = WorkspaceContext(name: "Work", symbol: "briefcase")
+        let contextManager = WorkspaceContextManagerSpy()
+        let viewModel = ContextDetailViewModel(
+            contextManager: contextManager,
+            saveDebounce: .zero
+        )
+        viewModel.adopt(context)
+        viewModel.adopt(
+            WorkspaceContext(
+                id: context.id,
+                name: context.name,
+                symbol: context.symbol,
+                transition: WorkspaceTransition(
+                    activationPolicy: .hide,
+                    terminalCommand: "echo remote"
+                )
+            )
+        )
+
+        let accepted = viewModel.addApplications(at: [mail, notes])
+        await viewModel.pendingSave?.value
+
+        let saved = contextManager.updatedContexts.first
+        #expect(accepted)
+        #expect(contextManager.updatedContexts.count == 1)
+        #expect(saved?.applications.map(\.bundleIdentifier) == [
+            "com.example.mail",
+            "com.example.notes"
+        ])
+        #expect(saved?.applications.map(\.displayName) == ["Example Mail", "Example Notes"])
+        #expect(saved?.transition.terminalCommand == "echo remote")
+        #expect(saved?.transition.activationPolicy == .hide)
+        #expect(viewModel.applicationImportError == nil)
+    }
+
+    @Test("Dropping an application that is already listed does not save again")
+    func dropSkipsDuplicateBundleIdentifier() async throws {
+        let mail = try makeApplicationBundle(
+            name: "Mail",
+            bundleIdentifier: sampleApplication.bundleIdentifier,
+            displayName: "Other Mail"
+        )
+        defer {
+            try? FileManager.default.removeItem(at: mail.deletingLastPathComponent())
+        }
+
+        let context = WorkspaceContext(
+            name: "Work",
+            symbol: "briefcase",
+            applications: [sampleApplication]
+        )
+        let contextManager = WorkspaceContextManagerSpy()
+        let viewModel = ContextDetailViewModel(
+            contextManager: contextManager,
+            saveDebounce: .zero
+        )
+        viewModel.adopt(context)
+
+        let accepted = viewModel.addApplications(at: [mail])
+        await viewModel.pendingSave?.value
+
+        #expect(accepted)
+        #expect(contextManager.updatedContexts.isEmpty)
+        #expect(viewModel.draft?.applications == [sampleApplication])
+        #expect(viewModel.applicationImportError == nil)
+    }
+
+    @Test("A drop that mixes a file with an application adds the application and reports the file")
+    func dropReportsInvalidItemAndKeepsValidApplication() async throws {
+        let mail = try makeApplicationBundle(
+            name: "Mail",
+            bundleIdentifier: "com.example.mail",
+            displayName: "Example Mail"
+        )
+        let document = mail.deletingLastPathComponent().appendingPathComponent("notes.txt")
+        try Data("notes".utf8).write(to: document)
+        defer {
+            try? FileManager.default.removeItem(at: mail.deletingLastPathComponent())
+        }
+
+        let context = WorkspaceContext(name: "Work", symbol: "briefcase")
+        let contextManager = WorkspaceContextManagerSpy()
+        let viewModel = ContextDetailViewModel(
+            contextManager: contextManager,
+            saveDebounce: .zero
+        )
+        viewModel.adopt(context)
+
+        let accepted = viewModel.addApplications(at: [document, mail])
+        await viewModel.pendingSave?.value
+
+        #expect(accepted)
+        #expect(viewModel.applicationImportError == .invalidApplication)
+        #expect(contextManager.updatedContexts.first?.applications.map(\.bundleIdentifier) == [
+            "com.example.mail"
+        ])
+
+        viewModel.dismissApplicationImportError()
+        #expect(viewModel.applicationImportError == nil)
+    }
+
     @Test("Activate saves a pending activation policy before switching")
     func runContextFlushesActivationPolicy() async {
         let context = WorkspaceContext(name: "Work", symbol: "briefcase")
@@ -619,6 +737,33 @@ struct ContextDetailViewModelTests {
     )
 
     private enum TestError: Error { case expected }
+
+    private func makeApplicationBundle(
+        name: String,
+        bundleIdentifier: String,
+        displayName: String
+    ) throws -> URL {
+        let root = FileManager.default.temporaryDirectory
+            .appendingPathComponent("dawn-app-import-\(UUID().uuidString)", isDirectory: true)
+        let contents = root
+            .appendingPathComponent("\(name).app", isDirectory: true)
+            .appendingPathComponent("Contents", isDirectory: true)
+        try FileManager.default.createDirectory(at: contents, withIntermediateDirectories: true)
+
+        let info = [
+            "CFBundleIdentifier": bundleIdentifier,
+            "CFBundleName": name,
+            "CFBundleDisplayName": displayName,
+            "CFBundlePackageType": "APPL"
+        ]
+        let data = try PropertyListSerialization.data(
+            fromPropertyList: info,
+            format: .xml,
+            options: 0
+        )
+        try data.write(to: contents.appendingPathComponent("Info.plist"))
+        return contents.deletingLastPathComponent()
+    }
 }
 
 @MainActor

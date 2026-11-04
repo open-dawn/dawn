@@ -4,10 +4,14 @@ import SwiftUI
 
 struct ContextDetailApplicationList: View {
     let applications: [WorkspaceApplication]
+    let interactionsDisabled: Bool
+    let onDropApplications: ([URL]) -> Bool
+
+    @State private var isDropTargeted = false
 
     var body: some View {
         // swiftlint:disable:next todo
-        // FIXME: Application rows and the add button are not implemented yet.
+        // FIXME: Application row menus and the add button are not implemented yet.
         VStack(alignment: .leading) {
             Text("Applications")
                 .font(DawnTextStyle.sectionLabel)
@@ -57,6 +61,21 @@ struct ContextDetailApplicationList: View {
                 }
             }
         }
+        .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.horizontal, 32)
+        .overlay {
+            if isDropTargeted {
+                RoundedRectangle(cornerRadius: 12)
+                    .strokeBorder(DawnColors.contextCardHoveredBorder, lineWidth: 1)
+            }
+        }
+        .dropDestination(for: URL.self) { urls, _ in
+            guard !interactionsDisabled else {
+                return false
+            }
+            return onDropApplications(urls)
+        } isTargeted: { isTargeted in
+            isDropTargeted = isTargeted && !interactionsDisabled
+        }
     }
 }

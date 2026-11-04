@@ -63,7 +63,13 @@ struct ContextDetailView: View {
                 }
                 .padding(.horizontal, 32)
 
-                ContextDetailApplicationList(applications: editedContext.applications)
+                ContextDetailApplicationList(
+                    applications: editedContext.applications,
+                    interactionsDisabled: interactionsDisabled,
+                    onDropApplications: { urls in
+                        viewModel.addApplications(at: urls)
+                    }
+                )
 
                 ContextDetailActivationPolicyPicker(
                     policy: editedContext.transition.activationPolicy
@@ -77,6 +83,23 @@ struct ContextDetailView: View {
             .onChange(of: context, initial: true) { _, snapshot in
                 viewModel.adopt(snapshot)
             }
+        }
+        .alert(
+            "Couldn't Add Application",
+            isPresented: Binding(
+                get: { viewModel.applicationImportError != nil },
+                set: { isPresented in
+                    if !isPresented {
+                        viewModel.dismissApplicationImportError()
+                    }
+                }
+            )
+        ) {
+            Button("OK", role: .cancel) {
+                viewModel.dismissApplicationImportError()
+            }
+        } message: {
+            Text(viewModel.applicationImportError?.localizedDescription ?? "")
         }
     }
 }

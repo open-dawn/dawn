@@ -14,6 +14,7 @@ final class ContextDetailViewModel {
     // does not publish it, so another frontend only knows about activations it started.
     private(set) var activeContextID: UUID?
     private(set) var error: SettingsContextStoreError?
+    var applicationImportError: ApplicationSelectionError?
     private(set) var contextBeingEdited: WorkspaceContext?
     private(set) var draft: WorkspaceContext?
     private(set) var pendingSave: Task<Void, Never>?
