@@ -3,6 +3,7 @@ import SwiftUI
 
 struct SidebarView: View {
     private let content: SidebarContent
+    private let availableUpdate: AvailableAppUpdate?
     @Binding private var selectedDestination: SidebarDestination?
     private let onCreateContext: () -> Void
     private let onDismissError: () -> Void
@@ -13,12 +14,14 @@ struct SidebarView: View {
 
     init(
         content: SidebarContent,
+        availableUpdate: AvailableAppUpdate? = nil,
         selectedDestination: Binding<SidebarDestination?>,
         initialSearch: SidebarSearchState = SidebarSearchState(),
         onCreateContext: @escaping () -> Void,
         onDismissError: @escaping () -> Void = {}
     ) {
         self.content = content
+        self.availableUpdate = availableUpdate
         self.onCreateContext = onCreateContext
         self.onDismissError = onDismissError
         _selectedDestination = selectedDestination
@@ -70,6 +73,7 @@ struct SidebarView: View {
     private var bottomSection: some View {
         SidebarFooter(
             content: content,
+            availableUpdate: availableUpdate,
             selectedDestination: $selectedDestination,
             onDismissError: onDismissError
         )

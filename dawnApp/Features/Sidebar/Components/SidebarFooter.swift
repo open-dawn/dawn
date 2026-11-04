@@ -3,7 +3,10 @@ import SwiftUI
 
 struct SidebarFooter: View {
     let content: SidebarContent
+    let availableUpdate: AvailableAppUpdate?
+
     @Binding var selectedDestination: SidebarDestination?
+
     let onDismissError: () -> Void
 
     var body: some View {
@@ -16,7 +19,7 @@ struct SidebarFooter: View {
                 accessibilityError
             }
 
-            updateLink
+            updateButton
 
             #if DEBUG
             footerButton(
@@ -100,19 +103,22 @@ struct SidebarFooter: View {
     }
 
     @ViewBuilder
-    private var updateLink: some View {
-        if let update = content.update {
-            Link(destination: update.releaseURL) {
+    private var updateButton: some View {
+        if let update = availableUpdate {
+            Button {
+                selectedDestination = .about
+            } label: {
                 HStack(spacing: 6) {
                     Image(systemName: "arrow.down.circle")
                         .font(DawnTextStyle.sidebarIcon)
                         .frame(width: SidebarMetrics.iconSize, height: SidebarMetrics.iconSize)
+                        .accessibilityHidden(true)
 
                     Text("Update Now")
                         .font(DawnTextStyle.sidebarFooter)
                         .lineLimit(1)
 
-                    Text(update.version)
+                    Text(update.displayVersion)
                         .font(DawnTextStyle.sidebarMeta)
                         .foregroundStyle(DawnColors.sidebarTertiaryForeground)
                         .lineLimit(1)
@@ -125,9 +131,10 @@ struct SidebarFooter: View {
                 .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
-            .help("Update to version \(update.version)")
-            .accessibilityValue("Version \(update.version)")
-            .accessibilityHint("Opens the release page in the browser")
+            .accessibilityLabel("Update available")
+            .help("Update to version \(update.displayVersion)")
+            .accessibilityValue("Version \(update.displayVersion)")
+            .accessibilityHint("Opens About to review and install the update")
         }
     }
 

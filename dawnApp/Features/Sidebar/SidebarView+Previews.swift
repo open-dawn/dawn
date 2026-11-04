@@ -65,7 +65,7 @@
 
     #Preview("Sidebar / Archived") {
         SidebarPreview(
-            content: SidebarPreviewData.archivedOpen,
+            content: SidebarPreviewData.populated,
             selection: .context(SidebarPreviewData.archived.id),
             search: SidebarSearchState(isArchivedSectionExpanded: true)
         )
@@ -73,21 +73,21 @@
 
     #Preview("Sidebar / No update") {
         SidebarPreview(
-            content: SidebarPreviewData.withoutUpdate,
+            content: SidebarPreviewData.populated,
             selection: .context(SidebarPreviewData.study.id)
         )
     }
 
     #Preview("Sidebar / Settings") {
         SidebarPreview(
-            content: SidebarPreviewData.withoutUpdate,
+            content: SidebarPreviewData.populated,
             selection: .settings
         )
     }
 
     #Preview("Sidebar / About") {
         SidebarPreview(
-            content: SidebarPreviewData.withoutUpdate,
+            content: SidebarPreviewData.populated,
             selection: .about
         )
     }
@@ -105,18 +105,29 @@
         SidebarPreview(content: SidebarPreviewData.empty)
     }
 
+    #Preview("Sidebar / Update available") {
+        SidebarPreview(
+            content: SidebarPreviewData.populated,
+            availableUpdate: SidebarPreviewData.availableUpdate,
+            selection: .context(SidebarPreviewData.academy.id),
+        )
+    }
+
     private struct SidebarPreview: View {
         private let content: SidebarContent
+        private let availableUpdate: AvailableAppUpdate?
         private let search: SidebarSearchState
 
         @State private var selectedDestination: SidebarDestination?
 
         init(
             content: SidebarContent,
+            availableUpdate: AvailableAppUpdate? = nil,
             selection: SidebarDestination? = nil,
             search: SidebarSearchState = SidebarSearchState()
         ) {
             self.content = content
+            self.availableUpdate = availableUpdate
             self.search = search
             _selectedDestination = State(initialValue: selection)
         }
@@ -125,6 +136,7 @@
             HSplitView {
                 SidebarView(
                     content: content,
+                    availableUpdate: availableUpdate,
                     selectedDestination: $selectedDestination,
                     initialSearch: search,
                     onCreateContext: {},
@@ -163,7 +175,7 @@
                 "Settings"
             case .about:
                 "About"
-            case let .context(identifier):
+            case .context(let identifier):
                 contextName(identifier) ?? "Context"
             case .debug:
                 "Debug"
@@ -266,10 +278,11 @@
             symbol: "apple.logo"
         )
 
-        static let availableUpdate = AppUpdateAvailability(
-            version: "1.2.0",
-            releaseURL: URL(string: "https://github.com/open-dawn/dawn/releases")
-                ?? URL(fileURLWithPath: "/")
+        static let availableUpdate = AvailableAppUpdate(
+            displayVersion: "1.2.0",
+            buildVersion: "120",
+            releaseNotesURL: URL(string: "https://update.opendawn.app"),
+            informationURL: nil
         )
 
         static var populated: SidebarContent {
@@ -277,7 +290,6 @@
                 contexts: [academy, gaming, study],
                 archivedContexts: [archived],
                 activeContextID: academy.id,
-                update: availableUpdate
             )
         }
 
@@ -286,7 +298,6 @@
                 contexts: [],
                 archivedContexts: [],
                 activeContextID: nil,
-                update: availableUpdate
             )
         }
 
@@ -297,7 +308,6 @@
                 activeContextID: academy.id,
                 isAgentRunning: false,
                 interactionsDisabled: true,
-                update: availableUpdate
             )
         }
 
@@ -322,7 +332,6 @@
             var content = populated
             content.isAgentRunning = false
             content.interactionsDisabled = true
-            content.update = nil
             return content
         }
 
@@ -337,20 +346,7 @@
                 contexts: [longName, gaming, study],
                 archivedContexts: [archived],
                 activeContextID: longName.id,
-                update: availableUpdate
             )
-        }
-
-        static var archivedOpen: SidebarContent {
-            var content = populated
-            content.update = nil
-            return content
-        }
-
-        static var withoutUpdate: SidebarContent {
-            var content = populated
-            content.update = nil
-            return content
         }
 
         static var failed: SidebarContent {
