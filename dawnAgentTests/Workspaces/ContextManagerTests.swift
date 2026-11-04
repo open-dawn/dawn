@@ -10,7 +10,6 @@ struct ContextManagerTests {
     @Test("Valid repository loads contexts")
     func validRepository() async {
         let mockRepository = MockSettingsRepository()
-        let publisherSpy = SnapshotPublisherSpy()
 
         await #expect(throws: Never.self) {
             _ = try await SettingsStore.make(repository: mockRepository)
@@ -20,11 +19,9 @@ struct ContextManagerTests {
     @Test("Corrupted repository resets to empty")
     func corruptedRepository() async throws {
         let mockRepository = MockSettingsRepository(loadFailuresRemaining: 1)
-        let publisherSpy = SnapshotPublisherSpy()
         let store = try await SettingsStore.make(repository: mockRepository)
-        let manager = ContextManager(store: store, snapshotPublisher: publisherSpy)
 
-        #expect(await manager.getAvailableContexts().isEmpty)
+        #expect(await store.snapshot().contexts.isEmpty)
         #expect(await mockRepository.loadFailuresRemaining == 0)
     }
 
@@ -34,7 +31,6 @@ struct ContextManagerTests {
             shouldFailSave: true,
             loadFailuresRemaining: 1
         )
-        let publisherSpy = SnapshotPublisherSpy()
 
         await #expect(throws: SettingsRepositoryError.corruptedData(description: "save")) {
             try await SettingsStore.make(repository: mockRepository)
