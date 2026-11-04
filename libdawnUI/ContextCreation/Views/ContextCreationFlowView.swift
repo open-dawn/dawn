@@ -8,10 +8,8 @@
 import AppKit
 import SwiftUI
 import UniformTypeIdentifiers
-import libdawn
-import libdawnUI
 
-struct ContextCreationFlowView: View {
+public struct ContextCreationFlowView: View {
     private enum Step: Equatable {
         case identity
         case applications
@@ -35,29 +33,35 @@ struct ContextCreationFlowView: View {
 
     @State private var step: Step = .identity
     @State private var draft = ContextCreationDraft()
-    @State private var createdContext: WorkspaceContext?
+    @State private var createdContextID: UUID?
     @State private var isPerformingOperation = false
     @State private var operationError: String?
-    @State private var applications: [ContextCreationApplication] = []
+    @State private var applications: [ContextCreationApplicationItem] = []
     @State private var isApplicationImporterPresented = false
     @State private var isLoadingApplications = false
 
-    private let applicationProvider: any InstalledApplicationProviding
+    private let loadApplications: @MainActor () async throws -> [ContextCreationApplication]
+    private let onCreate: @MainActor (ContextCreationRequest) async throws -> UUID
+    private let onActivate: @MainActor (UUID) async throws -> Void
+    private let onModalPresentationChange: @MainActor (ContextCreationModal, Bool) -> Void
 
-    let workspace: WorkspaceRuntime
-    let onExit: () -> Void
-    private let modalPresentationState: MenuBarModalPresentationState
+    let onExit: @MainActor () -> Void
 
-    init(
-        workspace: WorkspaceRuntime,
-        modalPresentationState: MenuBarModalPresentationState,
-        applicationProvider: any InstalledApplicationProviding = ApplicationsDirectoryProvider(),
-        onExit: @escaping () -> Void
+    public init(
+        loadApplications: @escaping @MainActor () async throws -> [ContextCreationApplication],
+        createContext: @escaping @MainActor (ContextCreationRequest) async throws -> UUID,
+        activateContext: @escaping @MainActor (UUID) async throws -> Void,
+        onExit: @escaping @MainActor () -> Void,
+        onModalPresentationChange: @escaping @MainActor (
+            ContextCreationModal,
+            Bool
+        ) -> Void = { _, _ in }
     ) {
-        self.workspace = workspace
-        self.modalPresentationState = modalPresentationState
-        self.applicationProvider = applicationProvider
+        self.loadApplications = loadApplications
+        self.onCreate = createContext
+        self.onActivate = activateContext
         self.onExit = onExit
+        self.onModalPresentationChange = onModalPresentationChange
     }
 
     private var isShowingOperationError: Binding<Bool> {
@@ -73,7 +77,7 @@ struct ContextCreationFlowView: View {
         )
     }
 
-    private var selectedApplications: [WorkspaceApplication] {
+    private var selectedApplications: [ContextCreationApplication] {
         draft.selectedApplicationIDs.compactMap { selectedID in
             applications.first {
                 $0.id == selectedID
@@ -81,7 +85,7 @@ struct ContextCreationFlowView: View {
         }
     }
 
-    var body: some View {
+    public var body: some View {
         VStack(spacing: 24) {
             header
             stepContent
@@ -102,28 +106,15 @@ struct ContextCreationFlowView: View {
         ) { result in
             handleApplicationSelection(result)
         }
-        .onChange(of: operationError != nil) {_, isPresented in
-            modalPresentationState.setPresented(
-                isPresented,
-                for: .contextCreationError
-            )
+        .onChange(of: operationError != nil) { _, isPresented in
+            onModalPresentationChange(.operationError, isPresented)
         }
         .onChange(of: isApplicationImporterPresented) { _, isPresented in
-            modalPresentationState.setPresented(
-                isPresented,
-                for: .applicationImporter
-            )
+            onModalPresentationChange(.applicationImporter, isPresented)
         }
         .onDisappear {
-            modalPresentationState.setPresented(
-                false,
-                for: .contextCreationError
-            )
-
-            modalPresentationState.setPresented(
-                false,
-                for: .applicationImporter
-            )
+            onModalPresentationChange(.operationError, false)
+            onModalPresentationChange(.applicationImporter, false)
         }
     }
 
@@ -214,6 +205,13 @@ extension ContextCreationFlowView {
             return
         }
 
+        let request = ContextCreationRequest(
+            name: name,
+            symbolName: symbol,
+            applications: selectedApplications,
+            openingBehavior: draft.openingBehaviour
+        )
+
         isPerformingOperation = true
         operationError = nil
 
@@ -223,13 +221,7 @@ extension ContextCreationFlowView {
             }
 
             do {
-                let context = try await workspace.createContext(
-                    name: name,
-                    symbol: symbol,
-                    applications: selectedApplications
-                )
-
-                createdContext = context
+                createdContextID = try await onCreate(request)
                 step = .confirmation
             } catch {
                 operationError = error.localizedDescription
@@ -251,7 +243,7 @@ extension ContextCreationFlowView {
     }
 
     private func finishAndSwitch() {
-        guard !isPerformingOperation, let createdContext else {
+        guard !isPerformingOperation, let createdContextID else {
             return
         }
 
@@ -264,8 +256,7 @@ extension ContextCreationFlowView {
             }
 
             do {
-                try await workspace.activateContext(id: createdContext.id)
-
+                try await onActivate(createdContextID)
                 onExit()
             } catch {
                 operationError = error.localizedDescription
@@ -307,19 +298,18 @@ extension ContextCreationFlowView {
                 forInfoDictionaryKey: "CFBundleName"
             ) as? String ?? applicationURL.deletingPathExtension().lastPathComponent
 
-        let workspaceApplication = WorkspaceApplication(
+        let application = ContextCreationApplication(
             bundleIdentifier: bundleIdentifier,
             displayName: displayName,
             applicationURL: applicationURL
         )
 
-        let application = ContextCreationApplication(
-            application: workspaceApplication,
-            icon: NSWorkspace.shared.icon(forFile: applicationURL.path(percentEncoded: false))
-        )
+        guard let item = makeItem(application) else {
+            throw ApplicationImportError.invalidApplication
+        }
 
-        applications.append(application)
-        draft.selectedApplicationIDs.append(application.id)
+        applications.append(item)
+        draft.selectedApplicationIDs.append(item.id)
     }
 
     private func selectApplicationIfNeeded(_ applicationID: UUID) {
@@ -341,7 +331,7 @@ extension ContextCreationFlowView {
         }
 
         do {
-            let installedApplications = try await applicationProvider.applications()
+            let installedApplications = try await loadApplications()
 
             let existingBundleIdentifiers = Set(
                 applications.map {
@@ -351,22 +341,28 @@ extension ContextCreationFlowView {
 
             let newApplications = installedApplications.filter {
                 !existingBundleIdentifiers.contains($0.bundleIdentifier)
-            }.compactMap { application -> ContextCreationApplication? in
-                guard let applicationURL = application.applicationURL else {
-                    return nil
-                }
-
-                return ContextCreationApplication(
-                    application: application,
-                    icon: NSWorkspace.shared.icon(
-                        forFile: applicationURL.path(percentEncoded: false)
-                    )
-                )
+            }.compactMap { application in
+                makeItem(application)
             }
 
             applications.append(contentsOf: newApplications)
         } catch {
             operationError = error.localizedDescription
         }
+    }
+
+    private func makeItem(
+        _ application: ContextCreationApplication
+    ) -> ContextCreationApplicationItem? {
+        guard let applicationURL = application.applicationURL else {
+            return nil
+        }
+
+        return ContextCreationApplicationItem(
+            application: application,
+            icon: NSWorkspace.shared.icon(
+                forFile: applicationURL.path(percentEncoded: false)
+            )
+        )
     }
 }

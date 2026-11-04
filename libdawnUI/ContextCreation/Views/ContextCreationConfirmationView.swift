@@ -6,7 +6,6 @@
 //
 
 import SwiftUI
-import libdawnUI
 
 struct ContextCreationConfirmationView: View {
     let onFinishAndSwitch: () -> Void

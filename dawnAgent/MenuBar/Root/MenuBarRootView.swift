@@ -37,12 +37,13 @@ struct MenuBarRootView: View {
                 )
 
             case .contextCreation:
-                ContextCreationFlowView(
+                MenuBarContextCreationView(
                     workspace: workspace,
                     modalPresentationState: modalPresentationState,
                     onExit: {
-                    route = .contextList
-                })
+                        route = .contextList
+                    }
+                )
             }
         }
         .frame(
