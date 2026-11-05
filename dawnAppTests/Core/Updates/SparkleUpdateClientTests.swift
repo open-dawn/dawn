@@ -104,6 +104,13 @@ struct SparkleUpdateClientTests {
                     .invalidHostBundleIdentifierError,
                     .updaterUnavailable
                 ),
+
+                (.signatureError, .invalidUpdate),
+                (.validationError, .invalidUpdate),
+                (.notValidUpdateError, .invalidUpdate),
+
+                (.installationError, .installationFailed),
+                (.authenticationFailure, .installationFailed),
             ]
 
         for (sparkleError, expectedReason) in cases {

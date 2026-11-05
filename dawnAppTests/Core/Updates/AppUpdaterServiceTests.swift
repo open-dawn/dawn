@@ -191,6 +191,8 @@ struct AppUpdaterServiceTests {
             AppUpdateFailureReason.networkUnavailable,
             AppUpdateFailureReason.invalidFeed,
             AppUpdateFailureReason.invalidMetadata,
+            AppUpdateFailureReason.invalidUpdate,
+            AppUpdateFailureReason.installationFailed,
             AppUpdateFailureReason.unknown
         ]
     )
@@ -203,6 +205,60 @@ struct AppUpdaterServiceTests {
         client.sendFailure(reason)
 
         #expect(service.state == .failed(reason: reason))
+        #expect(service.canCheckForUpdates)
+    }
+
+    @Test("Network failure during download permits retrying")
+    func networkFailureDuringDownload() async throws {
+        let client = FakeAppUpdateClient()
+        let service = AppUpdaterService(client: client)
+
+        service.start()
+        service.checkForUpdates()
+        client.sendFound(update)
+        service.installAvailableUpdate()
+
+        try #require(service.state == .downloading(update, progress: .indeterminate))
+
+        client.sendFailure(.networkUnavailable)
+
+        #expect(service.state == .failed(reason: .networkUnavailable))
+        #expect(service.canCheckForUpdates)
+    }
+
+    @Test("Cancellation during download returns to idle")
+    func cancellationDuringDownload() {
+        let client = FakeAppUpdateClient()
+        let service = AppUpdaterService(client: client)
+
+        service.start()
+        service.checkForUpdates()
+        client.sendFound(update)
+        service.installAvailableUpdate()
+        service.cancelUpdate()
+
+        #expect(service.state == .idle)
+        #expect(service.canCheckForUpdates)
+        #expect(client.cancelCallCount == 1)
+    }
+
+    @Test("Cancellation during installation returns to idle")
+    func cancellationDuringInstallation() {
+        let client = FakeAppUpdateClient()
+        let service = AppUpdaterService(client: client)
+
+        service.start()
+        service.checkForUpdates()
+        client.sendFound(update)
+        service.installAvailableUpdate()
+        client.sendReadyToInstall()
+        service.installAndRelaunch()
+
+        #expect(service.state == .installing(update))
+
+        client.sendCancellation()
+
+        #expect(service.state == .idle)
         #expect(service.canCheckForUpdates)
     }
 }
@@ -281,6 +337,10 @@ private final class FakeAppUpdateClient: AppUpdateClient {
 
     func sendFailure(_ reason: AppUpdateFailureReason) {
         delegate?.appUpdateClient(self, didFailWith: reason)
+    }
+
+    func sendCancellation() {
+        delegate?.appUpdateClientDidCancel(self)
     }
 }
 

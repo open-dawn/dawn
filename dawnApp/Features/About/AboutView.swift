@@ -322,6 +322,10 @@ extension AboutView {
             "The update feed couldn't be loaded."
         case .invalidMetadata:
             "The available update information is invalid."
+        case .invalidUpdate:
+            "The downloaded update couldn't be verified."
+        case .installationFailed:
+            "The update couldn't be installed."
         case .unknown:
             "The update couldn't be checked."
         }
