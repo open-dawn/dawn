@@ -22,7 +22,7 @@ private final class RunningProcessRegistry {
         process.standardInput = FileHandle.nullDevice
         process.standardOutput = FileHandle.nullDevice
         process.standardError = FileHandle.nullDevice
-        process.terminationHandler = { [self] finished in
+        process.terminationHandler = { finished in
             finished.terminationHandler = nil
         }
         try process.run()

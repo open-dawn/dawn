@@ -46,10 +46,8 @@ struct WMWindowLayoutAction: WMAppAction {
     ) throws(WMActionError) {
         do {
             try apply(layout, to: window)
-        } catch let error as AccessibilityError {
-            throw map(accessibilityError: error)
         } catch {
-            throw .unknown(reason: error.localizedDescription)
+            throw map(accessibilityError: error)
         }
     }
 

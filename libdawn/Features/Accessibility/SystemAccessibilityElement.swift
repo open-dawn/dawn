@@ -77,8 +77,7 @@ public final class SystemAccessibilityRuntime: AccessibilityRuntimeServing {
         guard CFGetTypeID(cfObject) == AXUIElementGetTypeID() else {
             throw .unexpectedValue("AXUIElement")
         }
-        // `as? AXUIElement` always succeeds for CF types; type ID is the real check.
-        let element = unsafeBitCast(cfObject, to: AXUIElement.self)
+        let element = unsafeDowncast(cfObject, to: AXUIElement.self)
         return SystemAccessibilityElement(element)
     }
 }

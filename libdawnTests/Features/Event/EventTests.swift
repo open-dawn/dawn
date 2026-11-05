@@ -1,7 +1,6 @@
 import Foundation
-import Testing
-
 @testable import libdawn
+import Testing
 
 @Suite("Event")
 struct EventTests {
@@ -76,6 +75,26 @@ struct EventTests {
                 event: Event.accessibilityStatus(AccessibilityStatusEvent(isTrusted: true)),
                 kind: EventKind.accessibilityStatus
             ),
+            (
+                event: Event.getSettings(GetSettingsEvent()),
+                kind: EventKind.getSettings
+            ),
+            (
+                event: Event.settingsFetched(SettingsFetchedEvent(settings: Settings())),
+                kind: EventKind.settingsFetched
+            ),
+            (
+                event: Event.availableSettings(AvailableSettingsEvent(settings: Settings())),
+                kind: EventKind.availableSettings
+            ),
+            (
+                event: Event.settingsMutationAcknowledgement(SettingsMutationAcknowledgement.success),
+                kind: EventKind.settingsMutationAcknowledgement
+            ),
+            (
+                event: Event.updateSettings(UpdateSettingsEvent(settings: Settings())),
+                kind: EventKind.updateSettings
+            ),
         ]
     )
     func exposesKind(_ eventWithKind: (event: Event, kind: EventKind)) {
@@ -114,6 +133,11 @@ struct EventTests {
             .getAccessibilityStatus(GetAccessibilityStatusEvent()),
             .promptAccessibilityTrust(PromptAccessibilityTrustEvent()),
             .accessibilityStatus(AccessibilityStatusEvent(isTrusted: false)),
+            .getSettings(GetSettingsEvent()),
+            .settingsFetched(SettingsFetchedEvent(settings: Settings())),
+            .availableSettings(AvailableSettingsEvent(settings: Settings())),
+            .settingsMutationAcknowledgement(SettingsMutationAcknowledgement.success),
+            .updateSettings(UpdateSettingsEvent(settings: Settings())),
         ]
     )
     func roundTripsThroughJSON(_ event: Event) throws {

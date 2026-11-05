@@ -201,14 +201,14 @@ public struct ContextCard: View {
         } else {
             Menu {
                 switch model.status {
-                case .active(let activityText):
+                case .active:
                     Button {
                         onAction(.stop)
                     } label: {
                         Label("Stop", systemImage: "stop.fill")
                             .labelStyle(.titleAndIcon)
                     }
-                case .inactive(let lastUsedText):
+                case .inactive:
                     Button {
                         onAction(.activate)
                     } label: {
