@@ -10,6 +10,9 @@ struct SettingsView: View {
     @Environment(AccessibilityPermissionService.self)
     private var accessibilityPermissionService
 
+    @Environment(SettingsEventBusService.self)
+    private var eventBusService
+
     @State private var viewModel: SettingsViewModel?
 
     var body: some View {
@@ -17,7 +20,8 @@ struct SettingsView: View {
             if let viewModel {
                 SettingsContent(
                     viewModel: viewModel,
-                    accessibilityPermissionService: accessibilityPermissionService
+                    accessibilityPermissionService: accessibilityPermissionService,
+                    isAgentConnected: eventBusService.isConnected
                 )
             } else {
                 ProgressView()
@@ -38,12 +42,17 @@ struct SettingsView: View {
 struct SettingsContent: View {
     @Bindable var viewModel: SettingsViewModel
     let accessibilityPermissionService: AccessibilityPermissionService
+    let isAgentConnected: Bool
 
     private let protectedAppsColumns = [
         GridItem(.flexible(), spacing: 12),
         GridItem(.flexible(), spacing: 12),
         GridItem(.flexible(), spacing: 12),
     ]
+
+    private var interactionsDisabled: Bool {
+        viewModel.isLoading || !isAgentConnected
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 32) {
@@ -54,7 +63,8 @@ struct SettingsContent: View {
             Spacer(minLength: 0)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-        .disabled(viewModel.isLoading)
+        .disabled(interactionsDisabled)
+        .opacity(isAgentConnected ? 1 : 0.45)
     }
 
     private var generalSettingsSection: some View {
@@ -130,41 +140,33 @@ struct SettingsContent: View {
                 Text("Save Settings")
                     .frame(maxWidth: .infinity)
             }
-            .disabled(!viewModel.hasUnsavedChanges || viewModel.isLoading)
-            .opacity(viewModel.hasUnsavedChanges && !viewModel.isLoading ? 1 : 0.25)
+            .disabled(!viewModel.hasUnsavedChanges || interactionsDisabled)
+            .opacity(viewModel.hasUnsavedChanges && !interactionsDisabled ? 1 : 0.25)
             .accessibilityLabel("Save Settings")
         }
     }
 
     private var accessibilityPermissionRow: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack {
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("Accessibility")
-                        .font(DawnTextStyle.body)
-                        .foregroundStyle(DawnColors.primaryForeground)
-                    Text(accessibilityStatusDescription)
-                        .font(DawnTextStyle.caption)
-                        .foregroundStyle(DawnColors.secondaryForeground)
-                }
-
-                Spacer()
-
-                DButton(style: .secondary) {
-                    Task {
-                        await accessibilityPermissionService.promptTrust()
-                    }
-                } content: {
-                    Text(accessibilityPermissionService.isTrusted == true ? "Recheck" : "Grant Access")
-                }
-                .disabled(accessibilityPermissionService.isLoading)
-            }
-
-            if let message = accessibilityPermissionService.error?.errorDescription {
-                Text(message)
+        HStack {
+            VStack(alignment: .leading, spacing: 4) {
+                Text("Accessibility")
+                    .font(DawnTextStyle.body)
+                    .foregroundStyle(DawnColors.primaryForeground)
+                Text(accessibilityStatusDescription)
                     .font(DawnTextStyle.caption)
-                    .foregroundStyle(DawnColors.dangerForeground)
+                    .foregroundStyle(DawnColors.secondaryForeground)
             }
+
+            Spacer()
+
+            DButton(style: .secondary) {
+                Task {
+                    await accessibilityPermissionService.promptTrust()
+                }
+            } content: {
+                Text(accessibilityPermissionService.isTrusted == true ? "Recheck" : "Grant Access")
+            }
+            .disabled(accessibilityPermissionService.isLoading || !isAgentConnected)
         }
     }
 

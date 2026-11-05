@@ -176,31 +176,47 @@ struct SidebarFooter: View {
 
     @ViewBuilder
     private var errorNotice: some View {
-        if let message = content.errorMessage {
-            HStack(spacing: 6) {
-                Image(systemName: "exclamationmark.triangle.fill")
-                    .font(DawnTextStyle.sidebarIcon)
-                    .accessibilityHidden(true)
+        if !content.errorMessages.isEmpty {
+            VStack(alignment: .leading, spacing: SidebarMetrics.footerSpacing) {
+                ForEach(Array(content.errorMessages.enumerated()), id: \.element.id) { index, message in
+                    errorBanner(message.text, isTopMost: index == 0)
+                }
+            }
+        }
+    }
 
-                Text(message)
-                    .font(DawnTextStyle.sidebarWarning)
-                    .lineLimit(3)
+    private func errorBanner(_ message: String, isTopMost: Bool) -> some View {
+        HStack(spacing: 6) {
+            Image(systemName: "exclamationmark.triangle.fill")
+                .font(DawnTextStyle.sidebarIcon)
+                .accessibilityHidden(true)
+
+            Text(message)
+                .font(DawnTextStyle.sidebarWarning)
+                .lineLimit(3)
+        }
+        .foregroundStyle(DawnColors.dangerForeground)
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, SidebarMetrics.warningVerticalPadding)
+        .background {
+            RoundedRectangle(cornerRadius: SidebarMetrics.cornerRadius, style: .continuous)
+                .fill(DawnColors.dangerForeground.opacity(0.15))
+        }
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(message)
+        .accessibilityAction {
+            guard isTopMost else {
+                return
             }
-            .foregroundStyle(DawnColors.dangerForeground)
-            .frame(maxWidth: .infinity)
-            .padding(.vertical, SidebarMetrics.warningVerticalPadding)
-            .background {
-                RoundedRectangle(cornerRadius: SidebarMetrics.cornerRadius, style: .continuous)
-                    .fill(DawnColors.dangerForeground.opacity(0.15))
+
+            onDismissError()
+        }
+        .onTapGesture {
+            guard isTopMost else {
+                return
             }
-            .accessibilityElement(children: .ignore)
-            .accessibilityLabel(message)
-            .accessibilityAction {
-                onDismissError()
-            }
-            .onTapGesture {
-                onDismissError()
-            }
+
+            onDismissError()
         }
     }
 }

@@ -48,6 +48,10 @@ final class SettingsViewModel {
 
         await client.refresh()
 
+        if client.error == .notConnected {
+            return
+        }
+
         if client.error != nil {
             let loadError = ViewModelError.loadFailed
             error = loadError
@@ -68,6 +72,8 @@ final class SettingsViewModel {
             baseline = draft
             error = nil
             errorMessage = nil
+        } catch SettingsViewStoreError.notConnected {
+            return
         } catch {
             let persistenceError = ViewModelError.persistenceFailed
             self.error = persistenceError

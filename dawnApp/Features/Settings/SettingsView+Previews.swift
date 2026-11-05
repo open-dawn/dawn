@@ -55,7 +55,8 @@ private struct SettingsViewPreviewHost: View {
                     viewModel: viewModel,
                     accessibilityPermissionService: AccessibilityPermissionService(
                         bus: PreviewSettingsEventBus()
-                    )
+                    ),
+                    isAgentConnected: true
                 )
             } else {
                 ProgressView()

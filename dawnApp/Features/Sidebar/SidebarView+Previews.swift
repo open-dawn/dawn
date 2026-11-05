@@ -351,7 +351,9 @@
 
         static var failed: SidebarContent {
             var content = populated
-            content.errorMessage = "The workspace manager could not switch contexts."
+            content.errorMessages = [
+                SidebarErrorMessage(text: "The workspace manager could not switch contexts.")
+            ]
             return content
         }
 
