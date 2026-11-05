@@ -33,6 +33,8 @@ enum AppUpdateFailureReason: Equatable, Sendable {
     case networkUnavailable
     case invalidFeed
     case invalidMetadata
+    case invalidUpdate
+    case installationFailed
     case unknown
 }
 

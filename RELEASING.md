@@ -153,6 +153,138 @@ The release workflow generates the signed appcast and attaches it to a draft Git
 
 Prereleases do not update the stable feed. Sparkle channels must be implemented before alpha, beta or release-candidate builds can be offered through the updater.
 
+## Update Validation
+
+Every stable update must be validated before its GitHub release and production appcast are published.
+
+Use:
+
+- The exact signed and notarized candidate artifact produced by the Release workflow.
+- An older signed and notarized DAWN build with a lower build number.
+- An isolated HTTPS validation feed that cannot overwrite the production appcast.
+- A clean macOS 26 account or Mac.
+
+Only the older validation build should be configured to use the isolated feed. The candidate must remain identical to the artifact intended for publication.
+
+Malformed feeds and tampered artifacts must never be uploaded to https://update.opendawn.app/appcast.xml.
+
+Record the following information with the draft release:
+
+- Baseline version and build number.
+- Candidate version and build number.
+- Candidate DMG checksum.
+- Test macOS version and architecture.
+- Installation location.
+- Result of every validation scenario.
+- Relevant updater log lines.
+- Name of the person who performed the validation and the date.
+
+Do not include signing keys, credentials, complete local paths or unfiltered system logs in the validation record.
+
+### Pre-Publish Checks
+
+Before beginning the update scenarios:
+
+1. Confirm that CI succeeded for the candidate commit.
+2. Download the candidate DMG and checksum from the draft release.
+3. Confirm that the downloaded checksum matches the published checksum.
+4. Verify the DMG integrity, notarization ticket and Gatekeeper assessment.
+5. Confirm that the candidate app and embedded agent have valid Developer ID signatures.
+6. Inspect the validation appcast and confirm its version, build, URL, length, EdDSA signature, minimum macOS version and release-notes URL.
+7. Install and launch the baseline build.
+8. Confirm that the baseline build and embedded agent work before testing any update.
+
+### Validation Scenarios
+
+| Scenario | Procedure | Expected result |
+|---|---|---|
+| Already on latest version | Serve an appcast whose newest compatible build matches the installed build, then check for updates. | DAWN reports that it is up to date and remains usable. |
+| Compatible update available | Serve the signed candidate with a higher build number, then check for updates. | DAWN displays the candidate version and allows the download to begin. |
+| Offline during check | Disable the network before checking for updates. | DAWN reports a network failure, permits another check and leaves the installed build unchanged. |
+| Offline during download | Begin downloading the candidate, disable the network after progress begins, then restore the network. | The download fails safely, DAWN permits retrying and the installed build remains usable. |
+| Invalid appcast | Serve malformed XML from the isolated validation feed. | DAWN reports an invalid feed and does not modify the installed build. |
+| Invalid EdDSA signature | Copy the candidate archive, modify it after signing, update the appcast length if necessary, but retain the original EdDSA signature. | Sparkle rejects the archive, DAWN reports a verification failure and the installed build remains unchanged. |
+| Update requires newer macOS | Set the isolated appcast minimum system version higher than the test Mac version. | DAWN reports that the update requires a newer macOS version and does not download it. |
+| User cancels installation | Begin installation and cancel when macOS requests authorization. | DAWN returns to an idle state and the existing installation continues to launch. |
+| Installation from `/Applications` | Install the baseline in `/Applications` and complete the update. | The candidate replaces the baseline and launches from `/Applications`. |
+| Installation from another writable directory | Install the baseline in a user-writable directory such as `~/Applications` and complete the update. | The candidate replaces the baseline in the same directory and relaunches successfully. |
+| Installation requiring authorization | Run the update from a location that is not writable by the current test user and approve the macOS authorization request. | Authorization succeeds, the candidate is installed and no unrelated files are modified. |
+| Successful relaunch | Complete an update without interruption. | DAWN relaunches with the expected marketing version and build number. |
+| Embedded agent reconnects | After the updated application relaunches, open DAWN and exercise a feature that communicates with the embedded agent. | The embedded agent starts, the event bus reconnects and the feature completes successfully. |
+
+After every failure scenario:
+
+1. Launch the existing DAWN installation.
+2. Confirm that its version and build number did not change.
+3. Confirm that the embedded agent connects.
+4. Confirm that checking for updates can be attempted again.
+5. Restore the isolated feed before starting the next scenario.
+
+A release cannot be published if the working installation is damaged, replaced or made unlaunchable by any failed scenario.
+
+### Updater Diagnostics
+
+Use the unified logging system while reproducing update failures:
+
+```sh
+log stream \
+  --style compact \
+  --level info \
+  --predicate 'subsystem == "app.opendawn.dawnApp" AND category == "app-lifecycle"'
+```
+
+Updater failures must identify one of these stages:
+
+- check
+- download
+- verification
+- installation
+
+The error domain and numeric code may be recorded. Do not record signing secrets, authentication data, complete local paths or unrelated log messages.
+
+## Update Recovery
+
+### Broken Production Feed
+
+If the production appcast is malformed, inaccessible or references the wrong artifact:
+
+1. Stop any pending update-feed publication workflow.
+2. Restore the last known-good `appcast.xml` from the Git history of `open-dawn/open-dawn.github.io`.
+3. Do not modify or replace an already published artifact under the same tag or filename.
+4. Verify that the restored appcast is valid XML and references an available signed artifact.
+5. Verify the live appcast and release notes over HTTPS.
+6. Check for updates from a signed older build.
+7. Record the incident and the Pages commit used for recovery.
+
+Restoring a previous feed is allowed during incident recovery even though normal publication prevents build-number rollback. Do not delete or move the affected Git tag.
+
+### Broken Release
+
+If the appcast is valid but the published update is defective:
+
+1. Restore the last known-good production appcast so additional clients do not discover the defective build.
+2. Keep the defective tag and artifacts available for auditing.
+3. Add a warning to the affected GitHub release.
+4. Fix the problem on a new release branch.
+5. Increase the build number and create a new release tag.
+6. Build, sign and notarize a new artifact.
+7. Repeat every update-validation scenario before publishing the replacement.
+8. Publish the corrected release and appcast.
+9. Verify that clients on the last known-good build discover the corrected update.
+
+Never reuse a build number, replace an asset in place, move a published tag or generate a different artifact with the same release identity.
+
+### Suspected Signing-Key or Publication-Key Exposure
+
+If an EdDSA private key or Pages deploy key may have been exposed:
+
+1. Stop release and feed-publication workflows.
+2. Remove or rotate the affected credential.
+3. Restrict the production feed to the last known-good appcast.
+4. Preserve workflow logs and release metadata for investigation without copying secrets into the incident record.
+5. Coordinate EdDSA key rotation with an application release that embeds the replacement public key.
+6. Resume publication only after signed-build validation succeeds with the replacement credentials.
+
 ## Release Environment
 
 The `release` GitHub environment defines the `APPLE_TEAM_ID` variable and the following secrets:

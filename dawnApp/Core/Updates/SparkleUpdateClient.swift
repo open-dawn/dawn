@@ -11,6 +11,15 @@ import dawnLogging
 
 @MainActor
 final class SparkleUpdateClient: NSObject, AppUpdateClient {
+    private enum DiagnosticStage: String {
+        case check
+        case download
+        case verification
+        case installation
+    }
+
+    private var diagnosticStage: DiagnosticStage = .check
+
     weak var delegate: (any AppUpdateClientDelegate)?
 
     private let hostBundle: Bundle
@@ -62,6 +71,7 @@ final class SparkleUpdateClient: NSObject, AppUpdateClient {
     }
 
     func checkForUpdates() {
+        diagnosticStage = .check
         updater.checkForUpdates()
     }
 
@@ -70,6 +80,7 @@ final class SparkleUpdateClient: NSObject, AppUpdateClient {
             return
         }
 
+        diagnosticStage = .download
         updateChoice = nil
         choice.resume(returning: .install)
     }
@@ -79,6 +90,7 @@ final class SparkleUpdateClient: NSObject, AppUpdateClient {
             return
         }
 
+        diagnosticStage = .installation
         relaunchChoice = nil
         choice.resume(returning: .install)
     }
@@ -151,8 +163,8 @@ final class SparkleUpdateClient: NSObject, AppUpdateClient {
         }
 
         guard nsError.domain == SUSparkleErrorDomain,
-              let rawValue = Int32(exactly: nsError.code),
-              let sparkleError = SUError(rawValue: rawValue)
+            let rawValue = Int32(exactly: nsError.code),
+            let sparkleError = SUError(rawValue: rawValue)
         else {
             return .unknown
         }
@@ -166,6 +178,13 @@ final class SparkleUpdateClient: NSObject, AppUpdateClient {
 
         case .noPublicDSAFoundError, .insufficientSigningError, .invalidUpdaterError, .invalidHostBundleIdentifierError:
             return .updaterUnavailable
+
+        case .unarchivingError, .signatureError, .validationError, .notValidUpdateError:
+            return .invalidUpdate
+
+        case .fileCopyFailure, .authenticationFailure, .missingUpdateError, .missingInstallerToolError, .relaunchError,
+            .installationError, .downgradeError, .agentInvalidationError, .installationWriteNoPermissionError:
+            return .installationFailed
 
         default:
             return .unknown
@@ -239,11 +258,18 @@ extension SparkleUpdateClient: SPUUserDriver {
     func showUpdaterError(_ error: any Error) async {
         checkCancellation = nil
         downloadCancellation = nil
+        currentUpdate = nil
 
-        let description = String(describing: error)
+        let nsError = error as NSError
+        let stage = diagnosticStage.rawValue
+        let reason = Self.failureReason(from: error)
 
         #log(
-            "Updater operation failed: \(description, privacy: .private)",
+            """
+            Updater \(stage, privacy: .public) failed \
+            (domain: \(nsError.domain, privacy: .public), \
+            code: \(nsError.code, privacy: .public))
+            """,
             level: .error,
             category: .appLifecycle
         )
@@ -252,6 +278,7 @@ extension SparkleUpdateClient: SPUUserDriver {
     }
 
     func showDownloadInitiated(cancellation: @escaping () -> Void) {
+        diagnosticStage = .download
         downloadCancellation = cancellation
         expectedDownloadLength = 0
         receivedDownloadLength = 0
@@ -291,6 +318,7 @@ extension SparkleUpdateClient: SPUUserDriver {
     }
 
     func showDownloadDidStartExtractingUpdate() {
+        diagnosticStage = .verification
         downloadCancellation = nil
         delegate?.appUpdateClientDidBeginExtracting(self)
     }
@@ -316,15 +344,22 @@ extension SparkleUpdateClient: SPUUserDriver {
         withApplicationTerminated applicationTerminated: Bool,
         retryTerminatingApplication: @escaping () -> Void
     ) {
+        diagnosticStage = .installation
         delegate?.appUpdateClientDidBeginInstalling(self)
     }
 
     func showUpdateInstalledAndRelaunched(_ relaunched: Bool) async {
+        currentUpdate = nil
     }
 
     func dismissUpdateInstallation() {
+        let hadActiveUpdate = currentUpdate != nil
+
         dismissPendingChoices()
         currentUpdate = nil
-        delegate?.appUpdateClientDidCancel(self)
+
+        if hadActiveUpdate {
+            delegate?.appUpdateClientDidCancel(self)
+        }
     }
 }
