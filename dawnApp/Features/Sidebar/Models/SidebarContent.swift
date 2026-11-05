@@ -10,7 +10,18 @@ struct SidebarContent {
     var isAgentRunning = true
     var needsAccessibilityPermission = false
     var interactionsDisabled = false
-    var errorMessage: String?
+    /// Newest error first (FILO). Cap enforced by the shell when pushing.
+    var errorMessages: [SidebarErrorMessage] = []
+}
+
+struct SidebarErrorMessage: Identifiable, Equatable {
+    let id: UUID
+    let text: String
+
+    init(id: UUID = UUID(), text: String) {
+        self.id = id
+        self.text = text
+    }
 }
 
 struct SidebarSearchState: Equatable {

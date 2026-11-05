@@ -68,7 +68,8 @@ final class SettingsViewStore: Listener {
                 error = .unexpectedResponse(response.kind)
             }
         } catch {
-            self.error = SettingsViewStoreError(error)
+            let storeError = SettingsViewStoreError(error)
+            self.error = (storeError == .notConnected) ? nil : storeError
         }
     }
 
@@ -92,7 +93,7 @@ final class SettingsViewStore: Listener {
             }
         } catch {
             let storeError = SettingsViewStoreError(error)
-            self.error = storeError
+            self.error = storeError == .notConnected ? nil : storeError
             throw storeError
         }
     }

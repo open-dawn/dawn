@@ -35,6 +35,9 @@ struct AppShellView: View {
 
         @State private var viewModel: ContextDetailViewModel
         @State private var navigation: AppNavigationModel
+        @State private var sidebarErrors: [SidebarErrorMessage] = []
+
+        private static let maxSidebarErrors = 8
 
         private var interactionsDisabled: Bool {
             !eventBusService.isConnected || store.isLoading || viewModel.operationInProgress != nil
@@ -42,9 +45,7 @@ struct AppShellView: View {
 
         private var isShowingNavigationError: Binding<Bool> {
             Binding(
-                get: {
-                    navigation.error != nil
-                },
+                get: { navigation.error != nil },
                 set: { isPresented in
                     if !isPresented {
                         navigation.dismissError()
@@ -75,7 +76,6 @@ struct AppShellView: View {
             _viewModel = State(
                 initialValue: ContextDetailViewModel(contextManager: store)
             )
-
             _navigation = State(initialValue: AppNavigationModel())
         }
 
@@ -91,7 +91,7 @@ struct AppShellView: View {
                         isAgentRunning: eventBusService.isConnected,
                         needsAccessibilityPermission: accessibilityPermissionService.isTrusted == false,
                         interactionsDisabled: interactionsDisabled,
-                        errorMessage: sidebarErrorMessage
+                        errorMessages: sidebarErrors
                     ),
                     availableUpdate: availableUpdate,
                     selectedDestination: $navigation.selectedDestination,
@@ -123,6 +123,26 @@ struct AppShellView: View {
             .onChange(of: store.contexts) { _, contexts in
                 navigation.contextsDidChange(contexts)
                 viewModel.reconcileActiveContext(with: contexts.filter { !$0.isArchived })
+            }
+            .onChange(of: viewModel.error?.localizedDescription) { _, message in
+                pushSidebarError(message)
+            }
+            .onChange(of: store.error) { _, error in
+                guard error != .notConnected else {
+                    return
+                }
+
+                pushSidebarError(error?.localizedDescription)
+            }
+            .onChange(of: settingsStore.error) { _, error in
+                guard error != .notConnected else {
+                    return
+                }
+
+                pushSidebarError(error?.localizedDescription)
+            }
+            .onChange(of: accessibilityPermissionService.error?.errorDescription) { _, message in
+                pushSidebarError(message)
             }
             .onOpenURL(perform: handleOpenURL)
             .task(id: eventBusService.isConnected) {
@@ -161,14 +181,33 @@ struct AppShellView: View {
             }
         }
 
-        private var sidebarErrorMessage: String? {
-            viewModel.error?.localizedDescription
-                ?? store.error?.localizedDescription
-                ?? settingsStore.error?.localizedDescription
-                ?? accessibilityPermissionService.error?.errorDescription
+        private func pushSidebarError(_ message: String?) {
+            guard let message, !message.isEmpty else {
+                return
+            }
+
+            if message == SettingsViewStoreError.notConnected.errorDescription
+                || message == SettingsContextStoreError.notConnected.errorDescription
+            {
+                return
+            }
+
+            guard sidebarErrors.first?.text != message else {
+                return
+            }
+
+            sidebarErrors.insert(SidebarErrorMessage(text: message), at: 0)
+
+            if sidebarErrors.count > Self.maxSidebarErrors {
+                sidebarErrors = Array(sidebarErrors.prefix(Self.maxSidebarErrors))
+            }
         }
 
         private func dismissSidebarError() {
+            if !sidebarErrors.isEmpty {
+                sidebarErrors.removeFirst()
+            }
+
             viewModel.dismissError()
             store.dismissError()
             settingsStore.dismissError()
@@ -222,9 +261,7 @@ struct AppShellView: View {
         }
 
         private func handleOpenURL(_ url: URL) {
-            guard let route = DawnAppRoute(url: url) else {
-                return
-            }
+            guard let route = DawnAppRoute(url: url) else { return }
 
             let requiresRefresh = navigation.receive(
                 route,
@@ -242,15 +279,10 @@ struct AppShellView: View {
 
         private func refreshContextsAndResolvePendingRoute() async {
             await store.refresh()
-
-            guard navigation.pendingRoute != nil else {
-                return
-            }
+            guard navigation.pendingRoute != nil else { return }
 
             if store.error == nil {
-                navigation.contextRefreshSucceeded(
-                    with: store.contexts
-                )
+                navigation.contextRefreshSucceeded(with: store.contexts)
             } else {
                 navigation.contextRefreshFailed()
             }

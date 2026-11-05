@@ -30,9 +30,31 @@ struct SettingsViewModelTests {
         await viewModel.load()
 
         #expect(viewModel.draft == seeded)
+        #expect(!viewModel.hasUnsavedChanges)
         #expect(viewModel.error == nil)
         #expect(viewModel.errorMessage == nil)
         #expect(!viewModel.isLoading)
+    }
+
+    @Test("hasUnsavedChanges tracks draft edits and clears after apply")
+    func hasUnsavedChangesTracksEdits() async {
+        let client = SettingsViewStoreClientSpy(
+            settings: Settings(launchAtLogin: false)
+        )
+        let viewModel = SettingsViewModel(
+            client: client,
+            applicationSelector: ApplicationSelectorSpy()
+        )
+
+        await viewModel.load()
+        #expect(!viewModel.hasUnsavedChanges)
+
+        viewModel.draft.launchAtLogin = true
+        #expect(viewModel.hasUnsavedChanges)
+
+        await viewModel.setSettings()
+        #expect(!viewModel.hasUnsavedChanges)
+        #expect(viewModel.error == nil)
     }
 
     @Test("load failure maps to loadFailed")
@@ -87,6 +109,7 @@ struct SettingsViewModelTests {
         )
 
         #expect(client.updatedSettings == [expected])
+        #expect(!viewModel.hasUnsavedChanges)
         #expect(viewModel.error == nil)
         #expect(viewModel.errorMessage == nil)
     }
@@ -114,6 +137,31 @@ struct SettingsViewModelTests {
         #expect(client.updatedSettings[0].protectedApps.count == 1)
         #expect(client.updatedSettings[0].protectedApps[0].displayName == "Safari")
         #expect(client.updatedSettings[0].protectedApps[0].bundleIdentifier == "com.apple.Safari")
+        #expect(viewModel.applicationSelectionError == nil)
+    }
+
+    @Test("add protected app from running uses the running application selector")
+    func addProtectedAppFromRunningSelector() async {
+        let application = WorkspaceApplication(
+            bundleIdentifier: "com.nordvpn.macos",
+            displayName: "NordVPN",
+            applicationURL: URL(fileURLWithPath: "/Applications/NordVPN.app")
+        )
+        let runningSelector = ApplicationSelectorSpy(result: application)
+        let openPanelSelector = ApplicationSelectorSpy()
+        let viewModel = SettingsViewModel(
+            client: SettingsViewStoreClientSpy(),
+            applicationSelector: openPanelSelector,
+            runningApplicationSelector: runningSelector
+        )
+
+        await viewModel.load()
+        await viewModel.addProtectedAppFromRunning()
+
+        #expect(runningSelector.callCount == 1)
+        #expect(openPanelSelector.callCount == 0)
+        #expect(viewModel.draft.protectedApps.count == 1)
+        #expect(viewModel.draft.protectedApps[0].bundleIdentifier == "com.nordvpn.macos")
         #expect(viewModel.applicationSelectionError == nil)
     }
 

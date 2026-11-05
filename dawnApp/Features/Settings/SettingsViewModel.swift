@@ -23,15 +23,23 @@ final class SettingsViewModel {
     private(set) var applicationSelectionError: ApplicationSelectionError?
     private(set) var isLoading = false
 
+    private var baseline = Settings()
     private let client: any SettingsViewStoreClient
     private let applicationSelector: any ApplicationSelecting
+    private let runningApplicationSelector: any ApplicationSelecting
+
+    var hasUnsavedChanges: Bool {
+        draft != baseline
+    }
 
     init(
         client: any SettingsViewStoreClient,
-        applicationSelector: any ApplicationSelecting = SystemApplicationSelector()
+        applicationSelector: any ApplicationSelecting = SystemApplicationSelector(),
+        runningApplicationSelector: any ApplicationSelecting = SystemRunningApplicationSelector()
     ) {
         self.client = client
         self.applicationSelector = applicationSelector
+        self.runningApplicationSelector = runningApplicationSelector
     }
 
     func load() async {
@@ -39,6 +47,10 @@ final class SettingsViewModel {
         defer { isLoading = false }
 
         await client.refresh()
+
+        if client.error == .notConnected {
+            return
+        }
 
         if client.error != nil {
             let loadError = ViewModelError.loadFailed
@@ -48,6 +60,7 @@ final class SettingsViewModel {
         }
 
         draft = client.settings
+        baseline = client.settings
         error = nil
         errorMessage = nil
         applicationSelectionError = nil
@@ -56,8 +69,11 @@ final class SettingsViewModel {
     func setSettings() async {
         do {
             try await client.updateSettings(draft)
+            baseline = draft
             error = nil
             errorMessage = nil
+        } catch SettingsViewStoreError.notConnected {
+            return
         } catch {
             let persistenceError = ViewModelError.persistenceFailed
             self.error = persistenceError
@@ -70,6 +86,18 @@ final class SettingsViewModel {
     }
 
     func addProtectedApp() async {
+        await addProtectedApp(using: applicationSelector)
+    }
+
+    func addProtectedAppFromRunning() async {
+        await addProtectedApp(using: runningApplicationSelector)
+    }
+
+    func removeProtectedApp(id: UUID) {
+        draft.protectedApps.removeAll { $0.id == id }
+    }
+
+    private func addProtectedApp(using selector: any ApplicationSelecting) async {
         guard !isLoading else {
             return
         }
@@ -79,7 +107,7 @@ final class SettingsViewModel {
         defer { isLoading = false }
 
         do {
-            guard let application = try await applicationSelector.selectApplication() else {
+            guard let application = try await selector.selectApplication() else {
                 return
             }
 
@@ -102,9 +130,5 @@ final class SettingsViewModel {
         } catch {
             applicationSelectionError = .unknown
         }
-    }
-
-    func removeProtectedApp(id: UUID) {
-        draft.protectedApps.removeAll { $0.id == id }
     }
 }
