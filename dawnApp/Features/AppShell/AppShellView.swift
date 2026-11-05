@@ -5,6 +5,7 @@ import libdawnUI
 struct AppShellView: View {
     @Environment(SettingsContextStore.self)
     private var contextStore
+
     var availableUpdate: AppUpdateAvailability?
 
     init(availableUpdate: AppUpdateAvailability? = nil) {
@@ -33,6 +34,9 @@ struct AppShellView: View {
 
         @Environment(AccessibilityPermissionService.self)
         private var accessibilityPermissionService
+
+        @Environment(AppUpdaterService.self)
+        private var updaterService
 
         @State private var viewModel: ContextDetailViewModel
         @State private var navigation: AppNavigationModel
@@ -201,7 +205,8 @@ struct AppShellView: View {
 
             case .about:
                 AboutView(
-                    content: AboutContent.loadRequired()
+                    content: AboutContent.loadRequired(),
+                    updater: updaterService
                 )
 
             case nil:
