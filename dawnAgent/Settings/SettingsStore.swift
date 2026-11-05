@@ -223,19 +223,3 @@ actor SettingsStore {
         document.generalSettings
     }
 }
-
-extension SettingsStore: MenuBarVisibilityStoring {
-    func menuBarIsVisible() async -> Bool {
-        generalSettings().showInMenuBar
-    }
-
-    func setMenuBarVisible(_ isVisible: Bool) async throws {
-        guard document.generalSettings.showInMenuBar != isVisible else {
-            return
-        }
-
-        try await mutate { candidate in
-            candidate.generalSettings.showInMenuBar = isVisible
-        }
-    }
-}

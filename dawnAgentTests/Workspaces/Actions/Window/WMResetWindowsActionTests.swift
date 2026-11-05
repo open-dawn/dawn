@@ -113,4 +113,32 @@ struct WMResetWindowsActionTests {
             try action.execute()
         }
     }
+
+    @Test("force apps to quit turns hide into close")
+    func forceAppsToQuitOverridesHide() {
+        #expect(
+            SettingsWindowPolicy.activationPolicy(.hide, forceAppsToQuit: true) == .close
+        )
+        #expect(
+            SettingsWindowPolicy.activationPolicy(.merge, forceAppsToQuit: true) == .merge
+        )
+        #expect(
+            SettingsWindowPolicy.activationPolicy(.hide, forceAppsToQuit: false) == .hide
+        )
+    }
+
+    @Test("protected apps are preserved with system apps")
+    func protectedAppsJoinSystemList() {
+        let identifiers = SettingsWindowPolicy.protectedBundleIdentifiers(
+            extra: [
+                ProtectedApplication(
+                    bundleIdentifier: "com.nordvpn.macos",
+                    displayName: "NordVPN"
+                )
+            ]
+        )
+
+        #expect(identifiers.contains("com.nordvpn.macos"))
+        #expect(identifiers.contains("com.apple.finder"))
+    }
 }

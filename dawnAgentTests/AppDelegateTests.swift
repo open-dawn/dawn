@@ -139,10 +139,8 @@ struct AppDelegateTests {
         #expect(!service.bus.hasListeners(for: .getContexts(GetContextsEvent())))
         #expect(!service.bus.hasListeners(for: .debugPing(DebugPingEvent())))
         #expect(!service.bus.hasListeners(for: .getSettings(GetSettingsEvent())))
+        #expect(!service.bus.hasListeners(for: .applySettings(ApplySettingsEvent())))
         #expect(menuBarController.stopCallCount == 1)
-        #expect(!service.bus.hasListeners(for: .getMenuBarVisibility(GetMenuBarVisibilityEvent())))
-
-        #expect(!service.bus.hasListeners(for: .setMenuBarVisibility(SetMenuBarVisibilityEvent(isVisible: false))))
     }
 
     @Test("Repeated starts initialize only once")
@@ -180,8 +178,6 @@ struct AppDelegateTests {
         let provider = ContextProviderStub()
         let factory = PausingWorkspaceRuntimeFactory(provider: provider)
         let menuBarController = MenuBarControllerSpy()
-        let visibilityStore = MenuBarVisibilityStoreStub()
-
         let delegate = AppDelegate(
             eventBusService: service,
             repository: MockSettingsRepository(),
@@ -190,8 +186,7 @@ struct AppDelegateTests {
             },
             makeAgentRuntime: { _, _ in
                 AgentRuntimeComponents(
-                    workspace: await factory.makeRuntime(),
-                    menuBarVisibilityStore: visibilityStore
+                    workspace: await factory.makeRuntime()
                 )
             }
         )
@@ -283,9 +278,7 @@ struct AppDelegateTests {
             },
             makeAgentRuntime: { _, _ in
                 AgentRuntimeComponents(
-                    workspace: runtime,
-                    menuBarVisibilityStore:
-                        MenuBarVisibilityStoreStub()
+                    workspace: runtime
                 )
             }
         )
@@ -321,9 +314,7 @@ struct AppDelegateTests {
             },
             makeAgentRuntime: { _, _ in
                 AgentRuntimeComponents(
-                    workspace: runtime,
-                    menuBarVisibilityStore:
-                        MenuBarVisibilityStoreStub()
+                    workspace: runtime
                 )
             }
         )
@@ -372,9 +363,7 @@ struct AppDelegateTests {
             },
             makeAgentRuntime: { _, _ in
                 AgentRuntimeComponents(
-                    workspace: runtime,
-                    menuBarVisibilityStore:
-                        MenuBarVisibilityStoreStub()
+                    workspace: runtime
                 )
             }
         )
@@ -401,83 +390,29 @@ struct AppDelegateTests {
     ) async throws {
         let service = EventBusServiceSpy()
         let provider = ContextProviderStub()
-        let visibilityStore =
-            MenuBarVisibilityStoreStub(
-                isVisible: expectedVisibility
-            )
+        var document = SettingsDocument.empty
+        document.generalSettings.showInMenuBar = expectedVisibility
 
-        let menuBarController =
-            MenuBarControllerSpy()
+        let menuBarController = MenuBarControllerSpy()
 
         var receivedVisibility: Bool?
 
         let delegate = AppDelegate(
             eventBusService: service,
-            repository: MockSettingsRepository(),
+            repository: MockSettingsRepository(document: document),
             makeMenuBarController: { _, isVisible in
                 receivedVisibility = isVisible
                 return menuBarController
             },
             makeAgentRuntime: { _, _ in
-                makeAgentRuntimeComponents(
-                    provider: provider,
-                    visibilityStore: visibilityStore
-                )
+                makeAgentRuntimeComponents(provider: provider)
             }
         )
 
         try await delegate.start()
 
-        #expect(
-            receivedVisibility == expectedVisibility
-        )
-    }
-
-    @Test("Retained visibility listener answers requests")
-    func retainedVisibilityListenerAnswersRequests()
-        async throws
-    {
-        let service = EventBusServiceSpy()
-        let provider = ContextProviderStub()
-        let visibilityStore =
-            MenuBarVisibilityStoreStub(
-                isVisible: false
-            )
-
-        let menuBarController =
-            MenuBarControllerSpy()
-
-        let delegate = AppDelegate(
-            eventBusService: service,
-            repository: MockSettingsRepository(),
-            makeMenuBarController: { _, _ in
-                menuBarController
-            },
-            makeAgentRuntime: { _, _ in
-                makeAgentRuntimeComponents(
-                    provider: provider,
-                    visibilityStore: visibilityStore
-                )
-            }
-        )
-
-        try await delegate.start()
-
-        let response = try await service.bus.ask(
-            .getMenuBarVisibility(
-                GetMenuBarVisibilityEvent()
-            ),
-            timeout: .seconds(1)
-        )
-
-        #expect(
-            response
-                == .menuBarVisibilityState(
-                    MenuBarVisibilityStateEvent(
-                        isVisible: false
-                    )
-                )
-        )
+        #expect(receivedVisibility == expectedVisibility)
+        #expect(menuBarController.isVisible == expectedVisibility)
     }
 }
 
@@ -504,25 +439,19 @@ private final class EventBusServiceSpy: EventBusServicing {
             )
         )
 
-        let hasVisibilityGetter = bus.hasListeners(
-            for: .getMenuBarVisibility(
-                GetMenuBarVisibilityEvent()
-            )
+        let hasSettingsListener = bus.hasListeners(
+            for: .getSettings(GetSettingsEvent())
         )
 
-        let hasVisibilitySetter = bus.hasListeners(
-            for: .setMenuBarVisibility(
-                SetMenuBarVisibilityEvent(
-                    isVisible: false
-                )
-            )
+        let hasApplySettings = bus.hasListeners(
+            for: .applySettings(ApplySettingsEvent())
         )
 
         listenersWereRegisteredWhenStarted =
             hasWorkspaceListener
             && hasDebugListener
-            && hasVisibilityGetter
-            && hasVisibilitySetter
+            && hasSettingsListener
+            && hasApplySettings
     }
 
     func stop() {
@@ -672,37 +601,13 @@ private enum StartupError: Error, Equatable {
     case expected
 }
 
-private actor MenuBarVisibilityStoreStub:
-    MenuBarVisibilityStoring
-{
-    private var isVisible: Bool
-
-    init(isVisible: Bool = true) {
-        self.isVisible = isVisible
-    }
-
-    func menuBarIsVisible() async -> Bool {
-        isVisible
-    }
-
-    func setMenuBarVisible(
-        _ isVisible: Bool
-    ) async throws {
-        self.isVisible = isVisible
-    }
-}
-
 @MainActor
 private func makeAgentRuntimeComponents(
-    provider: ContextProviderStub,
-    visibilityStore:
-        any MenuBarVisibilityStoring =
-        MenuBarVisibilityStoreStub()
+    provider: ContextProviderStub
 ) -> AgentRuntimeComponents {
     AgentRuntimeComponents(
         workspace: WorkspaceRuntime(
             contextManager: provider
-        ),
-        menuBarVisibilityStore: visibilityStore
+        )
     )
 }

@@ -16,11 +16,6 @@ public enum Event: Codable, Sendable, Equatable {
     case availableContexts(AvailableContextsEvent)
     case contextMutationAcknowledged(ContextMutationAcknowledgement)
 
-    case getMenuBarVisibility(GetMenuBarVisibilityEvent)
-    case setMenuBarVisibility(SetMenuBarVisibilityEvent)
-    case menuBarVisibilityState(MenuBarVisibilityStateEvent)
-    case menuBarVisibilityMutationAcknowledged(MenuBarVisibilityMutationAcknowledgement)
-
     case getAccessibilityStatus(GetAccessibilityStatusEvent)
     case promptAccessibilityTrust(PromptAccessibilityTrustEvent)
     case accessibilityStatus(AccessibilityStatusEvent)
@@ -31,6 +26,7 @@ public enum Event: Codable, Sendable, Equatable {
 
     case updateSettings(UpdateSettingsEvent)
     case settingsMutationAcknowledgement(SettingsMutationAcknowledgement)
+    case applySettings(ApplySettingsEvent)
 
     public var kind: EventKind {
         switch self {
@@ -47,10 +43,6 @@ public enum Event: Codable, Sendable, Equatable {
         case .switchContext: .switchContext
         case .contextMutationAcknowledged: .contextMutationAcknowledged
         case .availableContexts: .availableContexts
-        case .getMenuBarVisibility: .getMenuBarVisibility
-        case .setMenuBarVisibility: .setMenuBarVisibility
-        case .menuBarVisibilityState: .menuBarVisibilityState
-        case .menuBarVisibilityMutationAcknowledged: .menuBarVisibilityMutationAcknowledged
         case .getAccessibilityStatus: .getAccessibilityStatus
         case .promptAccessibilityTrust: .promptAccessibilityTrust
         case .accessibilityStatus: .accessibilityStatus
@@ -59,6 +51,7 @@ public enum Event: Codable, Sendable, Equatable {
         case .availableSettings: .availableSettings
         case .updateSettings: .updateSettings
         case .settingsMutationAcknowledgement: .settingsMutationAcknowledgement
+        case .applySettings: .applySettings
         }
     }
 }

@@ -4,34 +4,27 @@ import ServiceManagement
 enum SettingsLoginItem {
     static let helperBundleIdentifier = "app.opendawn.dawnAgent"
 
-    static func registerIfNeeded() {
+    static func apply(launchAtLogin: Bool) {
         let service = SMAppService.loginItem(identifier: helperBundleIdentifier)
 
         #log("dawnAgent login-item status: \(service.status.rawValue)", level: .info, category: .appLifecycle)
 
-        switch service.status {
-        case .enabled:
-            #log("dawnAgent login item is already enabled", level: .info, category: .appLifecycle)
-
-        case .requiresApproval:
-            #log("dawnAgent login item requires user approval", level: .warning, category: .appLifecycle)
-        case .notRegistered, .notFound:
-            do {
-                #log("Registering dawnAgent login item", level: .info, category: .appLifecycle)
-
-                try service.register()
-
-                #log("dawnAgent login-item registration succeeded", level: .info, category: .appLifecycle)
-            } catch {
-                #log(
-                    "dawnAgent login-item registration failed: \(error.localizedDescription,privacy: .public)",
-                    level: .error,
-                    category: .appLifecycle
-                )
+        do {
+            if launchAtLogin {
+                switch service.status {
+                case .enabled, .requiresApproval:
+                    return
+                case .notRegistered, .notFound:
+                    try service.register()
+                @unknown default:
+                    try service.register()
+                }
+            } else if service.status == .enabled {
+                try service.unregister()
             }
-        @unknown default:
+        } catch {
             #log(
-                "Unkown dawnAgent login-item status: \(service.status.rawValue)",
+                "dawnAgent login-item update failed: \(error.localizedDescription, privacy: .public)",
                 level: .error,
                 category: .appLifecycle
             )

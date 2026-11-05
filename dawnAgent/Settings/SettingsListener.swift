@@ -27,13 +27,20 @@ final class SettingsCoordinator: SettingsProviding {
 final class SettingsListener: Listener {
     private let bus: EventBus
     private let settingsProvider: any SettingsProviding
+    private let applicator: any SettingsApplying
 
-    init(bus: EventBus, settingsProvider: any SettingsProviding) {
+    init(
+        bus: EventBus,
+        settingsProvider: any SettingsProviding,
+        applicator: any SettingsApplying
+    ) {
         self.bus = bus
         self.settingsProvider = settingsProvider
+        self.applicator = applicator
         bus.addListener(self, kinds: [
             .getSettings,
             .updateSettings,
+            .applySettings,
         ])
     }
 
@@ -48,6 +55,13 @@ final class SettingsListener: Listener {
         case let .updateSettings(payload):
             handleUpdateSettings(payload, reply: reply)
 
+        case .applySettings:
+            Task { @MainActor in
+                let settings = await settingsProvider.getSettings()
+                await applicator.applySettings(settings)
+                bus.publish(.availableSettings(AvailableSettingsEvent(settings: settings)))
+            }
+
         default:
             return
         }
@@ -59,7 +73,8 @@ final class SettingsListener: Listener {
         Task { @MainActor in
             do {
                 try await settingsProvider.updateSettings(payload.settings)
-                publishSettings(payload.settings)
+                await applicator.applySettings(payload.settings)
+                bus.publish(.availableSettings(AvailableSettingsEvent(settings: payload.settings)))
                 reply(.settingsMutationAcknowledgement(.success))
             } catch {
                 reply(
@@ -69,11 +84,6 @@ final class SettingsListener: Listener {
                 )
             }
         }
-    }
-
-    private func publishSettings(_ settings: Settings) {
-        // PIN-160 Apply stored settings to app behavior.
-        bus.publish(.availableSettings(AvailableSettingsEvent(settings: settings)))
     }
 
     private func mutationFailure(from error: Error) -> SettingsMutationAcknowledgement.Failure {
