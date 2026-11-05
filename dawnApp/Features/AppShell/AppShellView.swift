@@ -261,9 +261,7 @@ struct AppShellView: View {
         }
 
         private func handleOpenURL(_ url: URL) {
-            guard let route = DawnAppRoute(url: url) else {
-                return
-            }
+            guard let route = DawnAppRoute(url: url) else { return }
 
             let requiresRefresh = navigation.receive(
                 route,
@@ -281,15 +279,10 @@ struct AppShellView: View {
 
         private func refreshContextsAndResolvePendingRoute() async {
             await store.refresh()
-
-            guard navigation.pendingRoute != nil else {
-                return
-            }
+            guard navigation.pendingRoute != nil else { return }
 
             if store.error == nil {
-                navigation.contextRefreshSucceeded(
-                    with: store.contexts
-                )
+                navigation.contextRefreshSucceeded(with: store.contexts)
             } else {
                 navigation.contextRefreshFailed()
             }
