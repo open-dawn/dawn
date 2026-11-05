@@ -4,8 +4,6 @@ import libdawn
 
 struct AgentRuntimeComponents {
     let workspace: WorkspaceRuntime
-
-    let menuBarVisibilityStore: any MenuBarVisibilityStoring
 }
 
 typealias AgentRuntimeFactory = @MainActor (EventBus, SettingsStore) async throws -> AgentRuntimeComponents
@@ -16,8 +14,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private let eventBusService: any EventBusServicing
     private let makeMenuBarController: MenuBarControllerFactory
     private let makeAgentRuntime: AgentRuntimeFactory
-    private var menuBarVisibilityListener: MenuBarVisibilityListener?
-
     private var menuBarController: (any MenuBarControlling)?
     private var workspaceRuntime: WorkspaceRuntime?
     private var windowManagerListener: WindowManagerListener?
@@ -60,8 +56,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         )
 
         return AgentRuntimeComponents(
-            workspace: WorkspaceRuntime(contextManager: contextManager),
-            menuBarVisibilityStore: contextManager.menuBarVisibilityStore
+            workspace: WorkspaceRuntime(contextManager: contextManager)
         )
     }
 
@@ -104,7 +99,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         accessibilityTrustListener = nil
         settingsListener = nil
         workspaceRuntime = nil
-        menuBarVisibilityListener = nil
     }
 
     func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
@@ -147,15 +141,19 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
             let workspaceRuntime = components.workspace
             await workspaceRuntime.refresh()
-            let initialMenuBarVisibility = await components.menuBarVisibilityStore.menuBarIsVisible()
+            let settings = await store.generalSettings()
             try await reconcileRestoredActivity(in: workspaceRuntime)
             #log("Workspace runtime created", level: .info, category: .appLifecycle)
+
+            let menuBarController = makeMenuBarController(workspaceRuntime, settings.showInMenuBar)
+            let applicator = SettingsApplicator(menuBarController: menuBarController)
+            await applicator.applySettings(settings)
 
             registerListeners(
                 workspaceRuntime: workspaceRuntime,
                 store: store,
-                menuBarVisibilityStore: components.menuBarVisibilityStore,
-                initialMenuBarVisibility: initialMenuBarVisibility
+                menuBarController: menuBarController,
+                applicator: applicator
             )
 
             #log("Starting dawnAgent event bus", level: .info, category: .eventBus)
@@ -171,8 +169,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private func registerListeners(
         workspaceRuntime: WorkspaceRuntime,
         store: SettingsStore,
-        menuBarVisibilityStore: any MenuBarVisibilityStoring,
-        initialMenuBarVisibility: Bool
+        menuBarController: any MenuBarControlling,
+        applicator: any SettingsApplying
     ) {
         let windowManagerListener = WindowManagerListener(
             bus: eventBusService.bus,
@@ -181,19 +179,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         let settingsListener = SettingsListener(
             bus: eventBusService.bus,
-            settingsProvider: SettingsCoordinator(store: store)
+            settingsProvider: SettingsCoordinator(store: store),
+            applicator: applicator
         )
 
         let debugPingListener = DebugPingListener(bus: eventBusService.bus)
         let accessibilityTrustListener = AccessibilityTrustListener(bus: eventBusService.bus)
-
-        let menuBarController = makeMenuBarController(workspaceRuntime, initialMenuBarVisibility)
-
-        let menuBarVisibilityListener = MenuBarVisibilityListener(
-            bus: eventBusService.bus,
-            store: menuBarVisibilityStore,
-            menuBarController: menuBarController
-        )
 
         self.workspaceRuntime = workspaceRuntime
         self.windowManagerListener = windowManagerListener
@@ -201,7 +192,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         self.accessibilityTrustListener = accessibilityTrustListener
         self.settingsListener = settingsListener
         self.menuBarController = menuBarController
-        self.menuBarVisibilityListener = menuBarVisibilityListener
     }
 
     private func reconcileRestoredActivity(in workspace: WorkspaceRuntime) async throws {

@@ -32,7 +32,6 @@ final class SettingsAppDelegate: NSObject, NSApplicationDelegate {
         settingsStore.start()
         eventBusService.start()
         updaterService.start()
-        SettingsLoginItem.registerIfNeeded()
     }
 
     func applicationWillTerminate(_: Notification) {

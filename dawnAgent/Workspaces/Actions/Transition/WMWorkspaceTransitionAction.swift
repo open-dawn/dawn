@@ -36,9 +36,16 @@ struct DefaultWorkspaceTransitionPerformer: WorkspaceTransitionPerforming {
     }
 
     func resetWindows(policy: WorkspaceActivationPolicy, keepApplications: [WorkspaceApplication]) async throws {
+        let applied = await AppliedSettings.shared.snapshot()
         try WMResetWindowsAction(
-            activationPolicy: policy,
+            activationPolicy: SettingsWindowPolicy.activationPolicy(
+                policy,
+                forceAppsToQuit: applied.forceAppsToQuit
+            ),
             keepApplications: keepApplications,
+            protectedBundleIdentifiers: SettingsWindowPolicy.protectedBundleIdentifiers(
+                extra: applied.protectedApps
+            ),
             provider: provider
         ).execute()
     }

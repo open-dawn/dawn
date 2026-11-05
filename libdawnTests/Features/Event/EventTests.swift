@@ -44,25 +44,6 @@ struct EventTests {
                 event: Event.contextMutationAcknowledged(.success(contextID: UUID())),
                 kind: EventKind.contextMutationAcknowledged
             ),
-            (event: Event.getMenuBarVisibility(GetMenuBarVisibilityEvent()), kind: .getMenuBarVisibility),
-            (
-                event: Event.setMenuBarVisibility(SetMenuBarVisibilityEvent(isVisible: false)),
-                kind: .setMenuBarVisibility
-            ),
-            (
-                event: Event.menuBarVisibilityState(
-                    MenuBarVisibilityStateEvent(
-                        isVisible: true
-                    )
-                ),
-                kind: .menuBarVisibilityState
-            ),
-            (
-                event: Event.menuBarVisibilityMutationAcknowledged(
-                    .success(isVisible: false)
-                ),
-                kind: .menuBarVisibilityMutationAcknowledged
-            ),
             (
                 event: Event.getAccessibilityStatus(GetAccessibilityStatusEvent()),
                 kind: EventKind.getAccessibilityStatus
@@ -95,6 +76,10 @@ struct EventTests {
                 event: Event.updateSettings(UpdateSettingsEvent(settings: Settings())),
                 kind: EventKind.updateSettings
             ),
+            (
+                event: Event.applySettings(ApplySettingsEvent()),
+                kind: EventKind.applySettings
+            ),
         ]
     )
     func exposesKind(_ eventWithKind: (event: Event, kind: EventKind)) {
@@ -124,12 +109,6 @@ struct EventTests {
                     WorkspaceContext(name: "Old", symbol: "archivebox", isArchived: true)
                 ])
             ),
-            .getMenuBarVisibility(GetMenuBarVisibilityEvent()),
-            .setMenuBarVisibility(SetMenuBarVisibilityEvent(isVisible: false)),
-            .menuBarVisibilityState(MenuBarVisibilityStateEvent(isVisible: true)),
-            .menuBarVisibilityMutationAcknowledged(.success(isVisible: false)),
-            .menuBarVisibilityMutationAcknowledged(.failure(.persistence)),
-            .menuBarVisibilityMutationAcknowledged(.failure(.unexpected)),
             .getAccessibilityStatus(GetAccessibilityStatusEvent()),
             .promptAccessibilityTrust(PromptAccessibilityTrustEvent()),
             .accessibilityStatus(AccessibilityStatusEvent(isTrusted: false)),
@@ -138,6 +117,7 @@ struct EventTests {
             .availableSettings(AvailableSettingsEvent(settings: Settings())),
             .settingsMutationAcknowledgement(SettingsMutationAcknowledgement.success),
             .updateSettings(UpdateSettingsEvent(settings: Settings())),
+            .applySettings(ApplySettingsEvent()),
         ]
     )
     func roundTripsThroughJSON(_ event: Event) throws {

@@ -17,12 +17,6 @@ public enum EventKind: String, Codable, Sendable, Hashable, CaseIterable {
     case availableContexts
     case contextMutationAcknowledged
 
-    // MARK: MenuBar Visibility
-    case getMenuBarVisibility
-    case setMenuBarVisibility
-    case menuBarVisibilityState
-    case menuBarVisibilityMutationAcknowledged
-
     // MARK: Accessibility
     case getAccessibilityStatus
     case promptAccessibilityTrust
@@ -35,4 +29,5 @@ public enum EventKind: String, Codable, Sendable, Hashable, CaseIterable {
 
     case updateSettings
     case settingsMutationAcknowledgement
+    case applySettings
 }
