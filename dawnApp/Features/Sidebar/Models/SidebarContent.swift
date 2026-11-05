@@ -10,7 +10,6 @@ struct SidebarContent {
     var isAgentRunning = true
     var needsAccessibilityPermission = false
     var interactionsDisabled = false
-    var update: AppUpdateAvailability?
     var errorMessage: String?
 }
 

@@ -6,16 +6,9 @@ struct AppShellView: View {
     @Environment(SettingsContextStore.self)
     private var contextStore
 
-    var availableUpdate: AppUpdateAvailability?
-
-    init(availableUpdate: AppUpdateAvailability? = nil) {
-        self.availableUpdate = availableUpdate
-    }
-
     var body: some View {
         AppShellContent(
             store: contextStore,
-            availableUpdate: availableUpdate
         )
         .frame(
             minWidth: SidebarMetrics.width + SidebarMetrics.minimumDetailWidth,
@@ -27,7 +20,6 @@ struct AppShellView: View {
 
     private struct AppShellContent: View {
         let store: SettingsContextStore
-        let availableUpdate: AppUpdateAvailability?
 
         @Environment(SettingsEventBusService.self)
         private var eventBusService
@@ -58,6 +50,14 @@ struct AppShellView: View {
             )
         }
 
+        private var availableUpdate: AvailableAppUpdate? {
+            guard case let .updateAvailable(update) = updaterService.state else {
+                return nil
+            }
+
+            return update
+        }
+
         private var activeContexts: [WorkspaceContext] {
             store.contexts.filter { !$0.isArchived }
         }
@@ -66,9 +66,9 @@ struct AppShellView: View {
             store.contexts.filter(\.isArchived)
         }
 
-        init(store: SettingsContextStore, availableUpdate: AppUpdateAvailability?) {
+        init(store: SettingsContextStore) {
             self.store = store
-            self.availableUpdate = availableUpdate
+
             _viewModel = State(
                 initialValue: ContextDetailViewModel(contextManager: store)
             )
@@ -88,9 +88,9 @@ struct AppShellView: View {
                         isAgentRunning: eventBusService.isConnected,
                         needsAccessibilityPermission: accessibilityPermissionService.isTrusted == false,
                         interactionsDisabled: interactionsDisabled,
-                        update: availableUpdate,
                         errorMessage: sidebarErrorMessage
                     ),
+                    availableUpdate: availableUpdate,
                     selectedDestination: $navigation.selectedDestination,
                     onCreateContext: { viewModel.presentContextCreator() },
                     onDismissError: dismissSidebarError
