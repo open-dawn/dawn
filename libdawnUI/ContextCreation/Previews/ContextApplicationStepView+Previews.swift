@@ -63,6 +63,7 @@ private struct ContextApplicationsStepPreview: View {
             applications: applications,
             isLoadingApplications: false,
             selectedApplicationIDs: $selectedApplicationIDs,
+            confirmTitle: "Next",
             onChooseApplication: {},
             onNext: {}
         )

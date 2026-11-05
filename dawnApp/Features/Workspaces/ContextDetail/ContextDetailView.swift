@@ -1,4 +1,5 @@
 import libdawn
+import libdawnUI
 import SwiftUI
 
 struct ContextDetailView: View {
@@ -6,6 +7,8 @@ struct ContextDetailView: View {
     let viewModel: ContextDetailViewModel
     let interactionsDisabled: Bool
     let onDelete: (WorkspaceContext) -> Void
+
+    @State private var isApplicationPickerPresented = false
 
     var isActive: Bool {
         context.id == viewModel.activeContextID
@@ -66,6 +69,12 @@ struct ContextDetailView: View {
                 ContextDetailApplicationList(
                     applications: editedContext.applications,
                     interactionsDisabled: interactionsDisabled,
+                    onAddApplications: {
+                        isApplicationPickerPresented = true
+                    },
+                    onRemoveApplication: { application in
+                        viewModel.removeApplication(id: application.id)
+                    },
                     onDropApplications: { urls in
                         viewModel.addApplications(at: urls)
                     }
@@ -101,5 +110,58 @@ struct ContextDetailView: View {
         } message: {
             Text(viewModel.applicationImportError?.localizedDescription ?? "")
         }
+        .sheet(isPresented: $isApplicationPickerPresented) {
+            ContextApplicationPicker(
+                loadApplications: loadInstalledApplications,
+                initialSelection: editedContext.applications.map {
+                    creationApplication(from: $0)
+                },
+                confirmTitle: "Add",
+                onConfirm: { selected in
+                    viewModel.applyApplicationSelection(
+                        selected.map { workspaceApplication(from: $0) }
+                    )
+                    isApplicationPickerPresented = false
+                },
+                onCancel: {
+                    isApplicationPickerPresented = false
+                }
+            )
+            .padding(16)
+            .frame(width: 320, height: 600)
+            .background {
+                DawnColors.primaryBackground
+                    .ignoresSafeArea()
+            }
+            .presentationBackground(DawnColors.primaryBackground)
+        }
+    }
+
+    private func loadInstalledApplications() async throws -> [ContextCreationApplication] {
+        try await ApplicationsDirectoryProvider().applications().map {
+            creationApplication(from: $0)
+        }
+    }
+
+    private func creationApplication(
+        from application: WorkspaceApplication
+    ) -> ContextCreationApplication {
+        ContextCreationApplication(
+            id: application.id,
+            bundleIdentifier: application.bundleIdentifier,
+            displayName: application.displayName,
+            applicationURL: application.applicationURL
+        )
+    }
+
+    private func workspaceApplication(
+        from application: ContextCreationApplication
+    ) -> WorkspaceApplication {
+        WorkspaceApplication(
+            id: application.id,
+            bundleIdentifier: application.bundleIdentifier,
+            displayName: application.displayName,
+            applicationURL: application.applicationURL
+        )
     }
 }

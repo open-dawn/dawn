@@ -5,44 +5,46 @@ import SwiftUI
 struct ContextDetailApplicationList: View {
     let applications: [WorkspaceApplication]
     let interactionsDisabled: Bool
+    let onAddApplications: () -> Void
+    let onRemoveApplication: (WorkspaceApplication) -> Void
     let onDropApplications: ([URL]) -> Bool
 
     @State private var isDropTargeted = false
 
     var body: some View {
-        // swiftlint:disable:next todo
-        // FIXME: Application row menus and the add button are not implemented yet.
         VStack(alignment: .leading) {
             Text("Applications")
                 .font(DawnTextStyle.sectionLabel)
 
             FlowLayout(spacing: 8) {
                 ForEach(applications) { app in
-                    DButton(style: .plain) {
+                    HStack {
+                        if let appPath = app.applicationURL?.path(percentEncoded: false) {
+                            Image(nsImage: NSWorkspace.shared.icon(forFile: appPath))
+                        } else {
+                            Image(systemName: "questionmark.square")
+                        }
+                        Text(app.displayName)
+                            .font(DawnTextStyle.secondary)
 
-                    } content: {
-                        HStack {
-                            if let appPath = app.applicationURL?.path(percentEncoded: false) {
-                                Image(nsImage: NSWorkspace.shared.icon(forFile: appPath))
-                            } else {
-                                Image(systemName: "questionmark.square")
-                            }
-                            Text(app.displayName)
-                                .font(DawnTextStyle.secondary)
-
-                            Image(systemName: "chevron.down")
+                        DButton(style: .plain) {
+                            onRemoveApplication(app)
+                        } content: {
+                            Image(systemName: "xmark")
                                 .padding(.leading, 16)
                         }
-                        .padding(8)
-                        .background {
-                            DawnColors.secondaryBackground
-                        }
-                        .clipShape(RoundedRectangle(cornerRadius: 8))
+                        .disabled(interactionsDisabled)
+                        .accessibilityLabel("Remove \(app.displayName)")
                     }
+                    .padding(8)
+                    .background {
+                        DawnColors.secondaryBackground
+                    }
+                    .clipShape(RoundedRectangle(cornerRadius: 8))
                 }
 
                 DButton(style: .plain) {
-
+                    onAddApplications()
                 } content: {
                     Image(systemName: "plus")
                         .padding(8)
@@ -52,6 +54,8 @@ struct ContextDetailApplicationList: View {
                         .clipShape(RoundedRectangle(cornerRadius: 8))
                         .padding(9.5)
                 }
+                .disabled(interactionsDisabled)
+                .accessibilityLabel("Add application")
 
                 if applications.isEmpty {
                     Text("Nothing selected yet. Click the 􀅼 button or drag an app here to add it.")

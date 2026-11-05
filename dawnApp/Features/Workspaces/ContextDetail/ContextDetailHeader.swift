@@ -25,8 +25,7 @@ struct ContextDetailHeader: View {
 
             if !isArchived {
                 if isActive {
-                    // swiftlint:disable:next todo
-                    // FIXME: Stop has no action yet. There is no stop event on the agent.
+                    // PIN-145: Stop has no action yet. This app cannot ask the agent to stop.
                     DButton(style: .danger) {
                     } content: {
                         Text("Stop")

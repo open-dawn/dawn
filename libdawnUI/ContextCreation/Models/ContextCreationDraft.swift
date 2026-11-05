@@ -10,6 +10,6 @@ import Foundation
 struct ContextCreationDraft {
     var name = ""
     var symbolName: String?
-    var selectedApplicationIDs: [UUID] = []
+    var selectedApplications: [ContextCreationApplication] = []
     var openingBehaviour: ContextOpeningBehavior = .hideOthers
 }

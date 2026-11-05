@@ -8,10 +8,10 @@ final class ContextDetailViewModel {
     private let saveDebounce: Duration
 
     private(set) var operationInProgress: UUID?
-    // swiftlint:disable:next todo
-    // FIXME: Active context stays in this view model. dawnAgent records it on
+    // PIN-145: Active context stays in this view model. dawnAgent records it on
     // WorkspaceRuntime.lastRequestedContextID for the in-process menu bar and
-    // does not publish it, so another frontend only knows about activations it started.
+    // does not publish it, so this id is only the activation this window started.
+    // That local id is what flips the header button to Stop, and Stop has no action.
     private(set) var activeContextID: UUID?
     private(set) var error: SettingsContextStoreError?
     var applicationImportError: ApplicationSelectionError?
@@ -77,7 +77,6 @@ final class ContextDetailViewModel {
             return
         }
 
-        // PIN-145 Fixs it in future
         do {
             try await contextManager.switchContext(id: context.id)
             activeContextID = context.id

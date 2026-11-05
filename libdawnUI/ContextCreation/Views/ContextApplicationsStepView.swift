@@ -14,6 +14,7 @@ struct ContextApplicationsStepView: View {
 
     @Binding var selectedApplicationIDs: [UUID]
 
+    let confirmTitle: String
     let onChooseApplication: () -> Void
     let onNext: () -> Void
 
@@ -51,7 +52,7 @@ struct ContextApplicationsStepView: View {
             Spacer()
 
             DButton(action: onNext) {
-                Text("Next")
+                Text(confirmTitle)
                     .frame(maxWidth: .infinity)
             }
         }

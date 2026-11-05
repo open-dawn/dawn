@@ -683,6 +683,123 @@ struct ContextDetailViewModelTests {
         #expect(viewModel.applicationImportError == nil)
     }
 
+    @Test("Removing an application saves the remaining list and the terminal command")
+    func removeApplicationSavesRemainingList() async {
+        let context = WorkspaceContext(name: "Work", symbol: "briefcase")
+        let contextManager = WorkspaceContextManagerSpy()
+        let viewModel = ContextDetailViewModel(
+            contextManager: contextManager,
+            saveDebounce: .zero
+        )
+
+        viewModel.adopt(context)
+        viewModel.adopt(
+            WorkspaceContext(
+                id: context.id,
+                name: context.name,
+                symbol: context.symbol,
+                applications: [sampleApplication, otherApplication],
+                transition: WorkspaceTransition(
+                    activationPolicy: .hide,
+                    terminalCommand: "echo remote"
+                )
+            )
+        )
+        viewModel.removeApplication(id: sampleApplication.id)
+        await viewModel.pendingSave?.value
+
+        let saved = contextManager.updatedContexts.first
+        #expect(contextManager.updatedContexts.count == 1)
+        #expect(saved?.applications == [otherApplication])
+        #expect(saved?.name == "Work")
+        #expect(saved?.transition.activationPolicy == .hide)
+        #expect(saved?.transition.terminalCommand == "echo remote")
+    }
+
+    @Test("A picker selection keeps existing rows, appends new ones, and drops the rest")
+    func applyApplicationSelectionMergesByBundleIdentifier() async {
+        let kept = WorkspaceApplication(
+            bundleIdentifier: "com.apple.Safari",
+            displayName: "Safari",
+            createNewInstance: true
+        )
+        let removed = WorkspaceApplication(
+            bundleIdentifier: "com.apple.mail",
+            displayName: "Mail"
+        )
+        let added = WorkspaceApplication(
+            bundleIdentifier: "com.apple.Notes",
+            displayName: "Notes"
+        )
+        let context = WorkspaceContext(name: "Work", symbol: "briefcase")
+        let contextManager = WorkspaceContextManagerSpy()
+        let viewModel = ContextDetailViewModel(
+            contextManager: contextManager,
+            saveDebounce: .zero
+        )
+
+        viewModel.adopt(context)
+        viewModel.adopt(
+            WorkspaceContext(
+                id: context.id,
+                name: context.name,
+                symbol: context.symbol,
+                applications: [kept, removed],
+                transition: WorkspaceTransition(
+                    activationPolicy: .hide,
+                    terminalCommand: "echo remote"
+                )
+            )
+        )
+        viewModel.applyApplicationSelection([
+            WorkspaceApplication(
+                bundleIdentifier: kept.bundleIdentifier,
+                displayName: "Renamed Safari",
+                createNewInstance: false
+            ),
+            added
+        ])
+        await viewModel.pendingSave?.value
+
+        let saved = contextManager.updatedContexts.first
+        #expect(contextManager.updatedContexts.count == 1)
+        #expect(saved?.applications == [kept, added])
+        #expect(saved?.applications.first?.id == kept.id)
+        #expect(saved?.applications.first?.createNewInstance == true)
+        #expect(saved?.transition.terminalCommand == "echo remote")
+        #expect(saved?.transition.activationPolicy == .hide)
+    }
+
+    @Test("A picker selection that matches the current list does not save")
+    func applyApplicationSelectionSkipsUnchangedList() async {
+        let context = WorkspaceContext(
+            name: "Work",
+            symbol: "briefcase",
+            applications: [sampleApplication, otherApplication]
+        )
+        let contextManager = WorkspaceContextManagerSpy()
+        let viewModel = ContextDetailViewModel(
+            contextManager: contextManager,
+            saveDebounce: .zero
+        )
+        viewModel.adopt(context)
+
+        viewModel.applyApplicationSelection([
+            WorkspaceApplication(
+                bundleIdentifier: otherApplication.bundleIdentifier,
+                displayName: otherApplication.displayName
+            ),
+            WorkspaceApplication(
+                bundleIdentifier: sampleApplication.bundleIdentifier,
+                displayName: "Renamed Safari"
+            )
+        ])
+        await viewModel.pendingSave?.value
+
+        #expect(contextManager.updatedContexts.isEmpty)
+        #expect(viewModel.draft?.applications == [sampleApplication, otherApplication])
+    }
+
     @Test("Activate saves a pending activation policy before switching")
     func runContextFlushesActivationPolicy() async {
         let context = WorkspaceContext(name: "Work", symbol: "briefcase")
