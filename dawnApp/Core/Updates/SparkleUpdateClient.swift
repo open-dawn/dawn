@@ -243,5 +243,6 @@ extension SparkleUpdateClient: SPUUserDriver {
     func dismissUpdateInstallation() {
         dismissPendingChoices()
         currentUpdate = nil
+        delegate?.appUpdateClientDidCancel(self)
     }
 }
