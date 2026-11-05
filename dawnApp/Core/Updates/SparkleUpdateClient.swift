@@ -115,6 +115,78 @@ final class SparkleUpdateClient: NSObject, AppUpdateClient {
         updateChoice?.resume(returning: .dismiss)
         relaunchChoice?.resume(returning: .dismiss)
     }
+
+    static func unavailabilityReason(from error: any Error) -> AppUpdateUnavailabilityReason {
+        let nsError = error as NSError
+
+        guard let value = nsError.userInfo[SPUNoUpdateFoundReasonKey] as? NSNumber,
+            let reason = SPUNoUpdateFoundReason(rawValue: value.int32Value)
+        else {
+            return .unknown
+        }
+
+        switch reason {
+        case .onLatestVersion:
+            return .currentVersionIsLatest
+        case .onNewerThanLatestVersion:
+            return .currentVersionIsNewer
+        case .systemIsTooOld:
+            return .systemIsTooOld
+        case .systemIsTooNew:
+            return .systemIsTooNew
+        case .hardwareDoesNotSupportARM64:
+            return .unsupportedHardware
+        case .unknown:
+            return .unknown
+        @unknown default:
+            return .unknown
+        }
+    }
+
+    static func failureReason(from error: any Error) -> AppUpdateFailureReason {
+        let nsError = error as NSError
+
+        if containsNetworkError(nsError) {
+            return .networkUnavailable
+        }
+
+        guard nsError.domain == SUSparkleErrorDomain,
+              let rawValue = Int32(exactly: nsError.code),
+              let sparkleError = SUError(rawValue: rawValue)
+        else {
+            return .unknown
+        }
+
+        switch sparkleError {
+        case .insecureFeedURLError, .invalidFeedURLError, .appcastParseError:
+            return .invalidFeed
+
+        case .invalidHostVersionError, .appcastError:
+            return .invalidMetadata
+
+        case .noPublicDSAFoundError, .insufficientSigningError, .invalidUpdaterError, .invalidHostBundleIdentifierError:
+            return .updaterUnavailable
+
+        default:
+            return .unknown
+        }
+    }
+
+    private static func containsNetworkError(_ error: NSError) -> Bool {
+        var currentError: NSError? = error
+
+        var depth = 0
+        while depth < 8, let candidate = currentError {
+            if candidate.domain == NSURLErrorDomain {
+                return true
+            }
+
+            currentError = candidate.userInfo[NSUnderlyingErrorKey] as? NSError
+            depth += 1
+        }
+
+        return false
+    }
 }
 
 extension SparkleUpdateClient: SPUUserDriver {
@@ -160,13 +232,23 @@ extension SparkleUpdateClient: SPUUserDriver {
     func showUpdateNotFoundWithError(_ error: any Error) async {
         checkCancellation = nil
         currentUpdate = nil
-        delegate?.appUpdateClientDidFindNoUpdate(self)
+
+        delegate?.appUpdateClient(self, didFindNoUpdate: Self.unavailabilityReason(from: error))
     }
 
     func showUpdaterError(_ error: any Error) async {
         checkCancellation = nil
         downloadCancellation = nil
-        delegate?.appUpdateClient(self, didFailWithError: error)
+
+        let description = String(describing: error)
+
+        #log(
+            "Updater operation failed: \(description, privacy: .private)",
+            level: .error,
+            category: .appLifecycle
+        )
+
+        delegate?.appUpdateClient(self, didFailWith: Self.failureReason(from: error))
     }
 
     func showDownloadInitiated(cancellation: @escaping () -> Void) {

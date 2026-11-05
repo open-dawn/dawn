@@ -30,7 +30,7 @@ final class AppUpdaterService: AppUpdating {
         }
 
         return switch state {
-        case .idle, .upToDate, .failed:
+        case .idle, .updateUnavailable, .failed:
             true
         case .checking, .updateAvailable, .downloading, .extracting, .readyToInstall, .installing:
             false
@@ -57,7 +57,7 @@ final class AppUpdaterService: AppUpdating {
 
             #log("Failed to start updater: \(description, privacy: .private)", level: .error, category: .appLifecycle)
 
-            state = .failed(message: "Updates are temporarily unavailable")
+            state = .failed(reason: .updaterUnavailable)
         }
     }
 
@@ -97,7 +97,7 @@ final class AppUpdaterService: AppUpdating {
             activeUpdate = nil
             state = .idle
 
-        case .idle, .upToDate, .installing, .failed:
+        case .idle, .updateUnavailable, .installing, .failed:
             return
         }
     }
@@ -113,9 +113,9 @@ extension AppUpdaterService: AppUpdateClientDelegate {
         state = .updateAvailable(update)
     }
 
-    func appUpdateClientDidFindNoUpdate(_ client: any AppUpdateClient) {
+    func appUpdateClient(_ client: any AppUpdateClient, didFindNoUpdate reason: AppUpdateUnavailabilityReason) {
         activeUpdate = nil
-        state = .upToDate
+        state = .updateUnavailable(reason: reason)
     }
 
     func appUpdateClient(_ client: any AppUpdateClient, didBeginDownloading update: AvailableAppUpdate) {
@@ -168,12 +168,8 @@ extension AppUpdaterService: AppUpdateClientDelegate {
         state = .idle
     }
 
-    func appUpdateClient(_ client: any AppUpdateClient, didFailWithError error: any Error) {
-        let description = String(describing: error)
-
-        #log("Updater operation failed: \(description, privacy: .private)", level: .error, category: .appLifecycle)
-
+    func appUpdateClient(_ client: any AppUpdateClient, didFailWith reason: AppUpdateFailureReason) {
         activeUpdate = nil
-        state = .failed(message: "The update couldn't be completed. Please try again.")
+        state = .failed(reason: reason)
     }
 }

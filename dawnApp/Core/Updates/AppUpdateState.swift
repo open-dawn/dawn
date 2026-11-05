@@ -19,14 +19,31 @@ enum AppUpdateProgress: Equatable, Sendable {
     case fraction(Double)
 }
 
+enum AppUpdateUnavailabilityReason: Equatable, Sendable {
+    case currentVersionIsLatest
+    case currentVersionIsNewer
+    case systemIsTooOld
+    case systemIsTooNew
+    case unsupportedHardware
+    case unknown
+}
+
+enum AppUpdateFailureReason: Equatable, Sendable {
+    case updaterUnavailable
+    case networkUnavailable
+    case invalidFeed
+    case invalidMetadata
+    case unknown
+}
+
 enum AppUpdateState: Equatable, Sendable {
     case idle
     case checking
-    case upToDate
+    case updateUnavailable(reason: AppUpdateUnavailabilityReason)
     case updateAvailable(AvailableAppUpdate)
     case downloading(AvailableAppUpdate, progress: AppUpdateProgress)
     case extracting(AvailableAppUpdate, progress: AppUpdateProgress)
     case readyToInstall(AvailableAppUpdate)
     case installing(AvailableAppUpdate)
-    case failed(message: String)
+    case failed(reason: AppUpdateFailureReason)
 }
