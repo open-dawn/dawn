@@ -152,7 +152,7 @@ struct AppShellView: View {
 
                 await refreshContextsAndResolvePendingRoute()
             }
-            .sheet( // PIN-139 Change in future with new creation sheet
+            .sheet(
                 isPresented: Binding<Bool>(
                     get: { viewModel.isCreatingOrEditing },
                     set: { isPresented in
@@ -169,7 +169,7 @@ struct AppShellView: View {
                     }
                 },
                 content: {
-                    ContextCreatorView(context: viewModel.contextBeingEdited)
+                    ContextCreatorView()
                 }
             )
             .alert("Couldn't Open Context", isPresented: isShowingNavigationError) {
