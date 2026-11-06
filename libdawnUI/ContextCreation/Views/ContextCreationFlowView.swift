@@ -5,9 +5,7 @@
 //  Created by Rafael Venetikides on 20/10/26.
 //
 
-import AppKit
 import SwiftUI
-import UniformTypeIdentifiers
 
 public struct ContextCreationFlowView: View {
     private enum Step: Equatable {
@@ -17,28 +15,11 @@ public struct ContextCreationFlowView: View {
         case confirmation
     }
 
-    private enum ApplicationImportError: LocalizedError {
-        case invalidApplication
-        case missingBundleIdentifier
-
-        var errorDescription: String? {
-            switch self {
-            case .invalidApplication:
-                "The selected item is not a valid application."
-            case .missingBundleIdentifier:
-                "The selected application has no bundle identifier."
-            }
-        }
-    }
-
     @State private var step: Step = .identity
     @State private var draft = ContextCreationDraft()
     @State private var createdContextID: UUID?
     @State private var isPerformingOperation = false
     @State private var operationError: String?
-    @State private var applications: [ContextCreationApplicationItem] = []
-    @State private var isApplicationImporterPresented = false
-    @State private var isLoadingApplications = false
 
     private let loadApplications: @MainActor () async throws -> [ContextCreationApplication]
     private let onCreate: @MainActor (ContextCreationRequest) async throws -> UUID
@@ -77,14 +58,6 @@ public struct ContextCreationFlowView: View {
         )
     }
 
-    private var selectedApplications: [ContextCreationApplication] {
-        draft.selectedApplicationIDs.compactMap { selectedID in
-            applications.first {
-                $0.id == selectedID
-            }?.application
-        }
-    }
-
     public var body: some View {
         VStack(spacing: 24) {
             header
@@ -100,17 +73,8 @@ public struct ContextCreationFlowView: View {
         } message: {
             Text(operationError ?? "")
         }
-        .fileImporter(
-            isPresented: $isApplicationImporterPresented,
-            allowedContentTypes: [.applicationBundle]
-        ) { result in
-            handleApplicationSelection(result)
-        }
         .onChange(of: operationError != nil) { _, isPresented in
             onModalPresentationChange(.operationError, isPresented)
-        }
-        .onChange(of: isApplicationImporterPresented) { _, isPresented in
-            onModalPresentationChange(.applicationImporter, isPresented)
         }
         .onDisappear {
             onModalPresentationChange(.operationError, false)
@@ -146,9 +110,6 @@ public struct ContextCreationFlowView: View {
 
                 brand
             }
-            .task {
-                await loadInstalledApplications()
-            }
         }
     }
 
@@ -170,16 +131,18 @@ public struct ContextCreationFlowView: View {
                 )
             }
         case .applications:
-            ContextApplicationsStepView(
-                applications: applications,
-                isLoadingApplications: isLoadingApplications,
-                selectedApplicationIDs: $draft.selectedApplicationIDs,
-                onChooseApplication: {
-                    isApplicationImporterPresented = true
-                },
-                onNext: {
+            ContextApplicationPicker(
+                loadApplications: loadApplications,
+                initialSelection: draft.selectedApplications,
+                confirmTitle: "Next",
+                onConfirm: { selected in
+                    draft.selectedApplications = selected
                     step = .openingBehaviour
-                }
+                },
+                onSelectionChange: { selected in
+                    draft.selectedApplications = selected
+                },
+                onModalPresentationChange: onModalPresentationChange
             )
         case .openingBehaviour:
             ContextOpeningBehaviorStepView(
@@ -208,7 +171,7 @@ extension ContextCreationFlowView {
         let request = ContextCreationRequest(
             name: name,
             symbolName: symbol,
-            applications: selectedApplications,
+            applications: draft.selectedApplications,
             openingBehavior: draft.openingBehaviour
         )
 
@@ -262,107 +225,5 @@ extension ContextCreationFlowView {
                 operationError = error.localizedDescription
             }
         }
-    }
-
-    private func handleApplicationSelection(_ result: Result<URL, Error>) {
-        do {
-            let applicationURL = try result.get()
-            try addApplication(at: applicationURL)
-        } catch CocoaError.userCancelled {
-            return
-        } catch {
-            operationError = error.localizedDescription
-        }
-    }
-
-    private func addApplication(at applicationURL: URL) throws {
-        guard let bundle = Bundle(url: applicationURL) else {
-            throw ApplicationImportError.invalidApplication
-        }
-
-        guard let bundleIdentifier = bundle.bundleIdentifier else {
-            throw ApplicationImportError.missingBundleIdentifier
-        }
-
-        if let existingApplication = applications.first(where: {
-            $0.application.bundleIdentifier == bundleIdentifier
-        }) {
-            selectApplicationIfNeeded(existingApplication.id)
-            return
-        }
-
-        let displayName =
-            bundle.object(
-                forInfoDictionaryKey: "CFBundleDisplayName"
-            ) as? String ?? bundle.object(
-                forInfoDictionaryKey: "CFBundleName"
-            ) as? String ?? applicationURL.deletingPathExtension().lastPathComponent
-
-        let application = ContextCreationApplication(
-            bundleIdentifier: bundleIdentifier,
-            displayName: displayName,
-            applicationURL: applicationURL
-        )
-
-        guard let item = makeItem(application) else {
-            throw ApplicationImportError.invalidApplication
-        }
-
-        applications.append(item)
-        draft.selectedApplicationIDs.append(item.id)
-    }
-
-    private func selectApplicationIfNeeded(_ applicationID: UUID) {
-        guard !draft.selectedApplicationIDs.contains(applicationID) else {
-            return
-        }
-
-        draft.selectedApplicationIDs.append(applicationID)
-    }
-
-    private func loadInstalledApplications() async {
-        guard !isLoadingApplications else {
-            return
-        }
-
-        isLoadingApplications = true
-        defer {
-            isLoadingApplications = false
-        }
-
-        do {
-            let installedApplications = try await loadApplications()
-
-            let existingBundleIdentifiers = Set(
-                applications.map {
-                    $0.application.bundleIdentifier
-                }
-            )
-
-            let newApplications = installedApplications.filter {
-                !existingBundleIdentifiers.contains($0.bundleIdentifier)
-            }.compactMap { application in
-                makeItem(application)
-            }
-
-            applications.append(contentsOf: newApplications)
-        } catch {
-            operationError = error.localizedDescription
-        }
-    }
-
-    private func makeItem(
-        _ application: ContextCreationApplication
-    ) -> ContextCreationApplicationItem? {
-        guard let applicationURL = application.applicationURL else {
-            return nil
-        }
-
-        return ContextCreationApplicationItem(
-            application: application,
-            icon: NSWorkspace.shared.icon(
-                forFile: applicationURL.path(percentEncoded: false)
-            )
-        )
     }
 }

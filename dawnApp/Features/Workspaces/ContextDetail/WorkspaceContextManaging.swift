@@ -6,11 +6,15 @@
 //
 
 import Foundation
+import libdawn
 
 @MainActor
 protocol WorkspaceContextManaging: AnyObject {
     func switchContext(id: UUID) async throws
     func deleteContext(id: UUID) async throws
+    func archiveContext(id: UUID) async throws
+    func unarchiveContext(id: UUID) async throws
+    func updateContext(_ context: WorkspaceContext) async throws
 }
 
 extension SettingsContextStore: WorkspaceContextManaging {}

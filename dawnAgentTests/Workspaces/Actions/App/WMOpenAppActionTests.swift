@@ -93,7 +93,11 @@ struct WMOpenAppActionTests {
                                            displayName: "Safari",
                                            applicationURL: URL(filePath: "Applications/Safari.app"))
         let fakeWorkspace = FakeWorkspace()
-        let action = WMOpenAppAction(app: mockApp, workspace: fakeWorkspace)
+        let action = WMOpenAppAction(
+            app: mockApp,
+            workspace: fakeWorkspace,
+            provider: FakeAppProvider()
+        )
 
         try #require(mockApp.applicationURL != nil)
         await #expect(throws: Never.self) { try await action.execute() }
@@ -113,7 +117,11 @@ struct WMOpenAppActionTests {
             promptsUserIfNeeded: true
         )
         let fakeWorkspace = FakeWorkspace()
-        let action = WMOpenAppAction(app: mockApp, workspace: fakeWorkspace)
+        let action = WMOpenAppAction(
+            app: mockApp,
+            workspace: fakeWorkspace,
+            provider: FakeAppProvider()
+        )
 
         try await action.execute()
 

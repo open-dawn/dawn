@@ -7,23 +7,9 @@
 
 import Foundation
 import SwiftUI
+import libdawn
 
 struct ContextIdentityStepView: View {
-    private static let symbols = [
-        "gamecontroller.fill",
-        "network",
-        "apple.logo",
-        "playstation.logo",
-        "shippingbox",
-        "eraser",
-        "scribble",
-        "pencil.tip.crop.circle",
-        "folder",
-        "paperplane",
-        "externaldrive",
-        "document",
-    ]
-
     @Binding var name: String
     @Binding var selectedSymbolName: String?
 
@@ -75,8 +61,8 @@ struct ContextIdentityStepView: View {
                 .font(DawnTextStyle.fieldLabel)
 
             LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 4), count: 5)) {
-                ForEach(Self.symbols, id: \.self) { symbolName in
-                    symbolButton(symbolName)
+                ForEach(ContextSymbols.allCases, id: \.self) { symbolName in
+                    symbolButton(symbolName.rawValue)
                 }
             }
         }
