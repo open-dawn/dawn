@@ -52,7 +52,8 @@ extension ContextCreatorView {
                     displayName: application.displayName,
                     applicationURL: application.applicationURL
                 )
-            }
+            },
+            transition: request.transition
         )
     }
 

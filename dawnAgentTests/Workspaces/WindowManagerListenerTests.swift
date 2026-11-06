@@ -82,17 +82,22 @@ struct WindowManagerListenerTests {
             bundleIdentifier: "com.apple.Safari",
             displayName: "Safari"
         )
+        let transition = WorkspaceTransition(
+            activationPolicy: .merge
+        )
 
         let payload = CreateContextEvent(
             name: "Work",
             symbol: "briefcase",
-            applications: [application]
+            applications: [application],
+            transition: transition
         )
 
         let createdContext = WorkspaceContext(
             name: payload.name,
             symbol: payload.symbol,
-            applications: payload.applications
+            applications: payload.applications,
+            transition: payload.transition
         )
 
         let contextManager = FakeContextManager()
@@ -571,14 +576,18 @@ final class FakeContextManager: WorkspaceManaging {
         workspaceActivity
     }
 
-    func createContext(name: String, symbol: String, applications: [WorkspaceApplication]) async throws
-        -> WorkspaceContext
-    {
+    func createContext(
+        name: String,
+        symbol: String,
+        applications: [WorkspaceApplication],
+        transition: WorkspaceTransition
+    ) async throws -> WorkspaceContext {
         createPayloads.append(
             CreateContextEvent(
                 name: name,
                 symbol: symbol,
-                applications: applications
+                applications: applications,
+                transition: transition
             )
         )
 
@@ -591,7 +600,8 @@ final class FakeContextManager: WorkspaceManaging {
             ?? WorkspaceContext(
                 name: name,
                 symbol: symbol,
-                applications: applications
+                applications: applications,
+                transition: transition
             )
 
         contexts.append(context)

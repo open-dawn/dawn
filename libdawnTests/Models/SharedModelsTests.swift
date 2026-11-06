@@ -65,6 +65,25 @@ struct SharedModelsTests {
         #expect(decoded.isArchived == false)
     }
 
+    @Test("Create context event defaults transition when decoding legacy payloads")
+    func createContextEventDefaultsMissingTransition() throws {
+        let legacyJSON = Data("""
+        {
+            "name": "Legacy",
+            "symbol": "book",
+            "applications": []
+        }
+        """.utf8)
+
+        let decoded = try JSONDecoder().decode(
+            CreateContextEvent.self,
+            from: legacyJSON
+        )
+
+        #expect(decoded.transition == .default)
+        #expect(decoded.transition.activationPolicy == .hide)
+    }
+
     @Test("Workspace context is active by default")
     func workspaceContextIsActiveByDefault() {
         let context = WorkspaceContext(name: "Study", symbol: "book")

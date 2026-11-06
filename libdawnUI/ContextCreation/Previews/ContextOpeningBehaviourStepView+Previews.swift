@@ -2,29 +2,29 @@
 //  ContextOpeningBehaviourStepView+Previews.swift
 //  dawn
 //
-//  Created by Rafael Venetikides on 21/10/26.
-//
 
 #if DEBUG
 
+import libdawn
 import SwiftUI
 
 private struct ContextOpeningBehaviorStepPreview: View {
-    @State private var selectedBehavior: ContextOpeningBehavior = .hideOthers
+    @State private var selectedPolicy: WorkspaceActivationPolicy = .hide
 
     var body: some View {
         ContextOpeningBehaviorStepView(
-            selectedBehavior: $selectedBehavior,
+            selectedPolicy: $selectedPolicy,
             onFinish: {}
         )
+        .frame(width: 320, height: 600)
         .padding(16)
-        .frame(width: 320)
-        .background(.regularMaterial)
-        .preferredColorScheme(.dark)
+        .background {
+            DawnColors.primaryBackground
+        }
     }
 }
 
-#Preview("Opening behavior") {
+#Preview("Opening Behaviour Step") {
     ContextOpeningBehaviorStepPreview()
 }
 

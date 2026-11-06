@@ -95,7 +95,8 @@ final class ContextCreatorViewModel {
                 try await contextSaver.createContext(
                     name: context.name,
                     symbol: context.symbol,
-                    applications: context.applications
+                    applications: context.applications,
+                    transition: context.transition
                 )
             case .edit:
                 try await contextSaver.updateContext(context)

@@ -302,9 +302,31 @@ struct SettingsStoreTests {
         #expect(created.name == "Study")
         #expect(created.symbol == "book")
         #expect(created.applications == [applications])
+        #expect(created.transition == .default)
         #expect(created.isArchived == false)
         #expect(snapshot.contexts == [created])
         #expect(savedDocuments == [snapshot])
+    }
+
+    @Test("Create context persists the requested transition")
+    func createContextPersistsTransition() async throws {
+        let repository = SettingsRepositorySpy()
+        let sut = try await SettingsStore(repository: repository)
+        let transition = WorkspaceTransition(
+            activationPolicy: .close,
+            terminalCommand: "echo close"
+        )
+
+        let created = try await sut.createContext(
+            name: "Focus",
+            symbol: "target",
+            transition: transition
+        )
+
+        let snapshot = await sut.snapshot()
+
+        #expect(created.transition == transition)
+        #expect(snapshot.contexts == [created])
     }
 
     @Test("Create context does not save or modify cache when validation fails")

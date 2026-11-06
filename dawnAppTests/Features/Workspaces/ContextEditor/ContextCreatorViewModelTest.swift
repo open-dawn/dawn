@@ -209,7 +209,8 @@ struct ContextCreatorViewModelTests {
                 ContextCreatorSpy.Request(
                     name: "Work",
                     symbol: "briefcase",
-                    applications: [application]
+                    applications: [application],
+                    transition: .default
                 )
             ]
         )
@@ -392,6 +393,7 @@ private final class ContextCreatorSpy: ContextSaving {
         let name: String
         let symbol: String
         let applications: [WorkspaceApplication]
+        let transition: WorkspaceTransition
     }
 
     private(set) var requests: [Request] = []
@@ -405,13 +407,15 @@ private final class ContextCreatorSpy: ContextSaving {
     func createContext(
         name: String,
         symbol: String,
-        applications: [WorkspaceApplication]
+        applications: [WorkspaceApplication],
+        transition: WorkspaceTransition
     ) async throws -> UUID {
         requests.append(
             Request(
                 name: name,
                 symbol: symbol,
-                applications: applications
+                applications: applications,
+                transition: transition
             )
         )
 

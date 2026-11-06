@@ -449,7 +449,8 @@ private final class OutOfOrderContextProvider: WorkspaceManaging {
     func createContext(
         name: String,
         symbol: String,
-        applications: [WorkspaceApplication]
+        applications: [WorkspaceApplication],
+        transition: WorkspaceTransition
     ) async throws -> WorkspaceContext {
         fatalError("Not used by this test")
     }

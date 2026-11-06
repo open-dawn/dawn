@@ -60,12 +60,14 @@ actor SettingsStore {
     func createContext(
         name: String,
         symbol: String,
-        applications: [WorkspaceApplication] = []
+        applications: [WorkspaceApplication] = [],
+        transition: WorkspaceTransition = .default
     ) async throws -> WorkspaceContext {
         let newContext = WorkspaceContext(
             name: name,
             symbol: symbol,
-            applications: applications
+            applications: applications,
+            transition: transition
         )
 
         return try await mutate { candidate in

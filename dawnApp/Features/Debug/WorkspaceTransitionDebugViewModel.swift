@@ -123,21 +123,11 @@
                 let contextID = try await store.createContext(
                     name: name,
                     symbol: symbol,
-                    applications: applications
-                )
-                appendLog("Created context \(contextID.uuidString)")
-
-                let context = WorkspaceContext(
-                    id: contextID,
-                    name: name,
-                    symbol: symbol,
                     applications: applications,
                     transition: transition
                 )
-
-                try await store.updateContext(context)
                 appendLog(
-                    "Updated transition — terminal: \(transition.terminalCommand ?? "nil")"
+                    "Created context \(contextID.uuidString) — terminal: \(transition.terminalCommand ?? "nil")"
                 )
 
                 try await store.switchContext(id: contextID)

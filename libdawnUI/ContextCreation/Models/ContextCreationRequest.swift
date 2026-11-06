@@ -6,6 +6,7 @@
 //
 
 import Foundation
+import libdawn
 
 public enum ContextCreationModal: Hashable, Sendable {
     case operationError
@@ -16,17 +17,21 @@ public struct ContextCreationRequest: Equatable, Sendable {
     public let name: String
     public let symbolName: String
     public let applications: [ContextCreationApplication]
-    public let openingBehavior: ContextOpeningBehavior
+    public let activationPolicy: WorkspaceActivationPolicy
+
+    public var transition: WorkspaceTransition {
+        WorkspaceTransition(activationPolicy: activationPolicy)
+    }
 
     public init(
         name: String,
         symbolName: String,
         applications: [ContextCreationApplication],
-        openingBehavior: ContextOpeningBehavior
+        activationPolicy: WorkspaceActivationPolicy
     ) {
         self.name = name
         self.symbolName = symbolName
         self.applications = applications
-        self.openingBehavior = openingBehavior
+        self.activationPolicy = activationPolicy
     }
 }

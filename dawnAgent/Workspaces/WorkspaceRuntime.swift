@@ -78,9 +78,15 @@ final class WorkspaceRuntime: WorkspaceCoordinating {
     func createContext(
         name: String,
         symbol: String,
-        applications: [WorkspaceApplication]
+        applications: [WorkspaceApplication],
+        transition: WorkspaceTransition = .default
     ) async throws -> WorkspaceContext {
-        let context = try await contextManager.createContext(name: name, symbol: symbol, applications: applications)
+        let context = try await contextManager.createContext(
+            name: name,
+            symbol: symbol,
+            applications: applications,
+            transition: transition
+        )
 
         await refresh()
         return context
