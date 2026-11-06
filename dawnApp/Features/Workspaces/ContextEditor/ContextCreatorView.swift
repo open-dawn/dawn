@@ -1,117 +1,62 @@
-import libdawn
 import SwiftUI
+import libdawn
+import libdawnUI
 
 struct ContextCreatorView: View {
     @Environment(SettingsContextStore.self)
     private var contextStore
 
-    private let context: WorkspaceContext?
+    @Environment(\.dismiss)
+    private var dismiss
 
-    init(context: WorkspaceContext? = nil) {
-        self.context = context
+    private let applicationProvider: any InstalledApplicationProviding
+
+    init(
+        applicationProvider: any InstalledApplicationProviding = ApplicationsDirectoryProvider(),
+    ) {
+        self.applicationProvider = applicationProvider
     }
 
     var body: some View {
-        ContextCreatorContent(
-            contextSaver: contextStore,
-            context: context
+        ContextCreationFlowView(
+            loadApplications: loadApplications,
+            createContext: createContext,
+            activateContext: activateContext,
+            onExit: {
+                dismiss()
+            }
         )
     }
 }
 
-private struct ContextCreatorContent: View {
-    @State private var viewModel: ContextCreatorViewModel
-    @Environment(\.dismiss) private var dismiss
-
-    init(contextSaver: any ContextSaving, context: WorkspaceContext?) {
-        _viewModel = State(
-            initialValue: ContextCreatorViewModel(
-                contextSaver: contextSaver,
-                context: context
+extension ContextCreatorView {
+    fileprivate func loadApplications() async throws -> [ContextCreationApplication] {
+        try await applicationProvider.applications().map { application in
+            ContextCreationApplication(
+                id: application.id,
+                bundleIdentifier: application.bundleIdentifier,
+                displayName: application.displayName,
+                applicationURL: application.applicationURL
             )
+        }
+    }
+
+    fileprivate func createContext(_ request: ContextCreationRequest) async throws -> UUID {
+        try await contextStore.createContext(
+            name: request.name,
+            symbol: request.symbolName,
+            applications: request.applications.map { application in
+                WorkspaceApplication(
+                    id: application.id,
+                    bundleIdentifier: application.bundleIdentifier,
+                    displayName: application.displayName,
+                    applicationURL: application.applicationURL
+                )
+            }
         )
     }
 
-    var body: some View {
-        VStack {
-            Form {
-                Section("Context information") {
-                    TextField("Context name", text: $viewModel.context.name)
-                    TextField("Icon", text: $viewModel.context.symbol)
-                }
-
-                Section("Apps to open") {
-                    HStack {
-                        Text("Insert a new app")
-                        Spacer()
-                        Button {
-                            Task {
-                                await viewModel.addApplication()
-                            }
-                        } label: {
-                            Image(systemName: "plus")
-                        }
-                        .disabled(viewModel.isLoading)
-                    }
-
-                    ForEach($viewModel.context.applications, id: \.id) { $application in
-                        appRow($application)
-                    }
-                }
-            }
-            .padding(16)
-            .formStyle(.grouped)
-
-            if let error = viewModel.applicationSelectionError {
-                Text(error.localizedDescription)
-                    .foregroundStyle(.red)
-            }
-
-            if viewModel.saveError != nil {
-                Text("The context could not be saved. Check its fields and try again")
-                    .foregroundStyle(.red)
-            }
-
-            Button(viewModel.isEditing ? "Save changes" : "Create the context") {
-                Task {
-                    if await viewModel.saveContext() {
-                        dismiss()
-                    }
-                }
-            }
-            .disabled(viewModel.isLoading)
-            .padding(.bottom, 35)
-        }
-    }
-
-    @ViewBuilder
-    private func appRow(_ app: Binding<WorkspaceApplication>) -> some View {
-        HStack {
-            VStack(alignment: .leading) {
-                Text(app.wrappedValue.displayName)
-
-                Text(app.wrappedValue.bundleIdentifier)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-            }
-
-            Spacer()
-
-            Toggle(
-                "New instance",
-                isOn: app.createsNewApplicationInstance
-            )
-            .toggleStyle(.checkbox)
-
-            Button(
-                "Delete \(app.wrappedValue.displayName)",
-                systemImage: "trash",
-                role: .destructive
-            ) {
-                viewModel.removeApp(app.wrappedValue.id)
-            }
-            .tint(.red)
-            .labelStyle(.iconOnly)
-        }
+    fileprivate func activateContext(_ contextID: UUID) async throws {
+        try await contextStore.switchContext(id: contextID)
     }
 }
