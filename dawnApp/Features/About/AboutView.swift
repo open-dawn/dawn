@@ -62,12 +62,15 @@ struct AboutView<Updater: AppUpdating>: View {
 
             HStack(alignment: .bottom, spacing: 16) {
                 DButton(style: .secondary) {
-                    NSWorkspace.shared.open(content.ticket.marketingURL)
+                    NSWorkspace.shared.open(feedbackIssueURL)
                 } content: {
                     Text("Give us Feedback")
                 } leading: {
                     Image(systemName: "bubble.left.and.bubble.right")
                 }
+                .accessibilityHint(
+                    "Opens a feedback form in your browser"
+                )
 
                 updateControls
             }
@@ -85,6 +88,22 @@ struct AboutView<Updater: AppUpdating>: View {
 }
 
 extension AboutView {
+    private var feedbackIssueURL: URL {
+        let version = ProcessInfo.processInfo.operatingSystemVersion
+        let macosVersion = [
+            version.majorVersion,
+            version.minorVersion,
+            version.patchVersion,
+        ]
+        .map(String.init)
+        .joined(separator: ".")
+
+        return content.ticket.feedbackIssueURL(
+            appVersion: content.appVersion,
+            macosVersion: macosVersion
+        )
+    }
+
     @ViewBuilder
     private var updateControls: some View {
         switch updater.state {

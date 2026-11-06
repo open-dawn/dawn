@@ -4,7 +4,7 @@ Thank you for contributing. Participation in this project is covered by the [Cod
 
 ## Issues
 
-Use the issue forms for bug reports and feature requests.
+Use the issue forms for feedback, bug reports, and feature requests.
 
 Security vulnerabilities do not belong in a public issue. Report them as described in [SECURITY.md](SECURITY.md).
 

@@ -1,0 +1,39 @@
+name: Feedback
+description: Share feedback about using DAWN
+title: "[Feedback]: "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to share this. For a specific problem, use the bug report form. For a change you want, use the feature request form. Security vulnerabilities belong in a private report. See the [security policy](https://github.com/open-dawn/dawn/blob/main/SECURITY.md).
+  - type: textarea
+    id: feedback
+    attributes:
+      label: Feedback
+      description: What you want us to know about using Dawn.
+    validations:
+      required: true
+  - type: input
+    id: app-version
+    attributes:
+      label: Dawn version
+      description: The version shown in About. Filled in when opened from the app.
+      placeholder: "1.0.0"
+    validations:
+      required: false
+  - type: input
+    id: build
+    attributes:
+      label: Build
+      description: The commit shown in About. Filled in when opened from the app.
+      placeholder: "2b94d72 stable"
+    validations:
+      required: false
+  - type: input
+    id: macos
+    attributes:
+      label: macOS version
+      description: The macOS version where you used Dawn. Filled in when opened from the app.
+      placeholder: "26.0"
+    validations:
+      required: false
