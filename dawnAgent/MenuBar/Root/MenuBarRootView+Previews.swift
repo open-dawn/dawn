@@ -100,12 +100,14 @@ private final class PreviewContextProvider: WorkspaceManaging {
     func createContext(
         name: String,
         symbol: String,
-        applications: [WorkspaceApplication]
+        applications: [WorkspaceApplication],
+        transition: WorkspaceTransition
     ) async throws -> WorkspaceContext {
         let context = WorkspaceContext(
             name: name,
             symbol: symbol,
-            applications: applications
+            applications: applications,
+            transition: transition
         )
 
         contexts.append(context)

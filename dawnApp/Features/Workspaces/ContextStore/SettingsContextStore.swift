@@ -113,11 +113,21 @@ final class SettingsContextStore: Listener {
     }
 
     @discardableResult
-    func createContext(name: String, symbol: String, applications: [WorkspaceApplication])
-        async throws(SettingsContextStoreError) -> UUID
-    {
+    func createContext(
+        name: String,
+        symbol: String,
+        applications: [WorkspaceApplication],
+        transition: WorkspaceTransition = .default
+    ) async throws(SettingsContextStoreError) -> UUID {
         try await askForAcknowledgement(
-            .createContext(CreateContextEvent(name: name, symbol: symbol, applications: applications))
+            .createContext(
+                CreateContextEvent(
+                    name: name,
+                    symbol: symbol,
+                    applications: applications,
+                    transition: transition
+                )
+            )
         )
     }
 

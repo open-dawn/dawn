@@ -26,10 +26,18 @@ final class ContextManager: WorkspaceManaging {
         )
     }
 
-    func createContext(name: String, symbol: String, applications: [WorkspaceApplication]) async throws
-        -> WorkspaceContext
-    {
-        let context = try await store.createContext(name: name, symbol: symbol, applications: applications)
+    func createContext(
+        name: String,
+        symbol: String,
+        applications: [WorkspaceApplication],
+        transition: WorkspaceTransition = .default
+    ) async throws -> WorkspaceContext {
+        let context = try await store.createContext(
+            name: name,
+            symbol: symbol,
+            applications: applications,
+            transition: transition
+        )
 
         await publishAvailableContexts()
         return context
@@ -89,7 +97,8 @@ protocol ContextProviding {
     func createContext(
         name: String,
         symbol: String,
-        applications: [WorkspaceApplication]
+        applications: [WorkspaceApplication],
+        transition: WorkspaceTransition
     ) async throws -> WorkspaceContext
     func updateContext(_ context: WorkspaceContext) async throws
     func deleteContext(id: UUID) async throws

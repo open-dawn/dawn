@@ -472,9 +472,15 @@ private final class ContextProviderStub: WorkspaceManaging {
     func createContext(
         name: String,
         symbol: String,
-        applications: [WorkspaceApplication]
+        applications: [WorkspaceApplication],
+        transition: WorkspaceTransition
     ) async throws -> WorkspaceContext {
-        WorkspaceContext(name: name, symbol: symbol, applications: applications)
+        WorkspaceContext(
+            name: name,
+            symbol: symbol,
+            applications: applications,
+            transition: transition
+        )
     }
 
     func updateContext(_ context: WorkspaceContext) async throws {

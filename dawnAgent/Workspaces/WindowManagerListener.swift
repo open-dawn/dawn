@@ -97,7 +97,8 @@ final class WindowManagerListener: Listener {
                 let context = try await workspace.createContext(
                     name: payload.name,
                     symbol: payload.symbol,
-                    applications: payload.applications
+                    applications: payload.applications,
+                    transition: payload.transition
                 )
 
                 reply(

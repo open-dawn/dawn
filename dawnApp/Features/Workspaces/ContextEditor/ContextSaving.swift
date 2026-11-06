@@ -14,7 +14,8 @@ protocol ContextSaving: AnyObject {
     func createContext(
         name: String,
         symbol: String,
-        applications: [WorkspaceApplication]
+        applications: [WorkspaceApplication],
+        transition: WorkspaceTransition
     ) async throws -> UUID
 
     func updateContext(_ context: WorkspaceContext) async throws
