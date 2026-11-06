@@ -8,7 +8,6 @@
 import Foundation
 import SwiftUI
 import libdawn
-import libdawnUI
 
 struct ContextIdentityStepView: View {
     @Binding var name: String

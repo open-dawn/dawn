@@ -197,6 +197,8 @@ targets:
       configs:
         Debug:
           ENABLE_TESTABILITY: YES
+    dependencies:
+      - target: libdawn
     postCompileScripts:
       - *swiftlint
     scheme:
