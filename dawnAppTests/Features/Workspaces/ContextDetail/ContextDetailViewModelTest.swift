@@ -721,7 +721,7 @@ struct ContextDetailViewModelTests {
         let kept = WorkspaceApplication(
             bundleIdentifier: "com.apple.Safari",
             displayName: "Safari",
-            createNewInstance: true
+            createsNewApplicationInstance: true
         )
         let removed = WorkspaceApplication(
             bundleIdentifier: "com.apple.mail",
@@ -755,7 +755,7 @@ struct ContextDetailViewModelTests {
             WorkspaceApplication(
                 bundleIdentifier: kept.bundleIdentifier,
                 displayName: "Renamed Safari",
-                createNewInstance: false
+                createsNewApplicationInstance: false
             ),
             added
         ])
@@ -765,7 +765,7 @@ struct ContextDetailViewModelTests {
         #expect(contextManager.updatedContexts.count == 1)
         #expect(saved?.applications == [kept, added])
         #expect(saved?.applications.first?.id == kept.id)
-        #expect(saved?.applications.first?.createNewInstance == true)
+        #expect(saved?.applications.first?.createsNewApplicationInstance == true)
         #expect(saved?.transition.terminalCommand == "echo remote")
         #expect(saved?.transition.activationPolicy == .hide)
     }
