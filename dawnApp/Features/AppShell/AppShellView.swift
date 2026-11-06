@@ -18,7 +18,7 @@ struct AppShellView: View {
         )
     }
 
-    private struct AppShellContent: View {
+    fileprivate struct AppShellContent: View {
         let store: SettingsContextStore
 
         @Environment(SettingsEventBusService.self)
@@ -123,15 +123,11 @@ struct AppShellView: View {
                 navigation.contextsDidChange(contexts)
                 viewModel.reconcileActiveContext(with: contexts.filter { !$0.isArchived })
             }
-            .onChange(of: viewModel.error?.localizedDescription) { _, message in
-                pushSidebarError(message)
+            .onChange(of: viewModel.error) { previous, error in
+                presentSidebarError(previous, error)
             }
-            .onChange(of: store.error) { _, error in
-                guard error != .notConnected else {
-                    return
-                }
-
-                pushSidebarError(error?.localizedDescription)
+            .onChange(of: store.error) { previous, error in
+                presentSidebarError(previous, error, allowsDisconnected: false)
             }
             .onChange(of: settingsStore.error) { _, error in
                 guard error != .notConnected else {
@@ -202,89 +198,109 @@ struct AppShellView: View {
             }
         }
 
+        private func presentSidebarError(
+            _ previous: SettingsContextStoreError?,
+            _ error: SettingsContextStoreError?,
+            allowsDisconnected: Bool = true
+        ) {
+            if previous?.isEmptyContextName == true {
+                sidebarErrors.removeAll { $0.text == previous?.localizedDescription }
+            }
+
+            // An empty name is shown beside the name field, not in the sidebar.
+            guard error?.isEmptyContextName != true else { return }
+            guard allowsDisconnected || error != .notConnected else { return }
+
+            pushSidebarError(error?.localizedDescription)
+        }
+
         private func dismissSidebarError() {
             if !sidebarErrors.isEmpty {
                 sidebarErrors.removeFirst()
             }
 
-            viewModel.dismissError()
+            if viewModel.error?.isEmptyContextName != true {
+                viewModel.dismissError()
+            }
             store.dismissError()
             settingsStore.dismissError()
             accessibilityPermissionService.dismissError()
         }
+    }
+}
 
-        @ViewBuilder
-        private func detail(for destination: SidebarDestination?) -> some View {
-            switch destination {
-            case let .context(contextID):
-                if let context = store.contexts.first(where: { $0.id == contextID }) {
-                    ContextDetailView(
-                        context: context,
-                        viewModel: viewModel,
-                        interactionsDisabled: interactionsDisabled,
-                        onDelete: { deleted in
-                            if navigation.selectedDestination == .context(deleted.id) {
-                                navigation.selectedDestination = nil
-                            }
+extension AppShellView.AppShellContent {
+    @ViewBuilder
+    fileprivate func detail(for destination: SidebarDestination?) -> some View {
+        switch destination {
+        case let .context(contextID):
+            if let context = store.contexts.first(where: { $0.id == contextID }) {
+                ContextDetailView(
+                    context: context,
+                    viewModel: viewModel,
+                    interactionsDisabled: interactionsDisabled,
+                    onDelete: { deleted in
+                        if navigation.selectedDestination == .context(deleted.id) {
+                            navigation.selectedDestination = nil
                         }
-                    )
-                } else {
-                    ContentUnavailableView(
-                        "Context not available",
-                        systemImage: "rectangle.stack.slash",
-                        description: Text("This context is no longer available.")
-                    )
-                }
-
-            #if DEBUG
-                case .debug:
-                    WorkspaceTransitionDebugView()
-            #endif
-
-            case .settings:
-                SettingsView()
-
-            case .about:
-                AboutView(
-                    content: AboutContent.loadRequired(),
-                    updater: updaterService
+                    }
                 )
-
-            case nil:
+            } else {
                 ContentUnavailableView(
-                    "No context selected",
-                    systemImage: "sidebar.leading",
-                    description: Text("Select a context in the sidebar, or create a new one.")
+                    "Context not available",
+                    systemImage: "rectangle.stack.slash",
+                    description: Text("This context is no longer available.")
                 )
             }
-        }
 
-        private func handleOpenURL(_ url: URL) {
-            guard let route = DawnAppRoute(url: url) else { return }
+        #if DEBUG
+            case .debug:
+                WorkspaceTransitionDebugView()
+        #endif
 
-            let requiresRefresh = navigation.receive(
-                route,
-                availableContexts: store.contexts
+        case .settings:
+            SettingsView()
+
+        case .about:
+            AboutView(
+                content: AboutContent.loadRequired(),
+                updater: updaterService
             )
 
-            guard requiresRefresh, eventBusService.isConnected else {
-                return
-            }
+        case nil:
+            ContentUnavailableView(
+                "No context selected",
+                systemImage: "sidebar.leading",
+                description: Text("Select a context in the sidebar, or create a new one.")
+            )
+        }
+    }
 
-            Task {
-                await refreshContextsAndResolvePendingRoute()
-            }
+    fileprivate func handleOpenURL(_ url: URL) {
+        guard let route = DawnAppRoute(url: url) else { return }
+
+        let requiresRefresh = navigation.receive(
+            route,
+            availableContexts: store.contexts
+        )
+
+        guard requiresRefresh, eventBusService.isConnected else {
+            return
         }
 
-        private func refreshContextsAndResolvePendingRoute() async {
-            await store.refresh()
-            guard navigation.pendingRoute != nil else { return }
+        Task {
+            await refreshContextsAndResolvePendingRoute()
+        }
+    }
 
-            if store.error == nil {
-                navigation.contextRefreshSucceeded(with: store.contexts)
-            } else {
-                navigation.contextRefreshFailed()
-            }
+    fileprivate func refreshContextsAndResolvePendingRoute() async {
+        await store.refresh()
+        guard navigation.pendingRoute != nil else { return }
+
+        if store.error == nil {
+            navigation.contextRefreshSucceeded(with: store.contexts)
+        } else {
+            navigation.contextRefreshFailed()
         }
     }
 }

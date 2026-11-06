@@ -843,6 +843,73 @@ struct ContextDetailViewModelTests {
         #expect(viewModel.operationInProgress == nil)
     }
 
+    @Test("Entering a name clears an empty context name error")
+    func enteringNameClearsEmptyContextNameError() async {
+        let context = WorkspaceContext(name: "Work", symbol: "briefcase")
+        let contextManager = WorkspaceContextManagerSpy()
+        contextManager.error = SettingsContextStoreError.mutationRejected(.emptyContextName)
+        let viewModel = ContextDetailViewModel(
+            contextManager: contextManager,
+            saveDebounce: .zero
+        )
+        viewModel.adopt(context)
+
+        viewModel.setName(" ")
+        await viewModel.pendingSave?.value
+        #expect(viewModel.error == .mutationRejected(.emptyContextName))
+
+        viewModel.setName("Workspace")
+        #expect(viewModel.error == nil)
+
+        await viewModel.pendingSave?.value
+        #expect(viewModel.error == nil)
+        #expect(viewModel.draft?.name == "Workspace")
+    }
+
+    @Test("Whitespace does not clear an empty context name error")
+    func whitespaceKeepsEmptyContextNameError() async {
+        let context = WorkspaceContext(name: "Work", symbol: "briefcase")
+        let contextManager = WorkspaceContextManagerSpy()
+        contextManager.error = SettingsContextStoreError.mutationRejected(.emptyContextName)
+        let viewModel = ContextDetailViewModel(
+            contextManager: contextManager,
+            saveDebounce: .zero
+        )
+        viewModel.adopt(context)
+
+        viewModel.setName("")
+        await viewModel.pendingSave?.value
+        #expect(viewModel.error == .mutationRejected(.emptyContextName))
+
+        viewModel.setName(" \n ")
+        #expect(viewModel.error == .mutationRejected(.emptyContextName))
+
+        await viewModel.pendingSave?.value
+        #expect(viewModel.error == .mutationRejected(.emptyContextName))
+        #expect(viewModel.draft?.name == " \n ")
+    }
+
+    @Test("Switching context clears an empty context name error")
+    func adoptingAnotherContextClearsEmptyContextNameError() async {
+        let context = WorkspaceContext(name: "Work", symbol: "briefcase")
+        let contextManager = WorkspaceContextManagerSpy()
+        contextManager.error = SettingsContextStoreError.mutationRejected(.emptyContextName)
+        let viewModel = ContextDetailViewModel(
+            contextManager: contextManager,
+            saveDebounce: .zero
+        )
+        viewModel.adopt(context)
+
+        viewModel.setName("")
+        await viewModel.pendingSave?.value
+        #expect(viewModel.error == .mutationRejected(.emptyContextName))
+
+        viewModel.adopt(WorkspaceContext(name: "Home", symbol: "house"))
+
+        #expect(viewModel.error == nil)
+        #expect(viewModel.draft?.name == "Home")
+    }
+
     private let sampleApplication = WorkspaceApplication(
         bundleIdentifier: "com.apple.Safari",
         displayName: "Safari"

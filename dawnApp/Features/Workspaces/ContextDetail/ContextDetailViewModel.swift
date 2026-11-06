@@ -162,6 +162,7 @@ extension ContextDetailViewModel {
             saveAgain = false
             draft = snapshot
             committed = snapshot
+            clearEmptyContextNameError()
             return
         }
 
@@ -209,6 +210,7 @@ extension ContextDetailViewModel {
 
         current.name = name
         draft = current
+        if !isBlankContextName(name) { clearEmptyContextNameError() }
         scheduleSave(after: saveDebounce)
     }
 
@@ -316,11 +318,27 @@ extension ContextDetailViewModel {
                 saveAgain = true
             }
         case let .failure(error):
-            self.error = error
+            self.error = resolvedSaveError(error)
             if let saving, draftDiffers(from: saving) {
                 saveAgain = true
             }
         }
+    }
+
+    private func resolvedSaveError(_ error: SettingsContextStoreError) -> SettingsContextStoreError? {
+        if error.isEmptyContextName, !isBlankContextName(draft?.name ?? "") {
+            return nil
+        }
+
+        return error
+    }
+
+    private func clearEmptyContextNameError() {
+        if error?.isEmptyContextName == true { error = nil }
+    }
+
+    private func isBlankContextName(_ name: String) -> Bool {
+        name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
     }
 
     private func payloadToSave() -> WorkspaceContext? {

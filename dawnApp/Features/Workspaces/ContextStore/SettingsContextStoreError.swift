@@ -69,4 +69,12 @@ enum SettingsContextStoreError: Error, Equatable, LocalizedError {
             "Workspace manager returned the wrong context."
         }
     }
+
+    var isEmptyContextName: Bool {
+        guard case .mutationRejected(.emptyContextName) = self else {
+            return false
+        }
+
+        return true
+    }
 }

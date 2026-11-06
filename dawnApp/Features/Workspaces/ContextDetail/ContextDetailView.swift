@@ -56,7 +56,10 @@ struct ContextDetailView: View {
                 )
 
                 HStack(alignment: .top, spacing: 32) {
-                    ContextDetailNameField(name: editedContext.name) { newName in
+                    ContextDetailNameField(
+                        name: editedContext.name,
+                        validationMessage: nameValidationMessage
+                    ) { newName in
                         viewModel.setName(newName)
                     }
 
@@ -135,6 +138,18 @@ struct ContextDetailView: View {
             }
             .presentationBackground(DawnColors.primaryBackground)
         }
+    }
+
+    private var nameValidationMessage: String? {
+        guard viewModel.error?.isEmptyContextName == true else {
+            return nil
+        }
+
+        guard editedContext.name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+            return nil
+        }
+
+        return viewModel.error?.errorDescription
     }
 
     private func loadInstalledApplications() async throws -> [ContextCreationApplication] {
