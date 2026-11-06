@@ -58,29 +58,3 @@ struct ContextDetailActivationPolicyPicker: View {
         .padding(.horizontal, 32)
     }
 }
-
-private extension WorkspaceActivationPolicy {
-    var displaySymbol: String {
-        switch self {
-        case .hide: "eye.slash"
-        case .merge: "interface.window.on.rectangle"
-        case .close: "xmark.seal"
-        }
-    }
-
-    var displayName: String {
-        switch self {
-        case .hide: "Hide others"
-        case .merge: "Merge with others"
-        case .close: "Close others"
-        }
-    }
-
-    var displayDescription: String {
-        switch self {
-        case .hide: "hide other apps windows and remove them from the dock"
-        case .merge: "open this workspaces apps while keeping the others open"
-        case .close: "close all other apps open on your mac"
-        }
-    }
-}
