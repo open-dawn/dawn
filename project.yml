@@ -230,6 +230,7 @@ targets:
       GENERATE_INFOPLIST_FILE: YES
       SWIFT_VERSION: *swiftversion
     dependencies:
+      - target: libdawn
       - target: libdawnUI
     postCompileScripts:
       - *swiftlint

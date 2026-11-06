@@ -7,8 +7,6 @@ import Testing
 import libdawn
 import libdawnUI
 
-@testable import dawnAgent
-
 @Suite("Context opening behavior transition")
 struct OpeningBehaviorTransitionTests {
     @Test(

@@ -2,14 +2,11 @@
 //  ContextOpeningBehavior+WorkspaceTransition.swift
 //  dawn
 //
-//  Created by Longhi on 06/11/26.
-//
 
 import libdawn
-import libdawnUI
 
 extension ContextOpeningBehavior {
-    var activationPolicy: WorkspaceActivationPolicy {
+    public var activationPolicy: WorkspaceActivationPolicy {
         switch self {
         case .onlyOpen:
             .merge
@@ -20,7 +17,7 @@ extension ContextOpeningBehavior {
         }
     }
 
-    var transition: WorkspaceTransition {
+    public var transition: WorkspaceTransition {
         WorkspaceTransition(activationPolicy: activationPolicy)
     }
 }
