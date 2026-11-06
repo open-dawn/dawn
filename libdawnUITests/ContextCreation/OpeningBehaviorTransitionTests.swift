@@ -7,26 +7,21 @@ import Testing
 import libdawn
 import libdawnUI
 
-@Suite("Context opening behavior transition")
+@Suite("Context creation activation policy")
 struct OpeningBehaviorTransitionTests {
-    @Test(
-        "Maps each opening behavior to an activation policy",
-        arguments: [
-            (ContextOpeningBehavior.onlyOpen, WorkspaceActivationPolicy.merge),
-            (.hideOthers, .hide),
-            (.closeOthers, .close),
-        ]
-    )
-    func mapsOpeningBehavior(
-        _ pair: (
-            ContextOpeningBehavior,
-            WorkspaceActivationPolicy
+    @Test("Creation request carries the selected activation policy")
+    func creationRequestCarriesActivationPolicy() {
+        let request = ContextCreationRequest(
+            name: "Focus",
+            symbolName: "target",
+            applications: [],
+            activationPolicy: .merge
         )
-    ) {
-        #expect(pair.0.activationPolicy == pair.1)
+
+        #expect(request.activationPolicy == .merge)
         #expect(
-            pair.0.transition
-                == WorkspaceTransition(activationPolicy: pair.1)
+            request.transition
+                == WorkspaceTransition(activationPolicy: .merge)
         )
     }
 }

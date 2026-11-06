@@ -6,10 +6,11 @@
 //
 
 import Foundation
+import libdawn
 
 struct ContextCreationDraft {
     var name = ""
     var symbolName: String?
     var selectedApplications: [ContextCreationApplication] = []
-    var openingBehaviour: ContextOpeningBehavior = .hideOthers
+    var activationPolicy: WorkspaceActivationPolicy = .hide
 }

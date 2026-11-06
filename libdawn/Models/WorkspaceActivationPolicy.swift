@@ -13,7 +13,7 @@ public enum WorkspaceActivationPolicy: String, Codable, Sendable, Equatable, Cas
     public var displaySymbol: String {
         switch self {
         case .hide: "eye.slash"
-        case .merge: "interface.window.on.rectangle"
+        case .merge: "macwindow.on.rectangle"
         case .close: "xmark.seal"
         }
     }
@@ -21,7 +21,7 @@ public enum WorkspaceActivationPolicy: String, Codable, Sendable, Equatable, Cas
     public var displayName: String {
         switch self {
         case .hide: "Hide others"
-        case .merge: "Merge with others"
+        case .merge: "Only open"
         case .close: "Close others"
         }
     }

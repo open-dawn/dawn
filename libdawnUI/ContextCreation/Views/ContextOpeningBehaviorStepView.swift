@@ -5,10 +5,11 @@
 //  Created by Rafael Venetikides on 21/10/26.
 //
 
+import libdawn
 import SwiftUI
 
 struct ContextOpeningBehaviorStepView: View {
-    @Binding var selectedBehavior: ContextOpeningBehavior
+    @Binding var selectedPolicy: WorkspaceActivationPolicy
 
     let onFinish: () -> Void
 
@@ -21,8 +22,8 @@ struct ContextOpeningBehaviorStepView: View {
             )
 
             VStack(spacing: 24) {
-                ForEach(ContextOpeningBehavior.allCases, id: \.self) { behavior in
-                    behaviorButton(behavior)
+                ForEach(WorkspaceActivationPolicy.allCases, id: \.self) { policy in
+                    policyButton(policy)
                 }
             }
             .padding(.horizontal, 28)
@@ -36,13 +37,13 @@ struct ContextOpeningBehaviorStepView: View {
         }
     }
 
-    private func behaviorButton(_ behavior: ContextOpeningBehavior) -> some View {
-        let isSelected = selectedBehavior == behavior
+    private func policyButton(_ policy: WorkspaceActivationPolicy) -> some View {
+        let isSelected = selectedPolicy == policy
 
         return DButton(
             style: .plain,
             action: {
-                selectedBehavior = behavior
+                selectedPolicy = policy
             },
             content: {
                 HStack(alignment: .top, spacing: 8) {
@@ -51,11 +52,11 @@ struct ContextOpeningBehaviorStepView: View {
                         .foregroundStyle(DawnColors.primaryForeground)
 
                     VStack(alignment: .leading, spacing: 6) {
-                        Text(behavior.title)
+                        Text(policy.displayName)
                             .font(DawnTextStyle.optionTitle)
                             .foregroundStyle(DawnColors.primaryForeground)
 
-                        Text(behavior.detail)
+                        Text(policy.displayDescription)
                             .font(DawnTextStyle.secondaryCaption)
                             .foregroundStyle(DawnColors.menuItemSecondaryForeground)
                             .multilineTextAlignment(.leading)
@@ -65,7 +66,7 @@ struct ContextOpeningBehaviorStepView: View {
                 }
             }
         )
-        .accessibilityLabel(behavior.title)
+        .accessibilityLabel(policy.displayName)
         .accessibilityValue(isSelected ? "Selected" : "Not selected")
         .accessibilityAddTraits(isSelected ? .isSelected : [])
     }

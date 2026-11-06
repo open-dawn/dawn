@@ -63,7 +63,7 @@ extension MenuBarContextCreationView {
                     applicationURL: application.applicationURL
                 )
             },
-            transition: request.openingBehavior.transition
+            transition: request.transition
         )
 
         return context.id

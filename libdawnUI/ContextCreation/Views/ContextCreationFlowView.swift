@@ -146,7 +146,7 @@ public struct ContextCreationFlowView: View {
             )
         case .openingBehaviour:
             ContextOpeningBehaviorStepView(
-                selectedBehavior: $draft.openingBehaviour,
+                selectedPolicy: $draft.activationPolicy,
                 onFinish: createContext
             )
         case .confirmation:
@@ -172,7 +172,7 @@ extension ContextCreationFlowView {
             name: name,
             symbolName: symbol,
             applications: draft.selectedApplications,
-            openingBehavior: draft.openingBehaviour
+            activationPolicy: draft.activationPolicy
         )
 
         isPerformingOperation = true
