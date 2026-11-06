@@ -27,6 +27,7 @@ struct SettingsView: View {
                 ProgressView()
             }
         }
+        .padding(32)
         .onAppear {
             if viewModel == nil {
                 viewModel = SettingsViewModel(client: settingsStore)
