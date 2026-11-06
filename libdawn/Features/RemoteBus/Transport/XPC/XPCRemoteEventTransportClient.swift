@@ -1,5 +1,9 @@
-import Foundation
+// swiftlint:disable file_length
 
+import Foundation
+import dawnLogging
+
+// swiftlint:disable:next type_body_length
 public final class XPCRemoteEventTransportClient: NSObject, RemoteEventTransportClient, @unchecked Sendable {
     private struct ReconnectStart {
         let generation: UInt64
@@ -25,6 +29,11 @@ public final class XPCRemoteEventTransportClient: NSObject, RemoteEventTransport
     public init(endpoint: NSXPCListenerEndpoint) {
         self.connectionSource = .endpoint(endpoint)
         super.init()
+        #log(
+            "Initializing XPC transport client with listener endpoint; generation: 0",
+            level: .info,
+            category: .transport
+        )
         establishConnectionLocked(generation: 0)
         Task { await self.completeHandshake(generation: 0) }
     }
@@ -32,6 +41,11 @@ public final class XPCRemoteEventTransportClient: NSObject, RemoteEventTransport
     public init(machServiceName: String, options: NSXPCConnection.Options = []) {
         self.connectionSource = .mach(name: machServiceName, options: options)
         super.init()
+        #log(
+            "Initializing XPC transport client for Mach service \(machServiceName, privacy: .public); generation: 0",
+            level: .info,
+            category: .transport
+        )
         establishConnectionLocked(generation: 0)
         Task { await self.completeHandshake(generation: 0) }
     }
@@ -48,6 +62,7 @@ public final class XPCRemoteEventTransportClient: NSObject, RemoteEventTransport
         lock.withLock {
             deliveryHandler = handler
         }
+        #log("Installed delivery handler", category: .transport)
     }
 
     public func setConnectionStateHandler(
@@ -80,6 +95,11 @@ public final class XPCRemoteEventTransportClient: NSObject, RemoteEventTransport
 
     public func ask(_ event: Event) async throws -> Event {
         guard let hostProxy = currentHostProxy() else {
+            #log(
+                "Rejecting ask because no host proxy is available",
+                level: .warning,
+                category: .transport
+            )
             throw EventRemoteError.notConnected
         }
 
@@ -95,11 +115,21 @@ public final class XPCRemoteEventTransportClient: NSObject, RemoteEventTransport
                     resumed = true
 
                     if let error {
+                        #log(
+                            "Ask failed: \(error.localizedDescription, privacy: .public)",
+                            level: .error,
+                            category: .transport
+                        )
                         continuation.resume(throwing: error)
                         return
                     }
 
                     guard let responseData else {
+                        #log(
+                            "Ask returned neither response data nor an error",
+                            level: .error,
+                            category: .transport
+                        )
                         continuation.resume(throwing: EventRemoteError.invalidPayload)
                         return
                     }
@@ -107,6 +137,11 @@ public final class XPCRemoteEventTransportClient: NSObject, RemoteEventTransport
                     do {
                         continuation.resume(returning: try EventCodec.decode(responseData))
                     } catch {
+                        #log(
+                            "Failed to decode ask response: \(error.localizedDescription, privacy: .public)",
+                            level: .error,
+                            category: .transport
+                        )
                         continuation.resume(throwing: error)
                     }
                 }
@@ -116,9 +151,19 @@ public final class XPCRemoteEventTransportClient: NSObject, RemoteEventTransport
 
     public func attemptReconnect() async throws {
         guard let reconnect = beginReconnect() else {
+            #log(
+                "Reconnect rejected because transport is stopped",
+                level: .warning,
+                category: .transport
+            )
             throw EventRemoteError.notConnected
         }
 
+        #log(
+            "Reconnect starting; generation: \(reconnect.generation, privacy: .public)",
+            level: .info,
+            category: .transport
+        )
         reconnect.stateHandler?(.connecting)
 
         invalidateConnection(reconnect.connectionToInvalidate)
@@ -134,6 +179,11 @@ public final class XPCRemoteEventTransportClient: NSObject, RemoteEventTransport
         }
 
         guard established else {
+            #log(
+                "Reconnect superseded before connection setup; generation: \(reconnect.generation, privacy: .public)",
+                level: .warning,
+                category: .transport
+            )
             setConnection(.disconnected, generation: reconnect.generation)
             throw EventRemoteError.notConnected
         }
@@ -141,6 +191,11 @@ public final class XPCRemoteEventTransportClient: NSObject, RemoteEventTransport
         let connected = await completeHandshake(generation: reconnect.generation)
 
         guard connected else {
+            #log(
+                "Reconnect handshake failed; generation: \(reconnect.generation, privacy: .public)",
+                level: .error,
+                category: .transport
+            )
             setConnection(
                 .disconnected,
                 generation: reconnect.generation
@@ -196,8 +251,21 @@ public final class XPCRemoteEventTransportClient: NSObject, RemoteEventTransport
         let connection: NSXPCConnection
         switch connectionSource {
         case let .mach(name, options):
+            #log(
+                """
+                Creating XPC connection to Mach service \(name, privacy: .public); \
+                generation: \(generation, privacy: .public)
+                """,
+                level: .info,
+                category: .transport
+            )
             connection = NSXPCConnection(machServiceName: name, options: options)
         case let .endpoint(endpoint):
+            #log(
+                "Creating XPC connection from listener endpoint; generation: \(generation, privacy: .public)",
+                level: .info,
+                category: .transport
+            )
             connection = NSXPCConnection(listenerEndpoint: endpoint)
         }
 
@@ -211,9 +279,21 @@ public final class XPCRemoteEventTransportClient: NSObject, RemoteEventTransport
             self?.handleInvalidation(generation: generation)
         }
         connection.resume()
+        #log(
+            "Resumed XPC connection; generation: \(generation, privacy: .public)",
+            category: .transport
+        )
 
         self.connection = connection
-        self.hostProxy = connection.remoteObjectProxyWithErrorHandler { [weak self] _ in
+        self.hostProxy = connection.remoteObjectProxyWithErrorHandler { [weak self] error in
+            #log(
+                """
+                XPC remote proxy error; generation: \(generation, privacy: .public), \
+                error: \(error.localizedDescription, privacy: .public)
+                """,
+                level: .error,
+                category: .transport
+            )
             self?.handleInterruption(generation: generation)
         } as? EventHostXPC
         state = hostProxy == nil ? .disconnected : .connecting
@@ -222,12 +302,18 @@ public final class XPCRemoteEventTransportClient: NSObject, RemoteEventTransport
     private func invalidateConnection(
         _ connection: NSXPCConnection?
     ) {
+        #log("Invalidating existing XPC connection", category: .transport)
         connection?.invalidationHandler = nil
         connection?.interruptionHandler = nil
         connection?.invalidate()
     }
 
     func handleInterruption(generation: UInt64) {
+        #log(
+            "XPC connection interrupted; generation: \(generation, privacy: .public)",
+            level: .warning,
+            category: .transport
+        )
         setConnection(.disconnected, generation: generation)
     }
 
@@ -272,7 +358,17 @@ private extension XPCRemoteEventTransportClient {
             return false
         }
 
+        #log(
+            "Starting XPC handshake; generation: \(generation, privacy: .public)",
+            level: .info,
+            category: .transport
+        )
         guard await performHandshake(generation: generation) else {
+            #log(
+                "XPC handshake did not succeed; generation: \(generation, privacy: .public)",
+                level: .error,
+                category: .transport
+            )
             setConnection(.disconnected, generation: generation)
             return false
         }

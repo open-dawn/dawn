@@ -1,6 +1,11 @@
 import AppKit
 
 public protocol RunningApplicationControlling {
+    var processIdentifier: pid_t { get }
+    var bundleIdentifier: String? { get }
+    var activationPolicy: NSApplication.ActivationPolicy { get }
+    var isHidden: Bool { get }
+
     @discardableResult
     func activate(options: NSApplication.ActivationOptions) -> Bool
 
@@ -9,6 +14,9 @@ public protocol RunningApplicationControlling {
 
     @discardableResult
     func hide() -> Bool
+
+    @discardableResult
+    func unhide() -> Bool
 }
 
 extension NSRunningApplication: RunningApplicationControlling {}

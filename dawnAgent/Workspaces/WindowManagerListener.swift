@@ -1,82 +1,54 @@
-import libdawn
 import dawnLogging
+import libdawn
 
 @MainActor
 protocol ContextSwitching {
-    func switchToContext(to context: WorkspaceContext)
+    func switchToContext(to context: WorkspaceContext) async throws
 }
 
 @MainActor
-struct DefaultContextSwitching: ContextSwitching {
-    func switchToContext(to context: WorkspaceContext) {
-        let appsList: [WorkspaceApplication] = context.applications
+final class DefaultContextSwitching: ContextSwitching {
+    private var tail: Task<Void, Never>?
 
-        Task { @MainActor in
-            do {
-                try await WMActionIdentifier.resetWindows.action.execute()
-            } catch {
-                #log(
-                    "Error reseting windows: \(error.localizedDescription)",
-                    level: .error,
-                    category: .general
-                )
-            }
-
-            for app in appsList {
-                do {
-                    try await WMActionIdentifier.openApp(app).action.execute()
-                } catch {
-                    #log(
-                        "Error opening app \(app.bundleIdentifier) (\(error))",
-                        level: .error,
-                        category: .general
-                    )
-                }
-            }
+    func switchToContext(to context: WorkspaceContext) async throws {
+        let previous = tail
+        let transition = Task { @MainActor in
+            await previous?.value
+            try await WMActionIdentifier.workspaceTransition(context).action.execute()
         }
+        tail = Task {
+            _ = try? await transition.value
+        }
+        try await transition.value
     }
 }
 
 @MainActor
 final class WindowManagerListener: Listener {
-    private let contextManager: ContextProviding
-    private let contextSwitching: ContextSwitching
+    private let workspace: any WorkspaceCoordinating
 
     init(
         bus: EventBus,
-        contextManager: ContextProviding,
-        contextSwitching: ContextSwitching = DefaultContextSwitching()
+        workspace: any WorkspaceCoordinating
     ) {
-        self.contextManager = contextManager
-        self.contextSwitching = contextSwitching
+        self.workspace = workspace
         bus.addListener(
             self,
             kinds: [
                 .initialized,
-                .switchSpace,
                 .getContexts,
                 .createContext,
                 .updateContext,
                 .deleteContext,
+                .archiveContext,
+                .unarchiveContext,
                 .switchContext,
             ]
         )
     }
 
-    convenience init(bus: EventBus) async throws {
-        let publisher = EventBusContextSnapshotPublisher(bus: bus)
-
-        try await self.init(bus: bus, contextManager: ContextManager(snapshotPublisher: publisher))
-    }
-
     func handle(_ event: Event, reply: (@Sendable (Event) -> Void)?) {
         switch event {
-        case .switchSpace(let payload):
-            Task { @MainActor in
-                guard let context = await getContextWithIndex(payload.spaceIndex) else { return }
-                contextSwitching.switchToContext(to: context)
-            }
-
         case .getContexts:
             Task { @MainActor in
                 let contexts = await getAllContexts()
@@ -99,6 +71,12 @@ final class WindowManagerListener: Listener {
         case let .deleteContext(payload):
             handleDeleteContext(payload, reply: reply)
 
+        case let .archiveContext(payload):
+            handleArchiveContext(payload, reply: reply)
+
+        case let .unarchiveContext(payload):
+            handleUnarchiveContext(payload, reply: reply)
+
         case let .switchContext(payload):
             handleSwitchContext(payload, reply: reply)
 
@@ -107,14 +85,8 @@ final class WindowManagerListener: Listener {
         }
     }
 
-    func getContextWithIndex(_ index: Int) async -> WorkspaceContext? {
-        let allContexts = await getAllContexts()
-        guard index >= 0, index < allContexts.count else { return nil }
-        return allContexts[index]
-    }
-
     func getAllContexts() async -> [WorkspaceContext] {
-        await contextManager.getAvailableContexts()
+        await workspace.getAvailableContexts()
     }
 
     private func handleCreateContext(_ payload: CreateContextEvent, reply: (@Sendable (Event) -> Void)?) {
@@ -122,10 +94,11 @@ final class WindowManagerListener: Listener {
 
         Task { @MainActor in
             do {
-                let context = try await contextManager.createContext(
+                let context = try await workspace.createContext(
                     name: payload.name,
                     symbol: payload.symbol,
-                    applications: payload.applications
+                    applications: payload.applications,
+                    transition: payload.transition
                 )
 
                 reply(
@@ -150,7 +123,7 @@ final class WindowManagerListener: Listener {
 
         Task { @MainActor in
             do {
-                try await contextManager.updateContext(
+                try await workspace.updateContext(
                     payload.context
                 )
 
@@ -176,9 +149,53 @@ final class WindowManagerListener: Listener {
 
         Task { @MainActor in
             do {
-                try await contextManager.deleteContext(
+                try await workspace.deleteContext(
                     id: payload.contextID
                 )
+
+                reply(
+                    .contextMutationAcknowledged(
+                        .success(contextID: payload.contextID)
+                    )
+                )
+            } catch {
+                reply(
+                    .contextMutationAcknowledged(
+                        .failure(failure: mutationFailure(from: error))
+                    )
+                )
+            }
+        }
+    }
+
+    private func handleArchiveContext(_ payload: ArchiveContextEvent, reply: (@Sendable (Event) -> Void)?) {
+        guard let reply else { return }
+
+        Task { @MainActor in
+            do {
+                try await workspace.archiveContext(id: payload.contextID)
+
+                reply(
+                    .contextMutationAcknowledged(
+                        .success(contextID: payload.contextID)
+                    )
+                )
+            } catch {
+                reply(
+                    .contextMutationAcknowledged(
+                        .failure(failure: mutationFailure(from: error))
+                    )
+                )
+            }
+        }
+    }
+
+    private func handleUnarchiveContext(_ payload: UnarchiveContextEvent, reply: (@Sendable (Event) -> Void)?) {
+        guard let reply else { return }
+
+        Task { @MainActor in
+            do {
+                try await workspace.unarchiveContext(id: payload.contextID)
 
                 reply(
                     .contextMutationAcknowledged(
@@ -199,29 +216,23 @@ final class WindowManagerListener: Listener {
         guard let reply else { return }
 
         Task { @MainActor in
-            guard let context = await contextManager.getContext(
-                id: payload.contextID
-            ) else {
+            do {
+                try await workspace.activateContext(id: payload.contextID)
+
+                reply(
+                    .contextMutationAcknowledged(
+                        .success(contextID: payload.contextID)
+                    )
+                )
+            } catch {
                 reply(
                     .contextMutationAcknowledged(
                         .failure(
-                            failure: .contextNotFound(
-                                payload.contextID
-                            )
+                            failure: mutationFailure(from: error)
                         )
                     )
                 )
-
-                return
             }
-
-            contextSwitching.switchToContext(to: context)
-
-            reply(
-                .contextMutationAcknowledged(
-                    .success(contextID: context.id)
-                )
-            )
         }
     }
 
@@ -229,23 +240,7 @@ final class WindowManagerListener: Listener {
         from error: Error
     ) -> ContextMutationAcknowledgement.Failure {
         if let error = error as? SettingsStoreError {
-            return switch error {
-            case .emptyContextName: .emptyContextName
-
-            case .emptyContextSymbol: .emptyContextSymbol
-
-            case .emptyApplicationBundleIdentifier: .emptyApplicationBundleIdentifier
-
-            case .emptyApplicationDisplayName: .emptyApplicationDisplayName
-
-            case .duplicateApplication(let bundleIdentifier): .duplicateApplication(bundleIdentifier: bundleIdentifier)
-
-            case .duplicateContextIdentifier(let id): .duplicateContextIdentifier(id)
-
-            case .duplicateApplicationIdentifier(let id): .duplicateApplicationIdentifier(id)
-
-            case .contextNotFound(let id): .contextNotFound(id)
-            }
+            return error.mutationFailure
         }
 
         if error is SettingsRepositoryError {

@@ -6,6 +6,7 @@
 //
 
 import Foundation
+import libdawn
 
 enum SettingsStoreError: Error, Equatable, Sendable {
     case emptyContextName
@@ -16,6 +17,7 @@ enum SettingsStoreError: Error, Equatable, Sendable {
     case duplicateContextIdentifier(UUID)
     case duplicateApplicationIdentifier(UUID)
     case contextNotFound(UUID)
+    case contextArchived(UUID)
 
     var localizedDescription: String {
         switch self {
@@ -29,6 +31,21 @@ enum SettingsStoreError: Error, Equatable, Sendable {
         case let .duplicateApplicationIdentifier(id):
             "An application with the identifier '\(id.uuidString)' already exists."
         case let .contextNotFound(id): "No context was found with the identifier '\(id.uuidString)'."
+        case let .contextArchived(id): "The context with the identifier '\(id.uuidString)' is archived."
+        }
+    }
+
+    var mutationFailure: ContextMutationAcknowledgement.Failure {
+        switch self {
+        case .emptyContextName: .emptyContextName
+        case .emptyContextSymbol: .emptyContextSymbol
+        case .emptyApplicationBundleIdentifier: .emptyApplicationBundleIdentifier
+        case .emptyApplicationDisplayName: .emptyApplicationDisplayName
+        case let .duplicateApplication(bundleIdentifier): .duplicateApplication(bundleIdentifier: bundleIdentifier)
+        case let .duplicateContextIdentifier(id): .duplicateContextIdentifier(id)
+        case let .duplicateApplicationIdentifier(id): .duplicateApplicationIdentifier(id)
+        case let .contextNotFound(id): .contextNotFound(id)
+        case let .contextArchived(id): .contextArchived(id)
         }
     }
 }

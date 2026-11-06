@@ -1,8 +1,7 @@
-import Foundation
-import Testing
-
-@testable import libdawn
 @testable import dawnApp
+import Foundation
+@testable import libdawn
+import Testing
 
 @MainActor
 @Suite("SettingsEventBusService")
@@ -103,7 +102,7 @@ struct SettingsEventBusServiceTests {
         fixture.link.client.simulateDisconnect()
 
         var sawConnecting = fixture.service.connectionState == .connecting
-        for _ in 0..<40 where !sawConnecting {
+        for _ in 0 ..< 40 where !sawConnecting {
             try await Task.sleep(for: .milliseconds(50))
             sawConnecting = fixture.service.connectionState == .connecting
         }
@@ -144,7 +143,7 @@ struct SettingsEventBusServiceTests {
         defer { fixture.cleanUp() }
 
         let listener = RecordingListener()
-        fixture.service.bus.addListener(listener, kinds: [.switchSpace])
+        fixture.service.bus.addListener(listener, kinds: [.debugPing])
         fixture.service.start()
 
         try await Task.sleep(for: .milliseconds(200))
@@ -153,7 +152,7 @@ struct SettingsEventBusServiceTests {
         try await fixture.service.bus.attemptReconnect()
         try await Task.sleep(for: .milliseconds(100))
 
-        let event = Event.switchSpace(SwitchSpaceEvent(spaceIndex: 7))
+        let event = Event.debugPing(DebugPingEvent())
         fixture.hostBus.publish(event)
         try await Task.sleep(for: .milliseconds(200))
 
@@ -161,7 +160,7 @@ struct SettingsEventBusServiceTests {
     }
 
     @Test("Stop ignores and already queued connection callback")
-    func stopIgnoresQueuedConnectionCallback() async throws {
+    func stopIgnoresQueuedConnectionCallback() async {
         let fixture = ServiceFixture()
         defer { fixture.cleanUp() }
 
@@ -224,7 +223,8 @@ struct SettingsEventBusServiceTests {
 
         while ContinuousClock.now < deadline {
             if fixture.transport.reconnectAttempts == 2,
-               fixture.service.isConnected {
+               fixture.service.isConnected
+            {
                 break
             }
 
@@ -262,7 +262,7 @@ private struct ServiceFixture {
         self.transport = transport
         self.hostBus = hostBus
         self.eventServer = eventServer
-        self.service = SettingsEventBusService(
+        service = SettingsEventBusService(
             transport: transport,
             readyObserver: readyObserver
         )
@@ -297,8 +297,13 @@ private final class ControllableLoopbackTransport: RemoteEventTransportClient, @
         self.client = client
     }
 
-    var isConnected: Bool { client.isConnected }
-    var connectionState: RemoteConnectionState { client.connectionState }
+    var isConnected: Bool {
+        client.isConnected
+    }
+
+    var connectionState: RemoteConnectionState {
+        client.connectionState
+    }
 
     func setDeliveryHandler(_ handler: @escaping @Sendable (Event) -> Void) {
         client.setDeliveryHandler(handler)
@@ -418,7 +423,7 @@ private final class ControllableLoopbackTransport: RemoteEventTransportClient, @
 private final class RecordingListener: Listener {
     private(set) var events: [Event] = []
 
-    func handle(_ event: Event, reply: (@Sendable (Event) -> Void)?) {
+    func handle(_ event: Event, reply _: (@Sendable (Event) -> Void)?) {
         events.append(event)
     }
 }

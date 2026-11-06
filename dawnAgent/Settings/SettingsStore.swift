@@ -6,6 +6,7 @@
 //
 
 import Foundation
+import dawnLogging
 import libdawn
 
 actor SettingsStore {
@@ -14,10 +15,39 @@ actor SettingsStore {
     private var mutationInProgress = false
     private var mutationWaiters: [CheckedContinuation<Void, Never>] = []
 
+    static func make(repository: any SettingsRepository) async throws -> SettingsStore {
+        do {
+            return try await SettingsStore(repository: repository)
+        } catch {
+            #log(
+                "Corrupted SettingsStore \(error.localizedDescription)",
+                level: .error,
+                category: .settings
+            )
+            #log("Reseting setting store", level: .info, category: .settings)
+
+            try await repository.save(.empty)
+            return try await SettingsStore(repository: repository)
+        }
+    }
+
     init(repository: any SettingsRepository) async throws {
-        let document = try await repository.load() ?? .empty
+        var document = try await repository.load() ?? .empty
+        let loadedDocument = document
+
+        document.workspaceActivity.reconcile(
+            validContextIDs: Set(
+                document.contexts.map(
+                    \.id
+                )
+            )
+        )
 
         try Self.validate(document)
+
+        if document != loadedDocument {
+            try await repository.save(document)
+        }
 
         self.repository = repository
         self.document = document
@@ -30,12 +60,14 @@ actor SettingsStore {
     func createContext(
         name: String,
         symbol: String,
-        applications: [WorkspaceApplication] = []
+        applications: [WorkspaceApplication] = [],
+        transition: WorkspaceTransition = .default
     ) async throws -> WorkspaceContext {
         let newContext = WorkspaceContext(
             name: name,
             symbol: symbol,
-            applications: applications
+            applications: applications,
+            transition: transition
         )
 
         return try await mutate { candidate in
@@ -48,39 +80,79 @@ actor SettingsStore {
         _ updatedContext: WorkspaceContext
     ) async throws {
         try await mutate { candidate in
-            guard let contextIndex = candidate.contexts.firstIndex(
-                where: { $0.id == updatedContext.id }
-            ) else {
+            guard
+                let contextIndex = candidate.contexts.firstIndex(
+                    where: { $0.id == updatedContext.id }
+                )
+            else {
                 throw SettingsStoreError.contextNotFound(
                     updatedContext.id
                 )
             }
 
-            candidate.contexts[contextIndex] = updatedContext
+            var replacement = updatedContext
+            replacement.isArchived = candidate.contexts[contextIndex].isArchived
+            candidate.contexts[contextIndex] = replacement
         }
+    }
+
+    func archiveContext(id: UUID) async throws {
+        try await setArchived(true, id: id)
+    }
+
+    func unarchiveContext(id: UUID) async throws {
+        try await setArchived(false, id: id)
     }
 
     func deleteContext(
         id: UUID
     ) async throws {
         try await mutate { candidate in
-            guard let contextIndex = candidate.contexts.firstIndex(
-                where: { $0.id == id }
-            ) else {
+            guard
+                let contextIndex = candidate.contexts.firstIndex(
+                    where: { $0.id == id }
+                )
+            else {
                 throw SettingsStoreError.contextNotFound(
                     id
                 )
             }
 
             candidate.contexts.remove(at: contextIndex)
+            candidate.workspaceActivity.removeContext(id: id)
         }
     }
 
-    func setLaunchAtLogin(
-        _ enabled: Bool
-    ) async throws {
+    private func setArchived(_ isArchived: Bool, id: UUID) async throws {
+        await acquireMutationAccess()
+        defer { releaseMutationAccess() }
+
+        try Task.checkCancellation()
+
+        guard let index = document.contexts.firstIndex(where: { $0.id == id }) else {
+            throw SettingsStoreError.contextNotFound(id)
+        }
+
+        guard document.contexts[index].isArchived != isArchived else {
+            return
+        }
+
+        var candidate = document
+        candidate.contexts[index].isArchived = isArchived
+
+        if isArchived, candidate.workspaceActivity.activeContextID == id {
+            candidate.workspaceActivity.clearActiveSession(for: id)
+        }
+
+        try Self.validate(candidate)
+        try await repository.save(candidate)
+
+        document = candidate
+    }
+
+    func updateSettings(_ settings: Settings) async throws {
         try await mutate { candidate in
-            candidate.generalSettings.launchAtLogin = enabled
+            candidate.generalSettings = settings
         }
     }
 
@@ -104,6 +176,33 @@ actor SettingsStore {
         mutationWaiters.removeFirst().resume()
     }
 
+    @discardableResult
+    func recordContextActivation(
+        contextID: UUID,
+        at date: Date
+    ) async throws -> WorkspaceActivityState {
+        try await mutate { candidate in
+            guard candidate.contexts.contains(where: { $0.id == contextID }) else {
+                throw SettingsStoreError.contextNotFound(contextID)
+            }
+
+            candidate.workspaceActivity.activate(
+                contextID: contextID,
+                at: date
+            )
+
+            return candidate.workspaceActivity
+        }
+    }
+
+    @discardableResult
+    func stopActiveContext(at date: Date) async throws -> WorkspaceActivityState {
+        try await mutate { candidate in
+            candidate.workspaceActivity.stop(at: date)
+            return candidate.workspaceActivity
+        }
+    }
+
     private func mutate<Result: Sendable>(
         _ mutation: (inout SettingsDocument) throws -> Result
     ) async throws -> Result {
@@ -122,72 +221,7 @@ actor SettingsStore {
         return result
     }
 
-    private static func validate(_ document: SettingsDocument) throws {
-        var contextIdentifiers = Set<UUID>()
-
-        for context in document.contexts {
-            guard contextIdentifiers.insert(context.id).inserted else {
-                throw SettingsStoreError.duplicateContextIdentifier(context.id)
-            }
-
-            try validate(context)
-        }
-    }
-
-    private static func validate(_ context: WorkspaceContext) throws {
-        let trimmedName = context.name.trimmingCharacters(
-            in: .whitespacesAndNewlines
-        )
-
-        guard !trimmedName.isEmpty else {
-            throw SettingsStoreError.emptyContextName
-        }
-
-        let trimmedSymbol = context.symbol.trimmingCharacters(
-            in: .whitespacesAndNewlines
-        )
-
-        guard !trimmedSymbol.isEmpty else {
-            throw SettingsStoreError.emptyContextSymbol
-        }
-
-        var applicationIdentifiers = Set<UUID>()
-        var bundleIdentifiers = Set<String>()
-
-        for application in context.applications {
-            try validate(application)
-
-            guard applicationIdentifiers.insert(application.id).inserted else {
-                throw SettingsStoreError.duplicateApplicationIdentifier(
-                    application.id
-                )
-            }
-
-            let normalizedBundleIdentifier = application.bundleIdentifier
-                .trimmingCharacters(in: .whitespacesAndNewlines)
-                .lowercased()
-
-            guard bundleIdentifiers.insert(normalizedBundleIdentifier).inserted else {
-                throw SettingsStoreError.duplicateApplication(
-                    bundleIdentifier: application.bundleIdentifier
-                )
-            }
-        }
-    }
-
-    private static func validate(_ application: WorkspaceApplication) throws {
-        let trimmedBundleIdentifier = application.bundleIdentifier
-            .trimmingCharacters(in: .whitespacesAndNewlines)
-
-        guard !trimmedBundleIdentifier.isEmpty else {
-            throw SettingsStoreError.emptyApplicationBundleIdentifier
-        }
-
-        let trimmedDisplayName = application.displayName
-            .trimmingCharacters(in: .whitespacesAndNewlines)
-
-        guard !trimmedDisplayName.isEmpty else {
-            throw SettingsStoreError.emptyApplicationDisplayName
-        }
+    func generalSettings() -> Settings {
+        document.generalSettings
     }
 }

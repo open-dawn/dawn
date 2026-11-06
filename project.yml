@@ -3,12 +3,17 @@ options:
   bundleIdPrefix: app.opendawn
   deploymentTarget:
     macOS: &deployversion "26.0"
+  preGenCommand: bash Scripts/generate_build_ticket.sh
+  fileTypes:
+    icon:
+      file: true
+      buildPhase: resources
 
 settings:
   base:
     SWIFT_VERSION: &swiftversion "6"
-    MARKETING_VERSION: &mktversion "0.1.0"
-    CURRENT_PROJECT_VERSION: &buildversion "1"
+    MARKETING_VERSION: &mktversion "1.0.0"
+    CURRENT_PROJECT_VERSION: &buildversion "2"
 
   configs:
     Release:
@@ -20,6 +25,9 @@ settings:
 packages:
   dawnLogging:
     path: LocalPackages/dawnLogging
+  Sparkle:
+    url: https://github.com/sparkle-project/Sparkle
+    exactVersion: 2.10.0
 
 targets:
 
@@ -29,6 +37,14 @@ targets:
     deploymentTarget: *deployversion
     sources:
       - dawnApp
+      - path: Generated/BuildTicket+Current.swift
+      - path: Resources/AppIcon.icon
+    preBuildScripts:
+      - name: Generate Build Ticket
+        basedOnDependencyAnalysis: false
+        outputFiles:
+          - $(SRCROOT)/Generated/BuildTicket+Current.swift
+        script: bash "${SRCROOT}/Scripts/generate_build_ticket.sh"
     info:
       path: dawnApp/Info.plist
       properties:
@@ -36,6 +52,18 @@ targets:
         CFBundleDisplayName: DAWN
         CFBundleShortVersionString: "$(MARKETING_VERSION)"
         CFBundleVersion: "$(CURRENT_PROJECT_VERSION)"
+        SUFeedURL: "https://update.opendawn.app/appcast.xml"
+        SUPublicEDKey: "F62epeumzInQi+a4UM0k9lQF8xOWyXZNCDtBm5J5QT0="
+        SUEnableAutomaticChecks: false
+        SUAllowsAutomaticUpdates: false
+        SUAutomaticallyUpdate: false
+        SURequireSignedFeed: true
+        SUVerifyUpdateBeforeExtraction: true
+        CFBundleURLTypes:
+          - CFBundleTypeRole: Viewer
+            CFBundleURLName: app.opendawn.route
+            CFBundleURLSchemes:
+              - opendawn
         LSApplicationCategoryType: public.app-category.utilities
         LSMinimumSystemVersion: "$(MACOSX_DEPLOYMENT_TARGET)"
         NSHumanReadableCopyright: "Copyright © 2026 Open Dawn"
@@ -50,6 +78,7 @@ targets:
           ENABLE_TESTABILITY: YES
     dependencies:
       - target: libdawn
+      - target: libdawnUI
       - target: dawnAgent
         link: false
         embed: true
@@ -57,6 +86,23 @@ targets:
           destination: wrapper
           subpath: Contents/Library/LoginItems
       - package: dawnLogging
+      - package: Sparkle
+    postCompileScripts:
+      - &swiftlint
+        name: SwiftLint
+        basedOnDependencyAnalysis: false
+        script: |
+          if [ "${ENABLE_PREVIEWS:-}" = "YES" ]; then
+            exit 0
+          fi
+
+          export PATH="/opt/homebrew/bin:/usr/local/bin:$PATH"
+
+          if command -v swiftlint >/dev/null 2>&1; then
+            swiftlint lint --strict "${SRCROOT}/${TARGET_NAME}"
+          else
+            echo "warning: SwiftLint is not installed. Install it with: brew install swiftlint"
+          fi
     scheme:
       testTargets:
         - dawnAppTests
@@ -68,6 +114,7 @@ targets:
     deploymentTarget: *deployversion
     sources:
       - dawnAgent
+      - path: Resources/AppIcon.icon
     info:
       path: dawnAgent/Info.plist
       properties:
@@ -89,7 +136,10 @@ targets:
           ENABLE_TESTABILITY: YES
     dependencies:
       - target: libdawn
+      - target: libdawnUI
       - package: dawnLogging
+    postCompileScripts:
+      - *swiftlint
     scheme:
       testTargets:
         - dawnAgentTests
@@ -123,9 +173,37 @@ targets:
           ENABLE_TESTABILITY: YES
     dependencies:
       - package: dawnLogging
+    postCompileScripts:
+      - *swiftlint
     scheme:
       testTargets:
         - libdawnTests
+      gatherCoverageData: true
+
+  libdawnUI:
+    type: framework
+    platform: macOS
+    deploymentTarget: *deployversion
+    sources:
+      - libdawnUI
+    settings:
+      base:
+        PRODUCT_NAME: libdawnUI
+        PRODUCT_MODULE_NAME: libdawnUI
+        MARKETING_VERSION: *mktversion
+        CURRENT_PROJECT_VERSION: *buildversion
+        SWIFT_VERSION: *swiftversion
+        GENERATE_INFOPLIST_FILE: YES
+      configs:
+        Debug:
+          ENABLE_TESTABILITY: YES
+    dependencies:
+      - target: libdawn
+    postCompileScripts:
+      - *swiftlint
+    scheme:
+      testTargets:
+        - libdawnUITests
       gatherCoverageData: true
 
   libdawnTests:
@@ -139,6 +217,23 @@ targets:
       SWIFT_VERSION: *swiftversion
     dependencies:
       - target: libdawn
+    postCompileScripts:
+      - *swiftlint
+
+  libdawnUITests:
+    type: bundle.unit-test
+    platform: macOS
+    deploymentTarget: *deployversion
+    sources:
+      - libdawnUITests
+    settings:
+      GENERATE_INFOPLIST_FILE: YES
+      SWIFT_VERSION: *swiftversion
+    dependencies:
+      - target: libdawn
+      - target: libdawnUI
+    postCompileScripts:
+      - *swiftlint
 
   dawnAgentTests:
     type: bundle.unit-test
@@ -154,6 +249,8 @@ targets:
     dependencies:
       - target: dawnAgent
       - target: libdawn
+    postCompileScripts:
+      - *swiftlint
 
   dawnAppTests:
     type: bundle.unit-test
@@ -169,6 +266,8 @@ targets:
     dependencies:
       - target: dawnApp
       - target: libdawn
+    postCompileScripts:
+      - *swiftlint
 
 schemes:
   dawn:
@@ -177,13 +276,16 @@ schemes:
         libdawn: all
         dawnAgent: all
         dawnApp: all
+        libdawnUI: all
         libdawnTests: [test]
         dawnAgentTests: [test]
         dawnAppTests: [test]
+        libdawnUITests: [test]
     test:
       gatherCoverageData: true
       targets:
         - libdawnTests
         - dawnAgentTests
         - dawnAppTests
+        - libdawnUITests
         - package: dawnLogging/dawnLoggingTests

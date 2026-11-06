@@ -1,0 +1,34 @@
+name: Bug report
+description: Report a problem/bug in DAWN
+title: "[Bug]: "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to report this. Security vulnerabilities belong in a private report. See the [security policy](https://github.com/open-dawn/dawn/blob/main/SECURITY.md).
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened
+      description: What you expected, and what you saw instead.
+    validations:
+      required: true
+  - type: input
+    id: macos
+    attributes:
+      label: macOS version
+      description: The macOS version where this happened.
+      placeholder: "26.0"
+    validations:
+      required: true
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Steps to reproduce
+      description: How to reproduce the problem, including the workspace or app involved when that matters.
+      placeholder: |
+        1. 
+        2. 
+        3. 
+    validations:
+      required: true

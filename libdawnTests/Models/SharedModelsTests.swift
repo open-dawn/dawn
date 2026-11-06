@@ -12,19 +12,30 @@ import libdawn
 @Suite("Shared Models Tests")
 struct SharedModelsTests {
     @Test("Workspace context survives a Codable round trip")
-    func workspaceContextCodableRoundTrip() async throws {
+    func workspaceContextCodableRoundTrip() throws {
         let application = WorkspaceApplication(
             bundleIdentifier: "com.apple.Safari",
             displayName: "Safari",
             applicationURL: URL(
                 fileURLWithPath: "/Applications/Safari.app"
-            )
+            ),
+            allowsRunningApplicationSubstitution: false,
+            createsNewApplicationInstance: true,
+            arguments: ["--args"],
+            environment: ["FOO": "bar"],
+            promptsUserIfNeeded: true,
+            windowLayout: .minimized
         )
 
         let context = WorkspaceContext(
             name: "Study",
             symbol: "book",
-            applications: [application]
+            applications: [application],
+            transition: WorkspaceTransition(
+                activationPolicy: .merge,
+                terminalCommand: "echo study"
+            ),
+            isArchived: true
         )
 
         let data = try JSONEncoder().encode(context)
@@ -36,10 +47,81 @@ struct SharedModelsTests {
         #expect(decoded == context)
     }
 
-    @Test("General settings disable launch at login by default")
-    func generalSettingsDefaultValue() async throws {
-        let settings = GeneralSettings()
+    @Test("Workspace context defaults transition when decoding legacy payloads")
+    func workspaceContextDefaultsMissingTransition() throws {
+        let legacyJSON = Data("""
+        {
+            "id": "00000000-0000-0000-0000-000000000001",
+            "name": "Legacy",
+            "symbol": "book",
+            "applications": []
+        }
+        """.utf8)
+
+        let decoded = try JSONDecoder().decode(WorkspaceContext.self, from: legacyJSON)
+
+        #expect(decoded.transition == .default)
+        #expect(decoded.transition.activationPolicy == .hide)
+        #expect(decoded.isArchived == false)
+    }
+
+    @Test("Create context event defaults transition when decoding legacy payloads")
+    func createContextEventDefaultsMissingTransition() throws {
+        let legacyJSON = Data("""
+        {
+            "name": "Legacy",
+            "symbol": "book",
+            "applications": []
+        }
+        """.utf8)
+
+        let decoded = try JSONDecoder().decode(
+            CreateContextEvent.self,
+            from: legacyJSON
+        )
+
+        #expect(decoded.transition == .default)
+        #expect(decoded.transition.activationPolicy == .hide)
+    }
+
+    @Test("Workspace context is active by default")
+    func workspaceContextIsActiveByDefault() {
+        let context = WorkspaceContext(name: "Study", symbol: "book")
+
+        #expect(context.isArchived == false)
+    }
+
+    @Test("General Settings survives a Codable round trip")
+    func settingsCodableRoundTrip() throws {
+        let app = ProtectedApplication(
+            bundleIdentifier: "com.apple.Safari",
+            displayName: "Safari"
+        )
+        let setting = Settings(
+            launchAtLogin: true,
+            showInMenuBar: false,
+            forceAppsToQuit: true,
+            analyticsEnabled: true,
+            protectedApps: [app]
+        )
+
+        let data = try JSONEncoder().encode(setting)
+        let decoded = try JSONDecoder().decode(
+            Settings.self,
+            from: data
+        )
+
+        #expect(decoded == setting)
+    }
+
+    @Test("General settings use expected defaults")
+    func generalSettingsDefaultValue() {
+        let settings = Settings()
 
         #expect(settings.launchAtLogin == false)
+        #expect(settings.showInMenuBar)
+        #expect(settings.forceAppsToQuit == false)
+        #expect(settings.analyticsEnabled == false)
+        #expect(settings.protectedApps.isEmpty)
     }
 }

@@ -46,38 +46,25 @@ public struct LogMacro: ExpressionMacro {
         var messageWithCallSite = message
         let pounds = message.openingPounds
 
-        messageWithCallSite.segments = StringLiteralSegmentListSyntax {
-            StringSegmentSyntax(content: .stringSegment("["))
+        let callSite = callSiteSegments(pounds: pounds)
 
-            publicInterpolation(
-                ExprSyntax("#fileID"),
-                pounds: pounds
-            )
+        if message.openingQuote.tokenKind == .multilineStringQuote {
+            messageWithCallSite.segments = try multilineSegments(message: message, callSite: callSite)
+        } else {
+            messageWithCallSite.segments = StringLiteralSegmentListSyntax {
+                for segment in callSite {
+                    segment
+                }
 
-            StringSegmentSyntax(content: .stringSegment(":"))
-
-            publicInterpolation(
-                ExprSyntax("#line"),
-                pounds: pounds
-            )
-
-            StringSegmentSyntax(content: .stringSegment(" "))
-
-            publicInterpolation(
-                "#function",
-                pounds: pounds
-            )
-
-            StringSegmentSyntax(content: .stringSegment("] "))
-
-            for segment in message.segments {
-                segment
+                for segment in message.segments {
+                    segment
+                }
             }
         }
 
         return """
-        Loggers.\(raw: category).\(raw: level)(\(messageWithCallSite))
-        """
+            Loggers.\(raw: category).\(raw: level)(\(messageWithCallSite))
+            """
     }
 
     private static func messageLiteral(
@@ -85,18 +72,10 @@ public struct LogMacro: ExpressionMacro {
     ) throws -> StringLiteralExprSyntax {
         guard
             let message = node.arguments.first?
-            .expression.as(StringLiteralExprSyntax.self)
+                .expression.as(StringLiteralExprSyntax.self)
         else {
             throw MacroExpansionErrorMessage(
                 "#log requires a string literal."
-            )
-        }
-
-        let isMultiline = message.openingQuote.tokenKind == .multilineStringQuote
-
-        guard !isMultiline else {
-            throw MacroExpansionErrorMessage(
-                "#log does nto currently support multiline string literals"
             )
         }
 
@@ -162,6 +141,63 @@ public struct LogMacro: ExpressionMacro {
                 )
             }
         )
+    }
+
+    private static func callSiteSegments(pounds: TokenSyntax?) -> StringLiteralSegmentListSyntax {
+        StringLiteralSegmentListSyntax {
+            StringSegmentSyntax(content: .stringSegment("["))
+
+            publicInterpolation(ExprSyntax("#fileID"), pounds: pounds)
+
+            StringSegmentSyntax(content: .stringSegment(":"))
+
+            publicInterpolation(ExprSyntax("#line"), pounds: pounds)
+
+            StringSegmentSyntax(content: .stringSegment(" "))
+
+            publicInterpolation(ExprSyntax("#function"), pounds: pounds)
+
+            StringSegmentSyntax(content: .stringSegment("] "))
+        }
+    }
+
+    private static func multilineSegments(
+        message: StringLiteralExprSyntax,
+        callSite: StringLiteralSegmentListSyntax
+    ) throws -> StringLiteralSegmentListSyntax {
+        guard let first = message.segments.first,
+            case var .stringSegment(firstMessageSegment) = first
+        else {
+            throw MacroExpansionErrorMessage(
+                "Malformed multiline log message"
+            )
+        }
+
+        let indentation = firstMessageSegment.content.leadingTrivia
+        firstMessageSegment.content.leadingTrivia = []
+
+        var adjustedCallSite = Array(callSite)
+
+        guard case var .stringSegment(firstCallSiteSegment)? = adjustedCallSite.first else {
+            throw MacroExpansionErrorMessage(
+                "Malformed log call site"
+            )
+        }
+
+        firstCallSiteSegment.content.leadingTrivia = indentation
+        adjustedCallSite[0] = .stringSegment(firstCallSiteSegment)
+
+        return StringLiteralSegmentListSyntax {
+            for segment in adjustedCallSite {
+                segment
+            }
+
+            firstMessageSegment
+
+            for segment in message.segments.dropFirst() {
+                segment
+            }
+        }
     }
 }
 

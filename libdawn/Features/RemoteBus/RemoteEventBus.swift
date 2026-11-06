@@ -80,10 +80,7 @@ public final class RemoteEventBus: @unchecked Sendable {
         return try await withCheckedThrowingContinuation { continuation in
             let session = AskSession(continuation: continuation)
 
-            Task {
-                try await Task.sleep(for: timeout)
-                session.fail(with: EventAskError.timeout)
-            }
+            session.armTimeout(timeout)
 
             Task {
                 do {

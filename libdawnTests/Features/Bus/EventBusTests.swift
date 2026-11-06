@@ -28,9 +28,9 @@ struct EventBusTests {
         func deliversToMatchingListener() async throws {
             let bus = EventBus()
             let listener = TestListener()
-            bus.addListener(listener, kinds: [.switchSpace])
+            bus.addListener(listener, kinds: [.initialized])
 
-            let event = Event.switchSpace(SwitchSpaceEvent(spaceIndex: 1))
+            let event = Event.initialized(InitializedEvent())
             bus.publish(event)
 
             try await Task.sleep(for: .milliseconds(50))
@@ -45,7 +45,7 @@ struct EventBusTests {
             let listener = TestListener()
             bus.addListener(listener, kinds: [.debugPing])
 
-            bus.publish(.switchSpace(SwitchSpaceEvent(spaceIndex: 1)))
+            bus.publish(.initialized(InitializedEvent()))
 
             try await Task.sleep(for: .milliseconds(50))
 
@@ -59,29 +59,29 @@ struct EventBusTests {
             bus.addListener(listener)
 
             let ping = Event.debugPing(DebugPingEvent())
-            let space = Event.switchSpace(SwitchSpaceEvent(spaceIndex: 1))
+            let initialized = Event.initialized(InitializedEvent())
             bus.publish(ping)
-            bus.publish(space)
+            bus.publish(initialized)
 
             try await Task.sleep(for: .milliseconds(50))
 
-            #expect(listener.handledEvents == [ping, space])
+            #expect(listener.handledEvents == [ping, initialized])
         }
 
         @Test("drops deallocated listeners")
         func dropsDeallocatedListener() async throws {
             let bus = EventBus()
             let remaining = TestListener()
-            bus.addListener(remaining, kinds: [.switchSpace])
+            bus.addListener(remaining, kinds: [.initialized])
 
             var ephemeral: TestListener? = TestListener()
-            bus.addListener(ephemeral!, kinds: [.switchSpace])
+            bus.addListener(ephemeral!, kinds: [.initialized])
             weak let weakEphemeral = ephemeral
             ephemeral = nil
 
             #expect(weakEphemeral == nil)
 
-            let event = Event.switchSpace(SwitchSpaceEvent(spaceIndex: 1))
+            let event = Event.initialized(InitializedEvent())
             bus.publish(event)
 
             try await Task.sleep(for: .milliseconds(50))
@@ -93,12 +93,12 @@ struct EventBusTests {
         func setListenerKindsIgnoresUnknownListener() async throws {
             let bus = EventBus()
             let unknown = TestListener()
-            bus.setListenerKinds(unknown, kinds: [.switchSpace])
+            bus.setListenerKinds(unknown, kinds: [.initialized])
 
             let listener = TestListener()
             bus.addListener(listener, kinds: [])
 
-            bus.publish(.switchSpace(SwitchSpaceEvent(spaceIndex: 1)))
+            bus.publish(.initialized(InitializedEvent()))
 
             try await Task.sleep(for: .milliseconds(50))
 
@@ -110,9 +110,9 @@ struct EventBusTests {
         func deliversToPublishOnlyListener() async throws {
             let bus = EventBus()
             let listener = TestListener()
-            bus.addPublishOnlyListener(listener, kinds: [.switchSpace])
+            bus.addPublishOnlyListener(listener, kinds: [.initialized])
 
-            let event = Event.switchSpace(SwitchSpaceEvent(spaceIndex: 1))
+            let event = Event.initialized(InitializedEvent())
             bus.publish(event)
 
             try await Task.sleep(for: .milliseconds(50))
@@ -126,12 +126,12 @@ struct EventBusTests {
             let listener = TestListener()
             bus.addPublishOnlyListener(listener, kinds: [])
 
-            bus.publish(.switchSpace(SwitchSpaceEvent(spaceIndex: 1)))
+            bus.publish(.initialized(InitializedEvent()))
             try await Task.sleep(for: .milliseconds(50))
             #expect(listener.handledEvents.isEmpty)
 
-            bus.setListenerKinds(listener, kinds: [.switchSpace])
-            let event = Event.switchSpace(SwitchSpaceEvent(spaceIndex: 2))
+            bus.setListenerKinds(listener, kinds: [.initialized])
+            let event = Event.initialized(InitializedEvent())
             bus.publish(event)
 
             try await Task.sleep(for: .milliseconds(50))
@@ -143,9 +143,9 @@ struct EventBusTests {
         func removeListenerStopsDelivery() async throws {
             let bus = EventBus()
             let listener = TestListener()
-            bus.addListener(listener, kinds: [.switchSpace])
+            bus.addListener(listener, kinds: [.initialized])
 
-            let event = Event.switchSpace(SwitchSpaceEvent(spaceIndex: 1))
+            let event = Event.initialized(InitializedEvent())
             bus.publish(event)
 
             try await Task.sleep(for: .milliseconds(50))
@@ -153,7 +153,7 @@ struct EventBusTests {
             #expect(listener.handledEvents == [event])
 
             bus.removeListener(listener)
-            bus.publish(.switchSpace(SwitchSpaceEvent(spaceIndex: 2)))
+            bus.publish(.initialized(InitializedEvent()))
 
             try await Task.sleep(for: .milliseconds(50))
 

@@ -52,6 +52,11 @@ jobs:
         run: |
           set -euo pipefail
 
+          if [[ ! "$APPLE_TEAM_ID" =~ ^[A-Z0-9]{10}$ ]]; then
+            echo "error: APPLE_TEAM_ID must be a 10-character Apple team identifier" >&2
+            exit 1
+          fi
+
           if [[ -n "$(git status --porcelain)" ]]; then
             echo "error: checkout is not clean" >&2
             exit 1
@@ -99,6 +104,16 @@ jobs:
           API_KEY_PATH="$RUNNER_TEMP/AuthKey_${{ secrets.APP_STORE_CONNECT_KEY_ID }}.p8"
           KEYCHAIN_PATH="$RUNNER_TEMP/dawn-release.keychain-db"
 
+          DERIVED_DATA_PATH="$RUNNER_TEMP/DerivedData"
+          SPARKLE_GENERATE_APPCAST_PATH="$DERIVED_DATA_PATH/SourcePackages/artifacts/sparkle/Sparkle/bin/generate_appcast"
+
+          APPCAST_PATH="$ARTIFACT_DIRECTORY/appcast.xml"
+          RELEASE_NOTES_MARKDOWN_PATH="$RUNNER_TEMP/DAWN-${RELEASE_VERSION}.md"
+          RELEASE_NOTES_PATH="$ARTIFACT_DIRECTORY/DAWN-${RELEASE_VERSION}.html"
+
+          DOWNLOAD_URL_PREFIX="https://github.com/${GITHUB_REPOSITORY}/releases/download/${RELEASE_TAG}/"
+          RELEASE_NOTES_URL_PREFIX="https://update.opendawn.app/releases/"
+
           mkdir -p "$ARTIFACT_DIRECTORY"
 
           {
@@ -113,6 +128,13 @@ jobs:
             echo "CERTIFICATE_PATH=$CERTIFICATE_PATH"
             echo "API_KEY_PATH=$API_KEY_PATH"
             echo "KEYCHAIN_PATH=$KEYCHAIN_PATH"
+            echo "DERIVED_DATA_PATH=$DERIVED_DATA_PATH"
+            echo "SPARKLE_GENERATE_APPCAST_PATH=$SPARKLE_GENERATE_APPCAST_PATH"
+            echo "APPCAST_PATH=$APPCAST_PATH"
+            echo "RELEASE_NOTES_MARKDOWN_PATH=$RELEASE_NOTES_MARKDOWN_PATH"
+            echo "RELEASE_NOTES_PATH=$RELEASE_NOTES_PATH"
+            echo "DOWNLOAD_URL_PREFIX=$DOWNLOAD_URL_PREFIX"
+            echo "RELEASE_NOTES_URL_PREFIX=$RELEASE_NOTES_URL_PREFIX"
           } >> "$GITHUB_ENV"
 
       - name: Install pinned build tools
@@ -156,23 +178,6 @@ jobs:
 
           echo "$TOOLS_DIRECTORY/xcodegen/bin" >> "$GITHUB_PATH"
           echo "$TOOLS_DIRECTORY/xcbeautify" >> "$GITHUB_PATH"
-
-      - name: Generate release metadata
-        shell: bash
-        env:
-          REPOSITORY_URL: ${{ github.server_url }}/${{ github.repository }}
-        run: |
-          set -euo pipefail
-
-          python3 Scripts/generate_about_metadata.py \
-            --sha "$GITHUB_SHA" \
-            --reference "$RELEASE_TAG" \
-            --repository_url "$REPOSITORY_URL" \
-            --output dawnApp/Features/About/AboutMetadata.json
-
-          python3 -m json.tool \
-            dawnApp/Features/About/AboutMetadata.json \
-            > /dev/null
 
       - name: Generate Xcode project
         shell: bash
@@ -263,10 +268,21 @@ jobs:
             -configuration Release \
             -destination "generic/platform=macOS" \
             -archivePath "$ARCHIVE_PATH" \
+            -derivedDataPath "$DERIVED_DATA_PATH" \
             ARCHS=arm64 \
             ONLY_ACTIVE_ARCH=NO \
             archive 2>&1 |
             xcbeautify --renderer github-actions
+
+      - name: Validate Sparkle release tool
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          if [[ ! -x "$SPARKLE_GENERATE_APPCAST_PATH" ]]; then
+            echo "error: generate_appcast was not found: $SPARKLE_GENERATE_APPCAST_PATH" >&2
+            exit 1
+          fi
 
       - name: Validate archived application
         shell: bash
@@ -313,6 +329,8 @@ jobs:
             echo "error: invalid build number: $ACTUAL_BUILD" >&2
             exit 1
           fi
+
+          echo "RELEASE_BUILD_VERSION=$ACTUAL_BUILD" >> "$GITHUB_ENV"
 
           APP_ARCHITECTURES="$(
             lipo -archs "$APP_PATH/Contents/MacOS/DAWN"
@@ -484,6 +502,151 @@ jobs:
 
           cat "$CHECKSUM_PATH"
 
+      - name: Generate release notes
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+
+          GENERATED_NOTES_JSON="$RUNNER_TEMP/generated-release-notes.json"
+          MARKDOWN_REQUEST_JSON="$RUNNER_TEMP/render-markdown.json"
+          RENDERED_NOTES_FRAGMENT="$RUNNER_TEMP/release-notes-fragment.html"
+
+          gh api \
+            --method POST \
+            "repos/${GITHUB_REPOSITORY}/releases/generate-notes" \
+            -f tag_name="$RELEASE_TAG" \
+            -f target_commitish="$GITHUB_SHA" \
+            > "$GENERATED_NOTES_JSON"
+
+          jq -er \
+            '.body | select(type == "string" and length > 0)' \
+            "$GENERATED_NOTES_JSON" \
+            > "$RELEASE_NOTES_MARKDOWN_PATH"
+
+          jq -n \
+            --rawfile text "$RELEASE_NOTES_MARKDOWN_PATH" \
+            --arg context "$GITHUB_REPOSITORY" \
+            '{
+              text: $text,
+              mode: "gfm",
+              context: $context
+            }' \
+            > "$MARKDOWN_REQUEST_JSON"
+
+          gh api \
+            --method POST \
+            -H "Accept: text/html" \
+            markdown \
+            --input "$MARKDOWN_REQUEST_JSON" \
+            > "$RENDERED_NOTES_FRAGMENT"
+
+          {
+            printf '%s\n' \
+              '<!doctype html>' \
+              '<html lang="en">' \
+              '<head>' \
+              '  <meta charset="utf-8">' \
+              '  <meta name="viewport" content="width=device-width, initial-scale=1">' \
+              "  <title>DAWN $RELEASE_VERSION</title>" \
+              '</head>' \
+              '<body>' \
+              '<main>'
+
+            cat "$RENDERED_NOTES_FRAGMENT"
+
+            printf '%s\n' \
+              '</main>' \
+              '</body>' \
+              '</html>'
+          } > "$RELEASE_NOTES_PATH"
+
+      - name: Prepare existing appcast
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          CURRENT_APPCAST_URL="https://update.opendawn.app/appcast.xml"
+
+          if ! HTTP_STATUS="$(
+            curl \
+              --silent \
+              --show-error \
+              --location \
+              --output "$APPCAST_PATH" \
+              --write-out "%{http_code}" \
+              "$CURRENT_APPCAST_URL"
+          )"; then
+            if [[ "$GITHUB_EVENT_NAME" == "workflow_dispatch" ]]; then
+              echo "::warning::The production appcast could not be downloaded; continuing the dry run without feed history"
+              rm -f "$APPCAST_PATH"
+              exit 0
+            fi
+
+            echo "error: failed to download the current appcast" >&2
+            exit 1
+          fi
+
+          case "$HTTP_STATUS" in
+            200)
+              /usr/bin/xmllint --noout "$APPCAST_PATH"
+
+              PREVIOUS_BUILD="$(
+                /usr/bin/xmllint \
+                  --xpath "string((//*[local-name()='item'])[1]/*[local-name()='enclosure']/@*[local-name()='version'])" \
+                  "$APPCAST_PATH"
+              )"
+
+              if [[ ! "$PREVIOUS_BUILD" =~ ^[1-9][0-9]*$ ]]; then
+                echo "error: invalid build number in current appcast: $PREVIOUS_BUILD" >&2
+                exit 1
+              fi
+
+              if (( 10#$RELEASE_BUILD_VERSION <= 10#$PREVIOUS_BUILD )); then
+                echo "error: build $RELEASE_BUILD_VERSION must be greater than published build $PREVIOUS_BUILD" >&2
+                exit 1
+              fi
+              ;;
+
+            404)
+              echo "No existing appcast was found; creating the initial feed"
+              rm -f "$APPCAST_PATH"
+              ;;
+
+            *)
+              if [[ "$GITHUB_EVENT_NAME" == "workflow_dispatch" ]]; then
+                echo "::warning::The production appcast returned HTTP $HTTP_STATUS; continuing the dry run without feed history"
+                rm -f "$APPCAST_PATH"
+              else
+                echo "error: appcast request returned HTTP $HTTP_STATUS" >&2
+                exit 1
+              fi
+              ;;
+          esac
+
+      - name: Generate signed appcast
+        shell: bash
+        env:
+          SPARKLE_ED_PRIVATE_KEY: ${{ secrets.SPARKLE_ED_PRIVATE_KEY }}
+        run: |
+          set -euo pipefail
+
+          if [[ -z "$SPARKLE_ED_PRIVATE_KEY" ]]; then
+            echo "error: SPARKLE_ED_PRIVATE_KEY is not configured" >&2
+            exit 1
+          fi
+
+          printf '%s' "$SPARKLE_ED_PRIVATE_KEY" |
+            Scripts/generate_appcast.sh \
+              "$SPARKLE_GENERATE_APPCAST_PATH" \
+              "$ARTIFACT_DIRECTORY" \
+              "$APPCAST_PATH" \
+              "$DOWNLOAD_URL_PREFIX" \
+              "$RELEASE_NOTES_URL_PREFIX" \
+              "$RELEASE_BUILD_VERSION" \
+              "$EXPECTED_MARKETING_VERSION"
+
       - name: Upload dry-run artifacts
         if: github.event_name == 'workflow_dispatch'
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
@@ -492,6 +655,8 @@ jobs:
           path: |
             ${{ runner.temp }}/release-artifacts/*.dmg
             ${{ runner.temp }}/release-artifacts/*.sha256
+            ${{ runner.temp }}/release-artifacts/*.html
+            ${{ runner.temp }}/release-artifacts/*.xml
           if-no-files-found: error
           retention-days: 7
           compression-level: 0
@@ -507,7 +672,7 @@ jobs:
           RELEASE_FLAGS=(
             --verify-tag
             --draft
-            --generate-notes
+            --notes-file "$RELEASE_NOTES_MARKDOWN_PATH"
             --title "DAWN $RELEASE_VERSION"
           )
 
@@ -522,6 +687,8 @@ jobs:
             "$RELEASE_TAG" \
             "$DMG_PATH" \
             "$CHECKSUM_PATH" \
+            "$APPCAST_PATH" \
+            "$RELEASE_NOTES_PATH" \
             "${RELEASE_FLAGS[@]}"
 
       - name: Remove temporary credentials

@@ -1,34 +1,57 @@
 public enum Event: Codable, Sendable, Equatable {
     case debugPing(DebugPingEvent)
     case debugPong(DebugPongEvent)
-    @available(*, deprecated, message: "use .switchContext instead.")
-    case switchSpace(SwitchSpaceEvent)
+
     case initialized(InitializedEvent)
+
     case getContexts(GetContextsEvent)
+    case contextsFetched(ContextsFetchedEvent)
+    case switchContext(SwitchContextEvent)
     case createContext(CreateContextEvent)
     case updateContext(UpdateContextEvent)
     case deleteContext(DeleteContextEvent)
-    case switchContext(SwitchContextEvent)
-    case contextsFetched(ContextsFetchedEvent)
+    case archiveContext(ArchiveContextEvent)
+    case unarchiveContext(UnarchiveContextEvent)
 
     case availableContexts(AvailableContextsEvent)
-
     case contextMutationAcknowledged(ContextMutationAcknowledgement)
+
+    case getAccessibilityStatus(GetAccessibilityStatusEvent)
+    case promptAccessibilityTrust(PromptAccessibilityTrustEvent)
+    case accessibilityStatus(AccessibilityStatusEvent)
+
+    case getSettings(GetSettingsEvent)
+    case settingsFetched(SettingsFetchedEvent)
+    case availableSettings(AvailableSettingsEvent)
+
+    case updateSettings(UpdateSettingsEvent)
+    case settingsMutationAcknowledgement(SettingsMutationAcknowledgement)
+    case applySettings(ApplySettingsEvent)
 
     public var kind: EventKind {
         switch self {
         case .debugPing: .debugPing
         case .debugPong: .debugPong
-        case .switchSpace: .switchSpace
         case .initialized: .initialized
         case .getContexts: .getContexts
         case .contextsFetched: .contextsFetched
         case .createContext: .createContext
         case .updateContext: .updateContext
         case .deleteContext: .deleteContext
+        case .archiveContext: .archiveContext
+        case .unarchiveContext: .unarchiveContext
         case .switchContext: .switchContext
         case .contextMutationAcknowledged: .contextMutationAcknowledged
         case .availableContexts: .availableContexts
+        case .getAccessibilityStatus: .getAccessibilityStatus
+        case .promptAccessibilityTrust: .promptAccessibilityTrust
+        case .accessibilityStatus: .accessibilityStatus
+        case .getSettings: .getSettings
+        case .settingsFetched: .settingsFetched
+        case .availableSettings: .availableSettings
+        case .updateSettings: .updateSettings
+        case .settingsMutationAcknowledgement: .settingsMutationAcknowledgement
+        case .applySettings: .applySettings
         }
     }
 }

@@ -6,8 +6,8 @@
 //
 
 import AppKit
-import libdawn
 import Testing
+import libdawn
 
 @testable import dawnAgent
 
@@ -18,15 +18,20 @@ struct AppDelegateTests {
     func startRegistersListenersBeforeService() async throws {
         let service = EventBusServiceSpy()
         let provider = ContextProviderStub()
+        let menuBarController = MenuBarControllerSpy()
 
         let delegate = AppDelegate(
-            eventBusService: service
-        ) { bus in
-            WindowManagerListener(
-                bus: bus,
-                contextManager: provider
-            )
-        }
+            eventBusService: service,
+            repository: MockSettingsRepository(),
+            makeMenuBarController: { _, _ in
+                menuBarController
+            },
+            makeAgentRuntime: { _, _ in
+                makeAgentRuntimeComponents(
+                    provider: provider
+                )
+            }
+        )
 
         try await delegate.start()
 
@@ -35,6 +40,7 @@ struct AppDelegateTests {
 
         #expect(service.bus.hasListeners(for: .getContexts(GetContextsEvent())))
         #expect(service.bus.hasListeners(for: .debugPing(DebugPingEvent())))
+        #expect(service.bus.hasListeners(for: .getSettings(GetSettingsEvent())))
     }
 
     @Test("Retained workspace listener answers context requests")
@@ -48,15 +54,20 @@ struct AppDelegateTests {
 
         let service = EventBusServiceSpy()
         let provider = ContextProviderStub(contexts: expectedContext)
+        let menuBarController = MenuBarControllerSpy()
 
         let delegate = AppDelegate(
-            eventBusService: service
-        ) { bus in
-            WindowManagerListener(
-                bus: bus,
-                contextManager: provider
-            )
-        }
+            eventBusService: service,
+            repository: MockSettingsRepository(),
+            makeMenuBarController: { _, _ in
+                menuBarController
+            },
+            makeAgentRuntime: { _, _ in
+                makeAgentRuntimeComponents(
+                    provider: provider
+                )
+            }
+        )
 
         try await delegate.start()
 
@@ -76,12 +87,18 @@ struct AppDelegateTests {
     @Test("Startup failure does not start event bus service")
     func startupFailureDoesNotStartService() async {
         let service = EventBusServiceSpy()
+        let menuBarController = MenuBarControllerSpy()
 
         let delegate = AppDelegate(
-            eventBusService: service
-        ) { _ in
-            throw StartupError.expected
-        }
+            eventBusService: service,
+            repository: MockSettingsRepository(),
+            makeMenuBarController: { _, _ in
+                menuBarController
+            },
+            makeAgentRuntime: { _, _ in
+                throw StartupError.expected
+            }
+        )
 
         await #expect(throws: StartupError.expected) {
             try await delegate.start()
@@ -95,15 +112,20 @@ struct AppDelegateTests {
     func terminationStopsServiceAndReleasesListeners() async throws {
         let service = EventBusServiceSpy()
         let provider = ContextProviderStub()
+        let menuBarController = MenuBarControllerSpy()
 
         let delegate = AppDelegate(
-            eventBusService: service
-        ) { bus in
-            WindowManagerListener(
-                bus: bus,
-                contextManager: provider
-            )
-        }
+            eventBusService: service,
+            repository: MockSettingsRepository(),
+            makeMenuBarController: { _, _ in
+                menuBarController
+            },
+            makeAgentRuntime: { _, _ in
+                makeAgentRuntimeComponents(
+                    provider: provider
+                )
+            }
+        )
 
         try await delegate.start()
 
@@ -116,6 +138,9 @@ struct AppDelegateTests {
         #expect(service.stopCallCount == 1)
         #expect(!service.bus.hasListeners(for: .getContexts(GetContextsEvent())))
         #expect(!service.bus.hasListeners(for: .debugPing(DebugPingEvent())))
+        #expect(!service.bus.hasListeners(for: .getSettings(GetSettingsEvent())))
+        #expect(!service.bus.hasListeners(for: .applySettings(ApplySettingsEvent())))
+        #expect(menuBarController.stopCallCount == 1)
     }
 
     @Test("Repeated starts initialize only once")
@@ -123,15 +148,22 @@ struct AppDelegateTests {
         let service = EventBusServiceSpy()
         let provider = ContextProviderStub()
         var factoryCallCount = 0
+        let menuBarController = MenuBarControllerSpy()
 
-        let delegate = AppDelegate(eventBusService: service) { bus in
-            factoryCallCount += 1
+        let delegate = AppDelegate(
+            eventBusService: service,
+            repository: MockSettingsRepository(),
+            makeMenuBarController: { _, _ in
+                menuBarController
+            },
+            makeAgentRuntime: { _, _ in
+                factoryCallCount += 1
 
-            return WindowManagerListener(
-                bus: bus,
-                contextManager: provider
-            )
-        }
+                return makeAgentRuntimeComponents(
+                    provider: provider
+                )
+            }
+        )
 
         try await delegate.start()
         try await delegate.start()
@@ -144,13 +176,20 @@ struct AppDelegateTests {
     func overlappingStartsInitializeOnlyOnce() async throws {
         let service = EventBusServiceSpy()
         let provider = ContextProviderStub()
-        let factory = PausingListenerFactory(provider: provider)
-
+        let factory = PausingWorkspaceRuntimeFactory(provider: provider)
+        let menuBarController = MenuBarControllerSpy()
         let delegate = AppDelegate(
-            eventBusService: service
-        ) { bus in
-            await factory.makeListener(bus: bus)
-        }
+            eventBusService: service,
+            repository: MockSettingsRepository(),
+            makeMenuBarController: { _, _ in
+                menuBarController
+            },
+            makeAgentRuntime: { _, _ in
+                AgentRuntimeComponents(
+                    workspace: await factory.makeRuntime()
+                )
+            }
+        )
 
         let firstStart = Task { @MainActor in
             try await delegate.start()
@@ -179,21 +218,26 @@ struct AppDelegateTests {
         let service = EventBusServiceSpy()
         let provider = ContextProviderStub()
         var attemptCount = 0
+        let menuBarController = MenuBarControllerSpy()
 
         let delegate = AppDelegate(
-            eventBusService: service
-        ) { bus in
-            attemptCount += 1
+            eventBusService: service,
+            repository: MockSettingsRepository(),
+            makeMenuBarController: { _, _ in
+                menuBarController
+            },
+            makeAgentRuntime: { _, _ in
+                attemptCount += 1
 
-            if attemptCount == 1 {
-                throw StartupError.expected
+                if attemptCount == 1 {
+                    throw StartupError.expected
+                }
+
+                return makeAgentRuntimeComponents(
+                    provider: provider
+                )
             }
-
-            return WindowManagerListener(
-                bus: bus,
-                contextManager: provider
-            )
-        }
+        )
 
         await #expect(throws: StartupError.expected) {
             try await delegate.start()
@@ -203,6 +247,172 @@ struct AppDelegateTests {
 
         #expect(attemptCount == 2)
         #expect(service.startCallCount == 1)
+    }
+
+    @Test("Start loads initial workspace snapshot")
+    func startLoadsInitialWorkspaceSnapshot() async throws {
+        let service = EventBusServiceSpy()
+
+        let expectedContexts = [
+            WorkspaceContext(
+                name: "Study",
+                symbol: "book"
+            )
+        ]
+
+        let provider = ContextProviderStub(
+            contexts: expectedContexts
+        )
+
+        let runtime = WorkspaceRuntime(
+            contextManager: provider
+        )
+
+        let menuBarController = MenuBarControllerSpy()
+
+        let delegate = AppDelegate(
+            eventBusService: service,
+            repository: MockSettingsRepository(),
+            makeMenuBarController: { _, _ in
+                menuBarController
+            },
+            makeAgentRuntime: { _, _ in
+                AgentRuntimeComponents(
+                    workspace: runtime
+                )
+            }
+        )
+
+        try await delegate.start()
+
+        #expect(provider.getWorkspaceSnapshotCallCount == 1)
+        #expect(runtime.contexts == expectedContexts)
+        #expect(provider.stopActiveContextCallCount == 0)
+    }
+
+    @Test("Start creates menu controller with shared runtime once")
+    func startCreatesMenuControllerOnce() async throws {
+        let service = EventBusService()
+        let provider = ContextProviderStub()
+
+        let runtime = WorkspaceRuntime(
+            contextManager: provider
+        )
+
+        let menuBarController = MenuBarControllerSpy()
+
+        var factoryCallCount = 0
+        var receivedWorkspace: WorkspaceRuntime?
+
+        let delegate = AppDelegate(
+            eventBusService: service,
+            repository: MockSettingsRepository(),
+            makeMenuBarController: { workspace, _ in
+                factoryCallCount += 1
+                receivedWorkspace = workspace
+                return menuBarController
+            },
+            makeAgentRuntime: { _, _ in
+                AgentRuntimeComponents(
+                    workspace: runtime
+                )
+            }
+        )
+
+        try await delegate.start()
+
+        let injectedWorkspace = try #require(receivedWorkspace)
+
+        #expect(factoryCallCount == 1)
+        #expect(injectedWorkspace === runtime)
+    }
+
+    @Test("Start ends a restored active session before creating menu bar")
+    func startEndsRestoredActiveSession() async throws {
+        let context = WorkspaceContext(
+            name: "Work",
+            symbol: "briefcase"
+        )
+
+        let provider = ContextProviderStub(
+            contexts: [context]
+        )
+
+        provider.workspaceActivity.activate(
+            contextID: context.id,
+            at: Date(timeIntervalSince1970: 100)
+        )
+
+        let runtime = WorkspaceRuntime(
+            contextManager: provider
+        )
+
+        let service = EventBusServiceSpy()
+        let menuBarController = MenuBarControllerSpy()
+
+        var activeContextReceivedByMenuBar: UUID?
+
+        let delegate = AppDelegate(
+            eventBusService: service,
+            repository: MockSettingsRepository(),
+            makeMenuBarController: { workspace, _ in
+                activeContextReceivedByMenuBar =
+                    workspace.activeContextID
+
+                return menuBarController
+            },
+            makeAgentRuntime: { _, _ in
+                AgentRuntimeComponents(
+                    workspace: runtime
+                )
+            }
+        )
+
+        try await delegate.start()
+
+        #expect(provider.stopActiveContextCallCount == 1)
+        #expect(provider.workspaceActivity.activeContextID == nil)
+        #expect(runtime.activeContextID == nil)
+        #expect(activeContextReceivedByMenuBar == nil)
+
+        #expect(
+            runtime.lastActiveAt(for: context.id)
+                == provider.lastStopDate
+        )
+    }
+
+    @Test(
+        "Start restores persisted menu bar visibility",
+        arguments: [true, false]
+    )
+    func startRestoresMenuBarVisibility(
+        expectedVisibility: Bool
+    ) async throws {
+        let service = EventBusServiceSpy()
+        let provider = ContextProviderStub()
+        var document = SettingsDocument.empty
+        document.generalSettings.showInMenuBar = expectedVisibility
+
+        let menuBarController = MenuBarControllerSpy()
+
+        var receivedVisibility: Bool?
+
+        let delegate = AppDelegate(
+            eventBusService: service,
+            repository: MockSettingsRepository(document: document),
+            makeMenuBarController: { _, isVisible in
+                receivedVisibility = isVisible
+                return menuBarController
+            },
+            makeAgentRuntime: { _, _ in
+                makeAgentRuntimeComponents(provider: provider)
+            }
+        )
+
+        try await delegate.start()
+
+        #expect(receivedVisibility == expectedVisibility)
+        #expect(menuBarController.isVisible == expectedVisibility)
     }
 }
 
@@ -217,11 +427,31 @@ private final class EventBusServiceSpy: EventBusServicing {
     func start() {
         startCallCount += 1
 
-        let hasWorkspaceListener = bus.hasListeners(for: .getContexts(GetContextsEvent()))
+        let hasWorkspaceListener = bus.hasListeners(
+            for: .getContexts(
+                GetContextsEvent()
+            )
+        )
 
-        let hasDebugListener = bus.hasListeners(for: .debugPing(DebugPingEvent()))
+        let hasDebugListener = bus.hasListeners(
+            for: .debugPing(
+                DebugPingEvent()
+            )
+        )
 
-        listenersWereRegisteredWhenStarted = hasWorkspaceListener && hasDebugListener
+        let hasSettingsListener = bus.hasListeners(
+            for: .getSettings(GetSettingsEvent())
+        )
+
+        let hasApplySettings = bus.hasListeners(
+            for: .applySettings(ApplySettingsEvent())
+        )
+
+        listenersWereRegisteredWhenStarted =
+            hasWorkspaceListener
+            && hasDebugListener
+            && hasSettingsListener
+            && hasApplySettings
     }
 
     func stop() {
@@ -230,13 +460,27 @@ private final class EventBusServiceSpy: EventBusServicing {
 }
 
 @MainActor
-private final class ContextProviderStub: ContextProviding {
+private final class ContextProviderStub: WorkspaceManaging {
+    private(set) var getWorkspaceSnapshotCallCount = 0
+    private(set) var stopActiveContextCallCount = 0
+    private(set) var lastStopDate: Date?
+
+    private let contexts: [WorkspaceContext]
+
+    var workspaceActivity: WorkspaceActivityState = .empty
+
     func createContext(
         name: String,
         symbol: String,
-        applications: [WorkspaceApplication]
+        applications: [WorkspaceApplication],
+        transition: WorkspaceTransition
     ) async throws -> WorkspaceContext {
-        WorkspaceContext(name: name, symbol: symbol, applications: applications)
+        WorkspaceContext(
+            name: name,
+            symbol: symbol,
+            applications: applications,
+            transition: transition
+        )
     }
 
     func updateContext(_ context: WorkspaceContext) async throws {
@@ -245,23 +489,62 @@ private final class ContextProviderStub: ContextProviding {
     func deleteContext(id: UUID) async throws {
     }
 
+    func archiveContext(id: UUID) async throws {
+    }
+
+    func unarchiveContext(id: UUID) async throws {
+    }
+
     func getContext(id: UUID) async -> WorkspaceContext? {
         WorkspaceContext(id: id, name: "Placeholder", symbol: "book")
     }
-
-    private let contexts: [WorkspaceContext]
 
     init(contexts: [WorkspaceContext] = []) {
         self.contexts = contexts
     }
 
     func getAvailableContexts() async -> [WorkspaceContext] {
-        contexts
+        return contexts
+    }
+
+    func getWorkspaceActivity() async -> WorkspaceActivityState {
+        workspaceActivity
+    }
+
+    func recordContextActivation(contextID: UUID, at date: Date) async throws -> WorkspaceActivityState {
+        guard contexts.contains(where: { $0.id == contextID }) else {
+            throw SettingsStoreError.contextNotFound(contextID)
+        }
+
+        workspaceActivity.activate(
+            contextID: contextID,
+            at: date
+        )
+
+        return workspaceActivity
+    }
+
+    func stopActiveContext(at date: Date) async throws -> WorkspaceActivityState {
+        stopActiveContextCallCount += 1
+        lastStopDate = date
+
+        workspaceActivity.stop(at: date)
+
+        return workspaceActivity
+    }
+
+    func getWorkspaceSnapshot() async -> WorkspaceSnapshot {
+        getWorkspaceSnapshotCallCount += 1
+
+        return WorkspaceSnapshot(
+            contexts: contexts,
+            activity: workspaceActivity
+        )
     }
 }
 
 @MainActor
-private final class PausingListenerFactory {
+private final class PausingWorkspaceRuntimeFactory {
     private let provider: ContextProviderStub
     private var callWaiter: CheckedContinuation<Void, Never>?
     private var factoryContinuation: CheckedContinuation<Void, Never>?
@@ -272,27 +555,28 @@ private final class PausingListenerFactory {
         self.provider = provider
     }
 
-    func makeListener(bus: EventBus) async -> WindowManagerListener {
+    func makeRuntime() async -> WorkspaceRuntime {
         callCount += 1
 
         callWaiter?.resume()
         callWaiter = nil
 
-        await withCheckedContinuation { continuation in
-            factoryContinuation = continuation
+        await withCheckedContinuation {
+            factoryContinuation = $0
         }
 
-        return WindowManagerListener(
-            bus: bus,
+        return WorkspaceRuntime(
             contextManager: provider
         )
     }
 
     func waitUntilCalled() async {
-        guard callCount == 0 else { return }
+        guard callCount == 0 else {
+            return
+        }
 
-        await withCheckedContinuation { continuation in
-            callWaiter = continuation
+        await withCheckedContinuation {
+            callWaiter = $0
         }
     }
 
@@ -302,6 +586,34 @@ private final class PausingListenerFactory {
     }
 }
 
+@MainActor
+private final class MenuBarControllerSpy: MenuBarControlling {
+    private(set) var isVisible: Bool = false
+    private(set) var visibilityChanges: [Bool] = []
+    private(set) var stopCallCount = 0
+
+    func setVisible(_ isVisible: Bool) {
+        self.isVisible = isVisible
+        visibilityChanges.append(isVisible)
+    }
+
+    func stop() {
+        stopCallCount += 1
+        isVisible = false
+    }
+}
+
 private enum StartupError: Error, Equatable {
     case expected
+}
+
+@MainActor
+private func makeAgentRuntimeComponents(
+    provider: ContextProviderStub
+) -> AgentRuntimeComponents {
+    AgentRuntimeComponents(
+        workspace: WorkspaceRuntime(
+            contextManager: provider
+        )
+    )
 }

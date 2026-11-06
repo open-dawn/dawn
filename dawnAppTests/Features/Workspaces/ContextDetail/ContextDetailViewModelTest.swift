@@ -1,0 +1,1006 @@
+@testable import dawnApp
+import Foundation
+import libdawn
+import Testing
+
+@MainActor
+@Suite("ContextDetail ViewModel")
+struct ContextDetailViewModelTests {
+    @Test("Starts with no active operation, error, or presented creator")
+    func initialState() {
+        let contextManager = WorkspaceContextManagerSpy()
+        let viewModel = ContextDetailViewModel(contextManager: contextManager)
+
+        #expect(viewModel.operationInProgress == nil)
+        #expect(viewModel.activeContextID == nil)
+        #expect(viewModel.error == nil)
+        #expect(viewModel.isCreatingOrEditing == false)
+        #expect(viewModel.contextBeingEdited == nil)
+    }
+
+    @Test("Presents and dismisses the context creator")
+    func contextCreatorPresentation() throws {
+        let contextManager = WorkspaceContextManagerSpy()
+        let viewModel = ContextDetailViewModel(contextManager: contextManager)
+
+        viewModel.presentContextCreator()
+        try #require(viewModel.isCreatingOrEditing == true)
+
+        viewModel.dismissContextCreator()
+        #expect(viewModel.isCreatingOrEditing == false)
+    }
+
+    @Test("Run delegates the selected context identifier")
+    func runContext() async {
+        let context = WorkspaceContext(
+            name: "Work",
+            symbol: "briefcase"
+        )
+
+        let contextManager = WorkspaceContextManagerSpy()
+        let viewModel = ContextDetailViewModel(contextManager: contextManager)
+
+        var observedOperationID: UUID?
+        contextManager.onSwitch = { observedOperationID = viewModel.operationInProgress }
+
+        await viewModel.runContext(context)
+
+        #expect(contextManager.switchedContextIDs == [context.id])
+        #expect(observedOperationID == context.id)
+        #expect(viewModel.operationInProgress == nil)
+        #expect(viewModel.activeContextID == context.id)
+        #expect(viewModel.error == nil)
+    }
+
+    @Test("Delete delegates the selected context identifier")
+    func deleteContext() async {
+        let context = WorkspaceContext(
+            name: "Personal",
+            symbol: "person"
+        )
+
+        let contextManager = WorkspaceContextManagerSpy()
+        let viewModel = ContextDetailViewModel(contextManager: contextManager)
+
+        await viewModel.deleteContext(context)
+
+        #expect(contextManager.deletedContextIDs == [context.id])
+        #expect(viewModel.operationInProgress == nil)
+        #expect(viewModel.error == nil)
+    }
+
+    @Test("A context-manager error is exposed and operation state is cleared")
+    func contextManagerError() async {
+        let context = WorkspaceContext(
+            name: "Work",
+            symbol: "briefcase"
+        )
+
+        let contextManager = WorkspaceContextManagerSpy()
+        contextManager.error = SettingsContextStoreError.notConnected
+
+        let viewModel = ContextDetailViewModel(contextManager: contextManager)
+
+        await viewModel.runContext(context)
+
+        #expect(contextManager.switchedContextIDs == [context.id])
+        #expect(viewModel.error == .notConnected)
+        #expect(viewModel.operationInProgress == nil)
+        #expect(viewModel.activeContextID == nil)
+    }
+
+    @Test("A successful operation clears the previous error")
+    func successfulOperationClearsError() async {
+        let context = WorkspaceContext(
+            name: "Work",
+            symbol: "briefcase"
+        )
+
+        let contextManager = WorkspaceContextManagerSpy()
+        contextManager.error = SettingsContextStoreError.timeout
+
+        let viewModel = ContextDetailViewModel(contextManager: contextManager)
+
+        await viewModel.runContext(context)
+        #expect(viewModel.error == .timeout)
+
+        contextManager.error = nil
+        await viewModel.runContext(context)
+
+        #expect(viewModel.error == nil)
+        #expect(viewModel.operationInProgress == nil)
+    }
+
+    @Test("An unknown error maps to unknown")
+    func unknownError() async {
+        let context = WorkspaceContext(
+            name: "Personal",
+            symbol: "person"
+        )
+
+        let contextManager = WorkspaceContextManagerSpy()
+        contextManager.error = TestError.expected
+
+        let viewModel = ContextDetailViewModel(contextManager: contextManager)
+
+        await viewModel.deleteContext(context)
+
+        #expect(viewModel.error == .unknown)
+        #expect(viewModel.operationInProgress == nil)
+    }
+
+    @Test("Presents the editor with the selected context")
+    func contextEditorPresentation() {
+        let context = WorkspaceContext(
+            name: "Personal",
+            symbol: "person"
+        )
+        let viewModel = ContextDetailViewModel(contextManager: WorkspaceContextManagerSpy())
+
+        viewModel.presentContextEditor(context)
+
+        #expect(viewModel.isCreatingOrEditing == true)
+        #expect(viewModel.contextBeingEdited == context)
+
+        viewModel.dismissContextCreator()
+
+        #expect(viewModel.isCreatingOrEditing == false)
+        #expect(viewModel.contextBeingEdited == nil)
+    }
+
+    @Test("Presenting the creator clears the editing context")
+    func creatorClearsEditingContext() {
+        let context = WorkspaceContext(
+            name: "Work",
+            symbol: "briefcase"
+        )
+        let viewModel = ContextDetailViewModel(contextManager: WorkspaceContextManagerSpy())
+
+        viewModel.presentContextEditor(context)
+        viewModel.presentContextCreator()
+
+        #expect(viewModel.isCreatingOrEditing == true)
+        #expect(viewModel.contextBeingEdited == nil)
+    }
+
+    @Test("Dismiss error clears the operation error")
+    func dismissErrorClearsOperationError() async {
+        let context = WorkspaceContext(
+            name: "Work",
+            symbol: "briefcase"
+        )
+
+        let contextManager = WorkspaceContextManagerSpy()
+        contextManager.error = SettingsContextStoreError.notConnected
+
+        let viewModel = ContextDetailViewModel(contextManager: contextManager)
+
+        await viewModel.runContext(context)
+        #expect(viewModel.error == .notConnected)
+
+        viewModel.dismissError()
+        #expect(viewModel.error == nil)
+    }
+
+    @Test("Archiving the active context clears the active marker")
+    func archiveClearsActiveContext() async {
+        let context = WorkspaceContext(name: "Work", symbol: "briefcase")
+        let contextManager = WorkspaceContextManagerSpy()
+        let viewModel = ContextDetailViewModel(contextManager: contextManager)
+
+        await viewModel.runContext(context)
+        let archived = await viewModel.archiveContext(context)
+
+        #expect(archived)
+        #expect(contextManager.archivedContextIDs == [context.id])
+        #expect(viewModel.activeContextID == nil)
+        #expect(viewModel.operationInProgress == nil)
+        #expect(viewModel.error == nil)
+    }
+
+    @Test("Unarchiving delegates the context identifier")
+    func unarchiveContext() async {
+        var context = WorkspaceContext(name: "Work", symbol: "briefcase")
+        context.isArchived = true
+        let contextManager = WorkspaceContextManagerSpy()
+        let viewModel = ContextDetailViewModel(contextManager: contextManager)
+
+        var operationDuringUnarchive: UUID?
+        contextManager.onUnarchive = {
+            operationDuringUnarchive = viewModel.operationInProgress
+        }
+
+        let restored = await viewModel.unarchiveContext(context)
+
+        #expect(restored)
+        #expect(contextManager.unarchivedContextIDs == [context.id])
+        #expect(operationDuringUnarchive == nil)
+        #expect(viewModel.operationInProgress == nil)
+        #expect(viewModel.error == nil)
+    }
+
+    @Test("A failed archive sets the error and leaves operation state clear")
+    func archiveFailureSetsError() async {
+        let context = WorkspaceContext(name: "Work", symbol: "briefcase")
+        let contextManager = WorkspaceContextManagerSpy()
+        contextManager.error = SettingsContextStoreError.notConnected
+        let viewModel = ContextDetailViewModel(contextManager: contextManager)
+
+        let archived = await viewModel.archiveContext(context)
+
+        #expect(!archived)
+        #expect(contextManager.archivedContextIDs == [context.id])
+        #expect(viewModel.error == .notConnected)
+        #expect(viewModel.operationInProgress == nil)
+    }
+
+    @Test("Adopting a snapshot refreshes archival without dropping a dirty name")
+    func adoptRefreshesArchival() async {
+        let context = WorkspaceContext(name: "Work", symbol: "briefcase")
+        let viewModel = ContextDetailViewModel(
+            contextManager: WorkspaceContextManagerSpy(),
+            saveDebounce: .zero
+        )
+        viewModel.adopt(context)
+        viewModel.setName("Dirty")
+
+        var archived = context
+        archived.isArchived = true
+        viewModel.adopt(archived)
+
+        #expect(viewModel.draft?.name == "Dirty")
+        #expect(viewModel.draft?.isArchived == true)
+
+        await viewModel.pendingSave?.value
+    }
+
+    @Test("Deleting the active context clears the active marker")
+    func deleteClearsActiveContext() async {
+        let context = WorkspaceContext(name: "Work", symbol: "briefcase")
+        let viewModel = ContextDetailViewModel(contextManager: WorkspaceContextManagerSpy())
+
+        await viewModel.runContext(context)
+        await viewModel.deleteContext(context)
+
+        #expect(viewModel.activeContextID == nil)
+    }
+
+    @Test("Reconciliation clears the active context when it is removed")
+    func reconcileClearsMissingActiveContext() async {
+        let context = WorkspaceContext(name: "Work", symbol: "briefcase")
+        let viewModel = ContextDetailViewModel(contextManager: WorkspaceContextManagerSpy())
+
+        await viewModel.runContext(context)
+        viewModel.reconcileActiveContext(with: [])
+
+        #expect(viewModel.activeContextID == nil)
+    }
+
+    @Test("Reconciliation keeps the active context while it still exists")
+    func reconcileKeepsExistingActiveContext() async {
+        let context = WorkspaceContext(name: "Work", symbol: "briefcase")
+        let viewModel = ContextDetailViewModel(contextManager: WorkspaceContextManagerSpy())
+
+        await viewModel.runContext(context)
+        viewModel.reconcileActiveContext(with: [context])
+
+        #expect(viewModel.activeContextID == context.id)
+    }
+
+    @Test("Adopting a snapshot updates an idle draft")
+    func adoptUpdatesIdleDraft() {
+        let context = WorkspaceContext(name: "Work", symbol: "briefcase")
+        let viewModel = ContextDetailViewModel(
+            contextManager: WorkspaceContextManagerSpy(),
+            saveDebounce: .zero
+        )
+        viewModel.adopt(context)
+
+        let refreshed = WorkspaceContext(
+            id: context.id,
+            name: "Workspace",
+            symbol: "star",
+            applications: [sampleApplication],
+            transition: WorkspaceTransition(
+                activationPolicy: .merge,
+                terminalCommand: "echo hi"
+            )
+        )
+        viewModel.adopt(refreshed)
+
+        #expect(viewModel.draft == refreshed)
+    }
+
+    @Test("Adopting a snapshot keeps a dirty name and refreshes applications")
+    func adoptKeepsDirtyName() async {
+        let context = WorkspaceContext(name: "Work", symbol: "briefcase")
+        let viewModel = ContextDetailViewModel(
+            contextManager: WorkspaceContextManagerSpy(),
+            saveDebounce: .zero
+        )
+        viewModel.adopt(context)
+        viewModel.setName("Dirty")
+
+        let refreshed = WorkspaceContext(
+            id: context.id,
+            name: "Remote",
+            symbol: "star",
+            applications: [sampleApplication]
+        )
+        viewModel.adopt(refreshed)
+
+        #expect(viewModel.draft?.name == "Dirty")
+        #expect(viewModel.draft?.symbol == "star")
+        #expect(viewModel.draft?.applications == [sampleApplication])
+
+        await viewModel.pendingSave?.value
+    }
+
+    @Test("Switching ids replaces the draft")
+    func adoptSwitchesContext() async {
+        let first = WorkspaceContext(name: "Work", symbol: "briefcase")
+        let second = WorkspaceContext(name: "Personal", symbol: "person")
+        let contextManager = WorkspaceContextManagerSpy()
+        let viewModel = ContextDetailViewModel(
+            contextManager: contextManager,
+            saveDebounce: .zero
+        )
+
+        viewModel.adopt(first)
+        viewModel.setName("Dirty")
+        let pendingSave = viewModel.pendingSave
+        viewModel.adopt(second)
+        await pendingSave?.value
+
+        #expect(contextManager.updatedContexts.isEmpty)
+        #expect(viewModel.draft == second)
+    }
+
+    @Test("A debounced name change saves the final name and snapshot applications")
+    func debouncedNameSaveUsesSnapshotApplications() async {
+        let context = WorkspaceContext(name: "Work", symbol: "briefcase")
+        let contextManager = WorkspaceContextManagerSpy()
+        let viewModel = ContextDetailViewModel(
+            contextManager: contextManager,
+            saveDebounce: .zero
+        )
+
+        viewModel.adopt(context)
+        viewModel.adopt(
+            WorkspaceContext(
+                id: context.id,
+                name: context.name,
+                symbol: context.symbol,
+                applications: [sampleApplication]
+            )
+        )
+        viewModel.setName("Worksp")
+        viewModel.setName("Workspace")
+        await viewModel.pendingSave?.value
+
+        #expect(contextManager.updatedContexts.count == 1)
+        #expect(contextManager.updatedContexts.first?.id == context.id)
+        #expect(contextManager.updatedContexts.first?.name == "Workspace")
+        #expect(contextManager.updatedContexts.first?.symbol == "briefcase")
+        #expect(contextManager.updatedContexts.first?.applications == [sampleApplication])
+        #expect(viewModel.operationInProgress == nil)
+    }
+
+    @Test("An activation policy change saves immediately without dropping the terminal command")
+    func activationPolicySaveKeepsTerminalCommand() async {
+        let context = WorkspaceContext(name: "Work", symbol: "briefcase")
+        let contextManager = WorkspaceContextManagerSpy()
+        let viewModel = ContextDetailViewModel(
+            contextManager: contextManager,
+            saveDebounce: .zero
+        )
+
+        viewModel.adopt(context)
+        viewModel.adopt(
+            WorkspaceContext(
+                id: context.id,
+                name: context.name,
+                symbol: context.symbol,
+                applications: [sampleApplication],
+                transition: WorkspaceTransition(
+                    activationPolicy: .hide,
+                    terminalCommand: "echo remote"
+                )
+            )
+        )
+        viewModel.setActivationPolicy(.close)
+        await viewModel.pendingSave?.value
+
+        let saved = contextManager.updatedContexts.first
+        #expect(saved?.transition.activationPolicy == .close)
+        #expect(saved?.transition.terminalCommand == "echo remote")
+        #expect(saved?.applications == [sampleApplication])
+        #expect(saved?.name == "Work")
+        #expect(viewModel.operationInProgress == nil)
+    }
+
+    @Test("Adopting a snapshot keeps a dirty activation policy and refreshes the terminal command")
+    func adoptKeepsDirtyActivationPolicy() async {
+        let context = WorkspaceContext(name: "Work", symbol: "briefcase")
+        let viewModel = ContextDetailViewModel(
+            contextManager: WorkspaceContextManagerSpy(),
+            saveDebounce: .zero
+        )
+        viewModel.adopt(context)
+        viewModel.setActivationPolicy(.merge)
+
+        var remote = context
+        remote.transition = WorkspaceTransition(
+            activationPolicy: .close,
+            terminalCommand: "echo remote"
+        )
+        viewModel.adopt(remote)
+
+        #expect(viewModel.draft?.transition.activationPolicy == .merge)
+        #expect(viewModel.draft?.transition.terminalCommand == "echo remote")
+
+        await viewModel.pendingSave?.value
+        #expect(viewModel.draft?.transition.activationPolicy == .merge)
+    }
+
+    @Test("An application edit saves that list and keeps the snapshot terminal command")
+    func applicationEditSavesDraftList() async {
+        let context = WorkspaceContext(name: "Work", symbol: "briefcase")
+        let contextManager = WorkspaceContextManagerSpy()
+        let viewModel = ContextDetailViewModel(
+            contextManager: contextManager,
+            saveDebounce: .zero
+        )
+
+        viewModel.adopt(context)
+        viewModel.adopt(
+            WorkspaceContext(
+                id: context.id,
+                name: context.name,
+                symbol: context.symbol,
+                applications: [sampleApplication],
+                transition: WorkspaceTransition(
+                    activationPolicy: .hide,
+                    terminalCommand: "echo remote"
+                )
+            )
+        )
+        viewModel.setApplications([otherApplication])
+        await viewModel.pendingSave?.value
+
+        let saved = contextManager.updatedContexts.first
+        #expect(contextManager.updatedContexts.count == 1)
+        #expect(saved?.applications == [otherApplication])
+        #expect(saved?.name == "Work")
+        #expect(saved?.symbol == "briefcase")
+        #expect(saved?.transition.activationPolicy == .hide)
+        #expect(saved?.transition.terminalCommand == "echo remote")
+        #expect(viewModel.operationInProgress == nil)
+    }
+
+    @Test("Adopting a snapshot keeps dirty applications and refreshes a clean name")
+    func adoptKeepsDirtyApplications() async {
+        let context = WorkspaceContext(name: "Work", symbol: "briefcase")
+        let contextManager = WorkspaceContextManagerSpy()
+        let viewModel = ContextDetailViewModel(
+            contextManager: contextManager,
+            saveDebounce: .zero
+        )
+        viewModel.adopt(context)
+        viewModel.setApplications([otherApplication])
+
+        let refreshed = WorkspaceContext(
+            id: context.id,
+            name: "Remote",
+            symbol: "star",
+            applications: [sampleApplication],
+            transition: WorkspaceTransition(
+                activationPolicy: .close,
+                terminalCommand: "echo remote"
+            )
+        )
+        viewModel.adopt(refreshed)
+
+        #expect(viewModel.draft?.applications == [otherApplication])
+        #expect(viewModel.draft?.name == "Remote")
+        #expect(viewModel.draft?.symbol == "star")
+        #expect(viewModel.draft?.transition.terminalCommand == "echo remote")
+
+        await viewModel.pendingSave?.value
+        let saved = contextManager.updatedContexts.first
+        #expect(contextManager.updatedContexts.count == 1)
+        #expect(saved?.applications == [otherApplication])
+        #expect(saved?.name == "Remote")
+        #expect(saved?.symbol == "star")
+        #expect(saved?.transition.terminalCommand == "echo remote")
+    }
+
+    @Test("A later name edit keeps applications saved ahead of the snapshot")
+    func nameEditKeepsApplicationsSavedAheadOfSnapshot() async {
+        let context = WorkspaceContext(
+            name: "Work",
+            symbol: "briefcase",
+            applications: [sampleApplication]
+        )
+        let contextManager = WorkspaceContextManagerSpy()
+        let viewModel = ContextDetailViewModel(
+            contextManager: contextManager,
+            saveDebounce: .zero
+        )
+
+        viewModel.adopt(context)
+        viewModel.setApplications([otherApplication])
+        await viewModel.pendingSave?.value
+        viewModel.setName("Workspace")
+        await viewModel.pendingSave?.value
+
+        #expect(contextManager.updatedContexts.map(\.applications) == [
+            [otherApplication],
+            [otherApplication]
+        ])
+        #expect(contextManager.updatedContexts.last?.name == "Workspace")
+    }
+
+    @Test("Activate saves a pending application edit before switching")
+    func runContextFlushesApplications() async {
+        let context = WorkspaceContext(name: "Work", symbol: "briefcase")
+        let contextManager = WorkspaceContextManagerSpy()
+        let viewModel = ContextDetailViewModel(
+            contextManager: contextManager,
+            saveDebounce: .zero
+        )
+
+        viewModel.adopt(context)
+        viewModel.setApplications([otherApplication])
+
+        var savedBeforeSwitch = false
+        contextManager.onSwitch = {
+            savedBeforeSwitch = contextManager.updatedContexts.last?.applications == [otherApplication]
+        }
+
+        await viewModel.runContext(context)
+
+        #expect(savedBeforeSwitch)
+        #expect(contextManager.switchedContextIDs == [context.id])
+        #expect(viewModel.activeContextID == context.id)
+    }
+
+    @Test("Dropping application bundles appends them and keeps the terminal command")
+    func dropImportsApplications() async throws {
+        let mail = try makeApplicationBundle(
+            name: "Mail",
+            bundleIdentifier: "com.example.mail",
+            displayName: "Example Mail"
+        )
+        let notes = try makeApplicationBundle(
+            name: "Notes",
+            bundleIdentifier: "com.example.notes",
+            displayName: "Example Notes"
+        )
+        defer {
+            try? FileManager.default.removeItem(at: mail.deletingLastPathComponent())
+            try? FileManager.default.removeItem(at: notes.deletingLastPathComponent())
+        }
+
+        let context = WorkspaceContext(name: "Work", symbol: "briefcase")
+        let contextManager = WorkspaceContextManagerSpy()
+        let viewModel = ContextDetailViewModel(
+            contextManager: contextManager,
+            saveDebounce: .zero
+        )
+        viewModel.adopt(context)
+        viewModel.adopt(
+            WorkspaceContext(
+                id: context.id,
+                name: context.name,
+                symbol: context.symbol,
+                transition: WorkspaceTransition(
+                    activationPolicy: .hide,
+                    terminalCommand: "echo remote"
+                )
+            )
+        )
+
+        let accepted = viewModel.addApplications(at: [mail, notes])
+        await viewModel.pendingSave?.value
+
+        let saved = contextManager.updatedContexts.first
+        #expect(accepted)
+        #expect(contextManager.updatedContexts.count == 1)
+        #expect(saved?.applications.map(\.bundleIdentifier) == [
+            "com.example.mail",
+            "com.example.notes"
+        ])
+        #expect(saved?.applications.map(\.displayName) == ["Example Mail", "Example Notes"])
+        #expect(saved?.transition.terminalCommand == "echo remote")
+        #expect(saved?.transition.activationPolicy == .hide)
+        #expect(viewModel.applicationImportError == nil)
+    }
+
+    @Test("Dropping an application that is already listed does not save again")
+    func dropSkipsDuplicateBundleIdentifier() async throws {
+        let mail = try makeApplicationBundle(
+            name: "Mail",
+            bundleIdentifier: sampleApplication.bundleIdentifier,
+            displayName: "Other Mail"
+        )
+        defer {
+            try? FileManager.default.removeItem(at: mail.deletingLastPathComponent())
+        }
+
+        let context = WorkspaceContext(
+            name: "Work",
+            symbol: "briefcase",
+            applications: [sampleApplication]
+        )
+        let contextManager = WorkspaceContextManagerSpy()
+        let viewModel = ContextDetailViewModel(
+            contextManager: contextManager,
+            saveDebounce: .zero
+        )
+        viewModel.adopt(context)
+
+        let accepted = viewModel.addApplications(at: [mail])
+        await viewModel.pendingSave?.value
+
+        #expect(accepted)
+        #expect(contextManager.updatedContexts.isEmpty)
+        #expect(viewModel.draft?.applications == [sampleApplication])
+        #expect(viewModel.applicationImportError == nil)
+    }
+
+    @Test("A drop that mixes a file with an application adds the application and reports the file")
+    func dropReportsInvalidItemAndKeepsValidApplication() async throws {
+        let mail = try makeApplicationBundle(
+            name: "Mail",
+            bundleIdentifier: "com.example.mail",
+            displayName: "Example Mail"
+        )
+        let document = mail.deletingLastPathComponent().appendingPathComponent("notes.txt")
+        try Data("notes".utf8).write(to: document)
+        defer {
+            try? FileManager.default.removeItem(at: mail.deletingLastPathComponent())
+        }
+
+        let context = WorkspaceContext(name: "Work", symbol: "briefcase")
+        let contextManager = WorkspaceContextManagerSpy()
+        let viewModel = ContextDetailViewModel(
+            contextManager: contextManager,
+            saveDebounce: .zero
+        )
+        viewModel.adopt(context)
+
+        let accepted = viewModel.addApplications(at: [document, mail])
+        await viewModel.pendingSave?.value
+
+        #expect(accepted)
+        #expect(viewModel.applicationImportError == .invalidApplication)
+        #expect(contextManager.updatedContexts.first?.applications.map(\.bundleIdentifier) == [
+            "com.example.mail"
+        ])
+
+        viewModel.dismissApplicationImportError()
+        #expect(viewModel.applicationImportError == nil)
+    }
+
+    @Test("Removing an application saves the remaining list and the terminal command")
+    func removeApplicationSavesRemainingList() async {
+        let context = WorkspaceContext(name: "Work", symbol: "briefcase")
+        let contextManager = WorkspaceContextManagerSpy()
+        let viewModel = ContextDetailViewModel(
+            contextManager: contextManager,
+            saveDebounce: .zero
+        )
+
+        viewModel.adopt(context)
+        viewModel.adopt(
+            WorkspaceContext(
+                id: context.id,
+                name: context.name,
+                symbol: context.symbol,
+                applications: [sampleApplication, otherApplication],
+                transition: WorkspaceTransition(
+                    activationPolicy: .hide,
+                    terminalCommand: "echo remote"
+                )
+            )
+        )
+        viewModel.removeApplication(id: sampleApplication.id)
+        await viewModel.pendingSave?.value
+
+        let saved = contextManager.updatedContexts.first
+        #expect(contextManager.updatedContexts.count == 1)
+        #expect(saved?.applications == [otherApplication])
+        #expect(saved?.name == "Work")
+        #expect(saved?.transition.activationPolicy == .hide)
+        #expect(saved?.transition.terminalCommand == "echo remote")
+    }
+
+    @Test("A picker selection keeps existing rows, appends new ones, and drops the rest")
+    func applyApplicationSelectionMergesByBundleIdentifier() async {
+        let kept = WorkspaceApplication(
+            bundleIdentifier: "com.apple.Safari",
+            displayName: "Safari",
+            createsNewApplicationInstance: true
+        )
+        let removed = WorkspaceApplication(
+            bundleIdentifier: "com.apple.mail",
+            displayName: "Mail"
+        )
+        let added = WorkspaceApplication(
+            bundleIdentifier: "com.apple.Notes",
+            displayName: "Notes"
+        )
+        let context = WorkspaceContext(name: "Work", symbol: "briefcase")
+        let contextManager = WorkspaceContextManagerSpy()
+        let viewModel = ContextDetailViewModel(
+            contextManager: contextManager,
+            saveDebounce: .zero
+        )
+
+        viewModel.adopt(context)
+        viewModel.adopt(
+            WorkspaceContext(
+                id: context.id,
+                name: context.name,
+                symbol: context.symbol,
+                applications: [kept, removed],
+                transition: WorkspaceTransition(
+                    activationPolicy: .hide,
+                    terminalCommand: "echo remote"
+                )
+            )
+        )
+        viewModel.applyApplicationSelection([
+            WorkspaceApplication(
+                bundleIdentifier: kept.bundleIdentifier,
+                displayName: "Renamed Safari",
+                createsNewApplicationInstance: false
+            ),
+            added
+        ])
+        await viewModel.pendingSave?.value
+
+        let saved = contextManager.updatedContexts.first
+        #expect(contextManager.updatedContexts.count == 1)
+        #expect(saved?.applications == [kept, added])
+        #expect(saved?.applications.first?.id == kept.id)
+        #expect(saved?.applications.first?.createsNewApplicationInstance == true)
+        #expect(saved?.transition.terminalCommand == "echo remote")
+        #expect(saved?.transition.activationPolicy == .hide)
+    }
+
+    @Test("A picker selection that matches the current list does not save")
+    func applyApplicationSelectionSkipsUnchangedList() async {
+        let context = WorkspaceContext(
+            name: "Work",
+            symbol: "briefcase",
+            applications: [sampleApplication, otherApplication]
+        )
+        let contextManager = WorkspaceContextManagerSpy()
+        let viewModel = ContextDetailViewModel(
+            contextManager: contextManager,
+            saveDebounce: .zero
+        )
+        viewModel.adopt(context)
+
+        viewModel.applyApplicationSelection([
+            WorkspaceApplication(
+                bundleIdentifier: otherApplication.bundleIdentifier,
+                displayName: otherApplication.displayName
+            ),
+            WorkspaceApplication(
+                bundleIdentifier: sampleApplication.bundleIdentifier,
+                displayName: "Renamed Safari"
+            )
+        ])
+        await viewModel.pendingSave?.value
+
+        #expect(contextManager.updatedContexts.isEmpty)
+        #expect(viewModel.draft?.applications == [sampleApplication, otherApplication])
+    }
+
+    @Test("Activate saves a pending activation policy before switching")
+    func runContextFlushesActivationPolicy() async {
+        let context = WorkspaceContext(name: "Work", symbol: "briefcase")
+        let contextManager = WorkspaceContextManagerSpy()
+        let viewModel = ContextDetailViewModel(
+            contextManager: contextManager,
+            saveDebounce: .zero
+        )
+
+        viewModel.adopt(context)
+        viewModel.setActivationPolicy(.close)
+
+        var savedBeforeSwitch = false
+        contextManager.onSwitch = {
+            savedBeforeSwitch = contextManager.updatedContexts.last?.transition.activationPolicy == .close
+        }
+
+        await viewModel.runContext(context)
+
+        #expect(savedBeforeSwitch)
+        #expect(contextManager.switchedContextIDs == [context.id])
+        #expect(viewModel.activeContextID == context.id)
+    }
+
+    @Test("A failed update sets the error and leaves operation state clear")
+    func updateFailureSetsError() async {
+        let context = WorkspaceContext(name: "Work", symbol: "briefcase")
+        let contextManager = WorkspaceContextManagerSpy()
+        contextManager.error = SettingsContextStoreError.notConnected
+        let viewModel = ContextDetailViewModel(
+            contextManager: contextManager,
+            saveDebounce: .zero
+        )
+
+        viewModel.adopt(context)
+        viewModel.setName("Nope")
+        await viewModel.pendingSave?.value
+
+        #expect(contextManager.updatedContexts.map(\.name) == ["Nope"])
+        #expect(viewModel.error == .notConnected)
+        #expect(viewModel.operationInProgress == nil)
+    }
+
+    @Test("Entering a name clears an empty context name error")
+    func enteringNameClearsEmptyContextNameError() async {
+        let context = WorkspaceContext(name: "Work", symbol: "briefcase")
+        let contextManager = WorkspaceContextManagerSpy()
+        contextManager.error = SettingsContextStoreError.mutationRejected(.emptyContextName)
+        let viewModel = ContextDetailViewModel(
+            contextManager: contextManager,
+            saveDebounce: .zero
+        )
+        viewModel.adopt(context)
+
+        viewModel.setName(" ")
+        await viewModel.pendingSave?.value
+        #expect(viewModel.error == .mutationRejected(.emptyContextName))
+
+        viewModel.setName("Workspace")
+        #expect(viewModel.error == nil)
+
+        await viewModel.pendingSave?.value
+        #expect(viewModel.error == nil)
+        #expect(viewModel.draft?.name == "Workspace")
+    }
+
+    @Test("Whitespace does not clear an empty context name error")
+    func whitespaceKeepsEmptyContextNameError() async {
+        let context = WorkspaceContext(name: "Work", symbol: "briefcase")
+        let contextManager = WorkspaceContextManagerSpy()
+        contextManager.error = SettingsContextStoreError.mutationRejected(.emptyContextName)
+        let viewModel = ContextDetailViewModel(
+            contextManager: contextManager,
+            saveDebounce: .zero
+        )
+        viewModel.adopt(context)
+
+        viewModel.setName("")
+        await viewModel.pendingSave?.value
+        #expect(viewModel.error == .mutationRejected(.emptyContextName))
+
+        viewModel.setName(" \n ")
+        #expect(viewModel.error == .mutationRejected(.emptyContextName))
+
+        await viewModel.pendingSave?.value
+        #expect(viewModel.error == .mutationRejected(.emptyContextName))
+        #expect(viewModel.draft?.name == " \n ")
+    }
+
+    @Test("Switching context clears an empty context name error")
+    func adoptingAnotherContextClearsEmptyContextNameError() async {
+        let context = WorkspaceContext(name: "Work", symbol: "briefcase")
+        let contextManager = WorkspaceContextManagerSpy()
+        contextManager.error = SettingsContextStoreError.mutationRejected(.emptyContextName)
+        let viewModel = ContextDetailViewModel(
+            contextManager: contextManager,
+            saveDebounce: .zero
+        )
+        viewModel.adopt(context)
+
+        viewModel.setName("")
+        await viewModel.pendingSave?.value
+        #expect(viewModel.error == .mutationRejected(.emptyContextName))
+
+        viewModel.adopt(WorkspaceContext(name: "Home", symbol: "house"))
+
+        #expect(viewModel.error == nil)
+        #expect(viewModel.draft?.name == "Home")
+    }
+
+    private let sampleApplication = WorkspaceApplication(
+        bundleIdentifier: "com.apple.Safari",
+        displayName: "Safari"
+    )
+
+    private let otherApplication = WorkspaceApplication(
+        bundleIdentifier: "com.apple.mail",
+        displayName: "Mail"
+    )
+
+    private enum TestError: Error { case expected }
+
+    private func makeApplicationBundle(
+        name: String,
+        bundleIdentifier: String,
+        displayName: String
+    ) throws -> URL {
+        let root = FileManager.default.temporaryDirectory
+            .appendingPathComponent("dawn-app-import-\(UUID().uuidString)", isDirectory: true)
+        let contents = root
+            .appendingPathComponent("\(name).app", isDirectory: true)
+            .appendingPathComponent("Contents", isDirectory: true)
+        try FileManager.default.createDirectory(at: contents, withIntermediateDirectories: true)
+
+        let info = [
+            "CFBundleIdentifier": bundleIdentifier,
+            "CFBundleName": name,
+            "CFBundleDisplayName": displayName,
+            "CFBundlePackageType": "APPL"
+        ]
+        let data = try PropertyListSerialization.data(
+            fromPropertyList: info,
+            format: .xml,
+            options: 0
+        )
+        try data.write(to: contents.appendingPathComponent("Info.plist"))
+        return contents.deletingLastPathComponent()
+    }
+}
+
+@MainActor
+private final class WorkspaceContextManagerSpy: WorkspaceContextManaging {
+    private(set) var switchedContextIDs: [UUID] = []
+    private(set) var deletedContextIDs: [UUID] = []
+    private(set) var archivedContextIDs: [UUID] = []
+    private(set) var unarchivedContextIDs: [UUID] = []
+    private(set) var updatedContexts: [WorkspaceContext] = []
+
+    var error: Error?
+    var onSwitch: (() -> Void)?
+    var onUnarchive: (() -> Void)?
+
+    func switchContext(id: UUID) async throws {
+        switchedContextIDs.append(id)
+        onSwitch?()
+
+        if let error {
+            throw error
+        }
+    }
+
+    func deleteContext(id: UUID) async throws {
+        deletedContextIDs.append(id)
+
+        if let error {
+            throw error
+        }
+    }
+
+    func archiveContext(id: UUID) async throws {
+        archivedContextIDs.append(id)
+
+        if let error {
+            throw error
+        }
+    }
+
+    func unarchiveContext(id: UUID) async throws {
+        unarchivedContextIDs.append(id)
+        onUnarchive?()
+
+        if let error {
+            throw error
+        }
+    }
+
+    func updateContext(_ context: WorkspaceContext) async throws {
+        updatedContexts.append(context)
+
+        if let error {
+            throw error
+        }
+    }
+}

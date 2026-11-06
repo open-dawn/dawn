@@ -60,10 +60,10 @@ struct EventBusRuntimeTests {
         defer { remoteBus.disconnect() }
 
         let listener = RecordingListener()
-        remoteBus.addListener(listener, kinds: [.switchSpace])
+        remoteBus.addListener(listener, kinds: [.initialized])
         try await Task.sleep(for: .milliseconds(200))
 
-        let event = Event.switchSpace(SwitchSpaceEvent(spaceIndex: 4))
+        let event = Event.initialized(InitializedEvent())
         runtime.bus.publish(event)
 
         try await Task.sleep(for: .milliseconds(200))

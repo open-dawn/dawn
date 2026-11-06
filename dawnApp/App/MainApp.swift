@@ -4,37 +4,31 @@ import SwiftUI
 struct MainApp: App {
     @NSApplicationDelegateAdaptor(SettingsAppDelegate.self) private var appDelegate
 
-    private let screens: [ConfigurationPane] = [
-        ConfigurationPane("Profiles") { WorkspaceSwitcherView() },
-//        ConfigurationPane("General Settings") { GeneralSettingsView() },
-        ConfigurationPane("About") {
-            AboutView(
-                content: AboutMetadataLoader.loadRequired()
-            )
-        }
-    ]
-
     var body: some Scene {
         WindowGroup {
-            TabView {
-                ForEach(screens, id: \.name) { screen in
-                    Tab(screen.name, systemImage: "") {
-                        screen.content
-                            .padding(16)
+            AppShellView()
+                .environment(appDelegate.eventBusService)
+                .environment(appDelegate.contextStore)
+                .environment(appDelegate.updaterService)
+                .environment(appDelegate.accessibilityPermissionService)
+                .environment(appDelegate.settingsStore)
+                .handlesExternalEvents(
+                    preferring: ["*"],
+                    allowing: ["*"]
+                )
+                .task(id: appDelegate.eventBusService.isConnected) {
+                    guard appDelegate.eventBusService.isConnected else {
+                        appDelegate.accessibilityPermissionService.clearStatus()
+                        return
                     }
-                }
-            }
-            .padding(0)
-            .environment(appDelegate.eventBusService)
-            .environment(appDelegate.contextStore)
-            .task(id: appDelegate.eventBusService.isConnected) {
-                guard appDelegate.eventBusService.isConnected else {
-                    return
-                }
 
-                await appDelegate.contextStore.refresh()
-            }
+                    await appDelegate.contextStore.refresh()
+                    await appDelegate.accessibilityPermissionService.refresh()
+                    await appDelegate.settingsStore.refresh()
+                }
         }
-        .windowResizability(.contentSize)
+        .defaultSize(width: 1080, height: 680)
+        .windowStyle(.hiddenTitleBar)
+        .windowResizability(.contentMinSize)
     }
 }

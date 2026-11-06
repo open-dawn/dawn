@@ -1,44 +1,50 @@
 import Foundation
 import libdawn
-import dawnLogging
 
-final class ContextManager: ContextProviding {
+final class ContextManager: WorkspaceManaging {
     private let store: SettingsStore
     private let snapshotPublisher: ContextSnapshotPublishing
 
     init(
-        repository: any SettingsRepository = UserDefaultsSettingsRepository(),
+        store: SettingsStore,
         snapshotPublisher: ContextSnapshotPublishing
-    ) async throws {
+    ) {
+        self.store = store
         self.snapshotPublisher = snapshotPublisher
-
-        do {
-            store = try await SettingsStore(repository: repository)
-        } catch {
-            #log("Corrupted SettingsStore \(error.localizedDescription)", level: .error, category: .settings)
-            #log("Reseting setting store", level: .info, category: .settings)
-
-            try await repository.save(.empty)
-            store = try await SettingsStore(repository: repository)
-        }
     }
 
     func getAvailableContexts() async -> [WorkspaceContext] {
-        let storeSnapshot = await store.snapshot()
-        return storeSnapshot.contexts
+        await store.snapshot().contexts
     }
 
-    func createContext(name: String, symbol: String, applications: [WorkspaceApplication]) async throws
-        -> WorkspaceContext
-    {
-        let context = try await store.createContext(name: name, symbol: symbol, applications: applications)
+    func getWorkspaceSnapshot() async -> WorkspaceSnapshot {
+        let document = await store.snapshot()
+
+        return WorkspaceSnapshot(
+            contexts: document.contexts,
+            activity: document.workspaceActivity
+        )
+    }
+
+    func createContext(
+        name: String,
+        symbol: String,
+        applications: [WorkspaceApplication],
+        transition: WorkspaceTransition = .default
+    ) async throws -> WorkspaceContext {
+        let context = try await store.createContext(
+            name: name,
+            symbol: symbol,
+            applications: applications,
+            transition: transition
+        )
 
         await publishAvailableContexts()
         return context
     }
 
     func getContext(id: UUID) async -> WorkspaceContext? {
-        let contexts = await getAvailableContexts()
+        let contexts = await store.snapshot().contexts
         return contexts.first(where: { $0.id == id })
     }
 
@@ -52,9 +58,35 @@ final class ContextManager: ContextProviding {
         await publishAvailableContexts()
     }
 
+    func archiveContext(id: UUID) async throws {
+        try await store.archiveContext(id: id)
+        await publishAvailableContexts()
+    }
+
+    func unarchiveContext(id: UUID) async throws {
+        try await store.unarchiveContext(id: id)
+        await publishAvailableContexts()
+    }
+
     private func publishAvailableContexts() async {
+        let contexts = await store.snapshot().contexts
+        snapshotPublisher.publishAvailableContexts(contexts)
+    }
+
+    func getWorkspaceActivity() async -> WorkspaceActivityState {
         let snapshot = await store.snapshot()
-        snapshotPublisher.publishAvailableContexts(snapshot.contexts)
+
+        return snapshot.workspaceActivity
+    }
+
+    @discardableResult
+    func recordContextActivation(contextID: UUID, at date: Date) async throws -> WorkspaceActivityState {
+        try await store.recordContextActivation(contextID: contextID, at: date)
+    }
+
+    @discardableResult
+    func stopActiveContext(at date: Date) async throws -> WorkspaceActivityState {
+        try await store.stopActiveContext(at: date)
     }
 }
 
@@ -65,12 +97,15 @@ protocol ContextProviding {
     func createContext(
         name: String,
         symbol: String,
-        applications: [WorkspaceApplication]
+        applications: [WorkspaceApplication],
+        transition: WorkspaceTransition
     ) async throws -> WorkspaceContext
-
     func updateContext(_ context: WorkspaceContext) async throws
-
     func deleteContext(id: UUID) async throws
+
+    func archiveContext(id: UUID) async throws
+
+    func unarchiveContext(id: UUID) async throws
 
     func getContext(id: UUID) async -> WorkspaceContext?
 }

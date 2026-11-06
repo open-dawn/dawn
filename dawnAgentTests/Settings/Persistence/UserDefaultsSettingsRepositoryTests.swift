@@ -46,7 +46,7 @@ struct UserDefaultsSettingsRepositoryTests {
         let expected = SettingsDocument(
             schemaVersion: SettingsDocument.currentSchemaVersion,
             contexts: [context],
-            generalSettings: GeneralSettings(launchAtLogin: true)
+            generalSettings: Settings(launchAtLogin: true)
         )
 
         try await sut.repository.save(expected)
@@ -123,7 +123,7 @@ struct UserDefaultsSettingsRepositoryTests {
         let unsupportedDocument = SettingsDocument(
             schemaVersion: 999,
             contexts: [],
-            generalSettings: GeneralSettings()
+            generalSettings: Settings()
         )
 
         let originalData = try JSONEncoder().encode(unsupportedDocument)
@@ -163,7 +163,7 @@ struct UserDefaultsSettingsRepositoryTests {
         let unsupportedDocument = SettingsDocument(
             schemaVersion: 999,
             contexts: [],
-            generalSettings: GeneralSettings()
+            generalSettings: Settings()
         )
 
         do {

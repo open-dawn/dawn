@@ -11,7 +11,7 @@ struct WMOpenAppActionTests {
         let mockApp = WorkspaceApplication(bundleIdentifier: "", displayName: "", applicationURL: nil)
         let fakeWorkspace = FakeWorkspace()
 
-        let action = WMOpenAppAction(mockApp, workspace: fakeWorkspace)
+        let action = WMOpenAppAction(app: mockApp, workspace: fakeWorkspace)
 
         await #expect(throws: WMActionError.invalidURL) {
             try await action.execute()
@@ -26,7 +26,7 @@ struct WMOpenAppActionTests {
         let fakeWorkspace = FakeWorkspace()
         fakeWorkspace.errorToThrow = NSError(domain: NSCocoaErrorDomain, code: NSFileReadNoSuchFileError, userInfo: [:])
 
-        let action = WMOpenAppAction(mockApp, workspace: fakeWorkspace)
+        let action = WMOpenAppAction(app: mockApp, workspace: fakeWorkspace)
 
         let appURL = try #require(mockApp.applicationURL)
         await #expect(throws: WMActionError.notFound(filePath: appURL.path())) {
@@ -44,7 +44,7 @@ struct WMOpenAppActionTests {
                                              code: NSFileReadCorruptFileError,
                                              userInfo: [:])
 
-        let action = WMOpenAppAction(mockApp, workspace: fakeWorkspace)
+        let action = WMOpenAppAction(app: mockApp, workspace: fakeWorkspace)
 
         try #require(mockApp.applicationURL != nil)
         await #expect(throws: WMActionError.corruptedFile) {
@@ -62,7 +62,7 @@ struct WMOpenAppActionTests {
                                              code: NSFileReadNoPermissionError,
                                              userInfo: [:])
 
-        let action = WMOpenAppAction(mockApp, workspace: fakeWorkspace)
+        let action = WMOpenAppAction(app: mockApp, workspace: fakeWorkspace)
 
         try #require(mockApp.applicationURL != nil)
         await #expect(throws: WMActionError.permissionDenied) {
@@ -78,7 +78,7 @@ struct WMOpenAppActionTests {
         let fakeWorkspace = FakeWorkspace()
         fakeWorkspace.errorToThrow = NSError(domain: "idkw", code: 5, userInfo: [:])
 
-        let action = WMOpenAppAction(mockApp, workspace: fakeWorkspace)
+        let action = WMOpenAppAction(app: mockApp, workspace: fakeWorkspace)
 
         try #require(mockApp.applicationURL != nil)
         let errorMessage = fakeWorkspace.errorToThrow?.localizedDescription
@@ -93,25 +93,202 @@ struct WMOpenAppActionTests {
                                            displayName: "Safari",
                                            applicationURL: URL(filePath: "Applications/Safari.app"))
         let fakeWorkspace = FakeWorkspace()
-        let action = WMOpenAppAction(mockApp, workspace: fakeWorkspace)
+        let action = WMOpenAppAction(
+            app: mockApp,
+            workspace: fakeWorkspace,
+            provider: FakeAppProvider()
+        )
 
         try #require(mockApp.applicationURL != nil)
         await #expect(throws: Never.self) { try await action.execute() }
+        #expect(fakeWorkspace.didCallOpenApplication)
+    }
+
+    @Test("maps WorkspaceApplication launch fields onto OpenConfiguration")
+    func mapsLaunchConfiguration() async throws {
+        let mockApp = WorkspaceApplication(
+            bundleIdentifier: "com.apple.Terminal",
+            displayName: "Terminal",
+            applicationURL: URL(filePath: "/System/Applications/Utilities/Terminal.app"),
+            allowsRunningApplicationSubstitution: false,
+            createsNewApplicationInstance: true,
+            arguments: ["--args", "hello"],
+            environment: ["DAWN_TEST": "1"],
+            promptsUserIfNeeded: true
+        )
+        let fakeWorkspace = FakeWorkspace()
+        let action = WMOpenAppAction(
+            app: mockApp,
+            workspace: fakeWorkspace,
+            provider: FakeAppProvider()
+        )
+
+        try await action.execute()
+
+        let configuration = try #require(fakeWorkspace.lastConfiguration)
+        #expect(configuration.activates == true)
+        #expect(configuration.hides == false)
+        #expect(configuration.hidesOthers == false)
+        #expect(configuration.requiresUniversalLinks == false)
+        #expect(configuration.allowsRunningApplicationSubstitution == false)
+        #expect(configuration.createsNewApplicationInstance == true)
+        #expect(configuration.arguments == ["--args", "hello"])
+        #expect(configuration.environment == ["DAWN_TEST": "1"])
+        #expect(configuration.promptsUserIfNeeded == true)
+    }
+
+    @Test("unhides and activates a hidden running app when substitution is allowed")
+    func restoresHiddenRunningApp() async throws {
+        let mockApp = WorkspaceApplication(
+            bundleIdentifier: "com.apple.Safari",
+            displayName: "Safari",
+            applicationURL: URL(filePath: "Applications/Safari.app")
+        )
+        let runningApp = FakeRunningApp(bundleIdentifier: mockApp.bundleIdentifier)
+        runningApp.isHidden = true
+
+        let provider = FakeAppProvider()
+        provider.appsByBundleIdentifier[mockApp.bundleIdentifier] = [runningApp]
+        let fakeWorkspace = FakeWorkspace()
+
+        let action = WMOpenAppAction(app: mockApp, workspace: fakeWorkspace, provider: provider)
+        try await action.execute()
+
+        #expect(runningApp.didUnhide)
+        #expect(runningApp.didActivate)
+        #expect(runningApp.lastActivationOptions == .activateAllWindows)
+        #expect(!fakeWorkspace.didCallOpenApplication)
+    }
+
+    @Test("activates a visible running app without relaunching when substitution is allowed")
+    func activatesVisibleRunningApp() async throws {
+        let mockApp = WorkspaceApplication(
+            bundleIdentifier: "com.apple.Safari",
+            displayName: "Safari",
+            applicationURL: URL(filePath: "Applications/Safari.app")
+        )
+        let runningApp = FakeRunningApp(bundleIdentifier: mockApp.bundleIdentifier)
+        runningApp.isHidden = false
+
+        let provider = FakeAppProvider()
+        provider.appsByBundleIdentifier[mockApp.bundleIdentifier] = [runningApp]
+        let fakeWorkspace = FakeWorkspace()
+
+        let action = WMOpenAppAction(app: mockApp, workspace: fakeWorkspace, provider: provider)
+        try await action.execute()
+
+        #expect(!runningApp.didUnhide)
+        #expect(runningApp.didActivate)
+        #expect(!fakeWorkspace.didCallOpenApplication)
+    }
+
+    @Test("relaunches when createsNewApplicationInstance is true even if running")
+    func createsNewInstanceIgnoresRunningApp() async throws {
+        let mockApp = WorkspaceApplication(
+            bundleIdentifier: "com.apple.Safari",
+            displayName: "Safari",
+            applicationURL: URL(filePath: "Applications/Safari.app"),
+            createsNewApplicationInstance: true
+        )
+        let runningApp = FakeRunningApp(bundleIdentifier: mockApp.bundleIdentifier, processIdentifier: 100)
+        runningApp.isHidden = true
+
+        let provider = FakeAppProvider()
+        provider.appsByBundleIdentifier[mockApp.bundleIdentifier] = [runningApp]
+        let fakeWorkspace = FakeWorkspace()
+        fakeWorkspace.applicationToReturn = FakeRunningApp(
+            bundleIdentifier: mockApp.bundleIdentifier,
+            processIdentifier: 200
+        )
+
+        let action = WMOpenAppAction(app: mockApp, workspace: fakeWorkspace, provider: provider)
+        let processIdentifier = try await action.open()
+
+        #expect(!runningApp.didUnhide)
+        #expect(!runningApp.didActivate)
+        #expect(fakeWorkspace.didCallOpenApplication)
+        #expect(processIdentifier == 200)
+    }
+
+    @Test("open returns the restored running process identifier")
+    func openReturnsRestoredProcessIdentifier() async throws {
+        let mockApp = WorkspaceApplication(
+            bundleIdentifier: "com.apple.Safari",
+            displayName: "Safari",
+            applicationURL: URL(filePath: "Applications/Safari.app")
+        )
+        let runningApp = FakeRunningApp(bundleIdentifier: mockApp.bundleIdentifier, processIdentifier: 100)
+        let provider = FakeAppProvider()
+        provider.appsByBundleIdentifier[mockApp.bundleIdentifier] = [runningApp]
+
+        let action = WMOpenAppAction(app: mockApp, workspace: FakeWorkspace(), provider: provider)
+        let processIdentifier = try await action.open()
+
+        #expect(processIdentifier == 100)
+    }
+
+    @Test("relaunches when substitution is disallowed even if running")
+    func disallowedSubstitutionRelaunches() async throws {
+        let mockApp = WorkspaceApplication(
+            bundleIdentifier: "com.apple.Safari",
+            displayName: "Safari",
+            applicationURL: URL(filePath: "Applications/Safari.app"),
+            allowsRunningApplicationSubstitution: false
+        )
+        let runningApp = FakeRunningApp(bundleIdentifier: mockApp.bundleIdentifier)
+        runningApp.isHidden = true
+
+        let provider = FakeAppProvider()
+        provider.appsByBundleIdentifier[mockApp.bundleIdentifier] = [runningApp]
+        let fakeWorkspace = FakeWorkspace()
+
+        let action = WMOpenAppAction(app: mockApp, workspace: fakeWorkspace, provider: provider)
+        try await action.execute()
+
+        #expect(!runningApp.didUnhide)
+        #expect(!runningApp.didActivate)
+        #expect(fakeWorkspace.didCallOpenApplication)
+    }
+
+    @Test("throws noGUItoShow when unhide fails")
+    func unhideFailure() async {
+        let mockApp = WorkspaceApplication(
+            bundleIdentifier: "com.apple.Safari",
+            displayName: "Safari",
+            applicationURL: URL(filePath: "Applications/Safari.app")
+        )
+        let runningApp = FakeRunningApp(bundleIdentifier: mockApp.bundleIdentifier)
+        runningApp.isHidden = true
+        runningApp.unhideResult = false
+
+        let provider = FakeAppProvider()
+        provider.appsByBundleIdentifier[mockApp.bundleIdentifier] = [runningApp]
+        let fakeWorkspace = FakeWorkspace()
+
+        let action = WMOpenAppAction(app: mockApp, workspace: fakeWorkspace, provider: provider)
+        await #expect(throws: WMActionError.noGUItoShow) {
+            try await action.execute()
+        }
+        #expect(!fakeWorkspace.didCallOpenApplication)
     }
 }
 
 final class FakeWorkspace: WorkspaceOpener {
     var didCallOpenApplication: Bool = false
+    var lastConfiguration: NSWorkspace.OpenConfiguration?
     var errorToThrow: Error?
+    var applicationToReturn: any RunningApplicationControlling = FakeRunningApp(processIdentifier: -1)
 
-    func openApplication(at _: URL,
-                         configuration _: NSWorkspace.OpenConfiguration) async throws -> NSRunningApplication
-    {
+    func openRunningApplication(
+        at _: URL,
+        configuration: NSWorkspace.OpenConfiguration
+    ) async throws -> any RunningApplicationControlling {
         didCallOpenApplication = true
+        lastConfiguration = configuration
         if let error = errorToThrow {
             throw error
         }
 
-        return NSRunningApplication()
+        return applicationToReturn
     }
 }

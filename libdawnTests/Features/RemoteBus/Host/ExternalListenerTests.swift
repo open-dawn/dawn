@@ -23,11 +23,11 @@ struct ExternalListenerTests {
     @Test("delivers matching publish events")
     func deliversPublishEvents() {
         let destination = MockEventDelivering()
-        let listener = ExternalListener(destination: destination, kinds: [.switchSpace])
+        let listener = ExternalListener(destination: destination, kinds: [.initialized])
 
-        listener.handle(.switchSpace(SwitchSpaceEvent(spaceIndex: 1)), reply: nil)
+        listener.handle(.initialized(InitializedEvent()), reply: nil)
 
-        #expect(destination.deliveredEvents() == [.switchSpace(SwitchSpaceEvent(spaceIndex: 1))])
+        #expect(destination.deliveredEvents() == [.initialized(InitializedEvent())])
     }
 
     @Test("ignores unsubscribed kinds")
@@ -35,7 +35,7 @@ struct ExternalListenerTests {
         let destination = MockEventDelivering()
         let listener = ExternalListener(destination: destination, kinds: [.debugPing])
 
-        listener.handle(.switchSpace(SwitchSpaceEvent(spaceIndex: 1)), reply: nil)
+        listener.handle(.initialized(InitializedEvent()), reply: nil)
 
         #expect(destination.deliveredEvents().isEmpty)
     }
@@ -45,11 +45,11 @@ struct ExternalListenerTests {
         let destination = MockEventDelivering()
         let listener = ExternalListener(destination: destination)
 
-        listener.handle(.switchSpace(SwitchSpaceEvent(spaceIndex: 1)), reply: nil)
+        listener.handle(.initialized(InitializedEvent()), reply: nil)
         listener.handle(.debugPing(DebugPingEvent()), reply: nil)
 
         #expect(destination.deliveredEvents() == [
-            .switchSpace(SwitchSpaceEvent(spaceIndex: 1)),
+            .initialized(InitializedEvent()),
             .debugPing(DebugPingEvent())
         ])
     }

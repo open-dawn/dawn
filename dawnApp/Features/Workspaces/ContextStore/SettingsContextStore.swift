@@ -6,22 +6,20 @@
 //
 
 import Foundation
-import Observation
 import libdawn
+import Observation
 
 @Observable
 @MainActor
 final class SettingsContextStore: Listener {
-    private let bus: any SettingsContextEventBus
+    private let bus: any SettingsEventBus
     private var isStarted = false
 
     private(set) var contexts: [WorkspaceContext] = []
     private(set) var isLoading = false
     private(set) var error: SettingsContextStoreError?
 
-    init(
-        bus: any SettingsContextEventBus,
-    ) {
+    init(bus: any SettingsEventBus) {
         self.bus = bus
     }
 
@@ -45,8 +43,8 @@ final class SettingsContextStore: Listener {
         error = nil
     }
 
-    func handle(_ event: Event, reply: (@Sendable (Event) -> Void)?) {
-        guard case .availableContexts(let payload) = event else {
+    func handle(_ event: Event, reply _: (@Sendable (Event) -> Void)?) {
+        guard case let .availableContexts(payload) = event else {
             return
         }
 
@@ -65,11 +63,11 @@ final class SettingsContextStore: Listener {
             )
 
             switch response {
-            case .contextsFetched(let payload):
+            case let .contextsFetched(payload):
                 contexts = payload.contexts
                 error = nil
 
-            case .availableContexts(let payload):
+            case let .availableContexts(payload):
                 contexts = payload.contexts
                 error = nil
 
@@ -87,7 +85,7 @@ final class SettingsContextStore: Listener {
         do {
             let response = try await bus.ask(event, timeout: .seconds(5))
 
-            guard case .contextMutationAcknowledged(let acknowledgement) = response else {
+            guard case let .contextMutationAcknowledged(acknowledgement) = response else {
                 throw SettingsContextStoreError.unexpectedResponse(response.kind)
             }
 
@@ -104,7 +102,7 @@ final class SettingsContextStore: Listener {
 
                 error = nil
                 return contextID
-            case .failure(let failure):
+            case let .failure(failure):
                 throw SettingsContextStoreError.mutationRejected(failure)
             }
         } catch {
@@ -115,11 +113,21 @@ final class SettingsContextStore: Listener {
     }
 
     @discardableResult
-    func createContext(name: String, symbol: String, applications: [WorkspaceApplication])
-        async throws(SettingsContextStoreError) -> UUID
-    {
+    func createContext(
+        name: String,
+        symbol: String,
+        applications: [WorkspaceApplication],
+        transition: WorkspaceTransition = .default
+    ) async throws(SettingsContextStoreError) -> UUID {
         try await askForAcknowledgement(
-            .createContext(CreateContextEvent(name: name, symbol: symbol, applications: applications))
+            .createContext(
+                CreateContextEvent(
+                    name: name,
+                    symbol: symbol,
+                    applications: applications,
+                    transition: transition
+                )
+            )
         )
     }
 
@@ -137,6 +145,20 @@ final class SettingsContextStore: Listener {
                     contextID: id
                 )
             ),
+            expectedContextID: id
+        )
+    }
+
+    func archiveContext(id: UUID) async throws(SettingsContextStoreError) {
+        _ = try await askForAcknowledgement(
+            .archiveContext(ArchiveContextEvent(contextID: id)),
+            expectedContextID: id
+        )
+    }
+
+    func unarchiveContext(id: UUID) async throws(SettingsContextStoreError) {
+        _ = try await askForAcknowledgement(
+            .unarchiveContext(UnarchiveContextEvent(contextID: id)),
             expectedContextID: id
         )
     }

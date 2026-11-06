@@ -2,8 +2,14 @@ import AppKit
 @testable import dawnAgent
 
 final class FakeAppProvider: ApplicationProvider {
-    var apps: [any RunningApplicationControlling] = [NSRunningApplication()]
-    func runningApplications(withBundleIdentifier _: String) -> [any RunningApplicationControlling] {
-        return apps
+    var appsByBundleIdentifier: [String: [any RunningApplicationControlling]] = [:]
+    var allApps: [any RunningApplicationControlling] = []
+
+    func runningApplications(withBundleIdentifier bundleIdentifier: String) -> [any RunningApplicationControlling] {
+        appsByBundleIdentifier[bundleIdentifier] ?? []
+    }
+
+    func runningApplications() -> [any RunningApplicationControlling] {
+        allApps
     }
 }

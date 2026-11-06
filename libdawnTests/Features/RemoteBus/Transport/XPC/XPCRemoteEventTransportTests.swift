@@ -26,7 +26,7 @@ struct XPCRemoteEventTransportTests {
             return
         }
 
-        let event = Event.switchSpace(SwitchSpaceEvent(spaceIndex: 4))
+        let event = Event.initialized(InitializedEvent())
         remoteBus.publish(event)
 
         try await Task.sleep(for: .milliseconds(200))

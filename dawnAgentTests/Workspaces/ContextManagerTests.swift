@@ -1,6 +1,6 @@
 import Foundation
-import libdawn
 import Testing
+import libdawn
 
 @testable import dawnAgent
 
@@ -10,20 +10,18 @@ struct ContextManagerTests {
     @Test("Valid repository loads contexts")
     func validRepository() async {
         let mockRepository = MockSettingsRepository()
-        let publisherSpy = SnapshotPublisherSpy()
 
         await #expect(throws: Never.self) {
-            try await ContextManager(repository: mockRepository, snapshotPublisher: publisherSpy)
+            _ = try await SettingsStore.make(repository: mockRepository)
         }
     }
 
     @Test("Corrupted repository resets to empty")
     func corruptedRepository() async throws {
         let mockRepository = MockSettingsRepository(loadFailuresRemaining: 1)
-        let publisherSpy = SnapshotPublisherSpy()
-        let manager = try await ContextManager(repository: mockRepository, snapshotPublisher: publisherSpy)
+        let store = try await SettingsStore.make(repository: mockRepository)
 
-        #expect(await manager.getAvailableContexts().isEmpty)
+        #expect(await store.snapshot().contexts.isEmpty)
         #expect(await mockRepository.loadFailuresRemaining == 0)
     }
 
@@ -33,10 +31,9 @@ struct ContextManagerTests {
             shouldFailSave: true,
             loadFailuresRemaining: 1
         )
-        let publisherSpy = SnapshotPublisherSpy()
 
         await #expect(throws: SettingsRepositoryError.corruptedData(description: "save")) {
-            try await ContextManager(repository: mockRepository, snapshotPublisher: publisherSpy)
+            try await SettingsStore.make(repository: mockRepository)
         }
     }
 
@@ -50,7 +47,7 @@ struct ContextManagerTests {
         let publisherSpy = SnapshotPublisherSpy()
 
         let manager = try #require(
-            try? await ContextManager(repository: mockRepository, snapshotPublisher: publisherSpy)
+            try? await makeManager(repository: mockRepository, publisher: publisherSpy)
         )
         #expect(await manager.getAvailableContexts() == document.contexts)
     }
@@ -65,7 +62,7 @@ struct ContextManagerTests {
         let publisherSpy = SnapshotPublisherSpy()
 
         let manager = try #require(
-            try? await ContextManager(repository: mockRepository, snapshotPublisher: publisherSpy)
+            try? await makeManager(repository: mockRepository, publisher: publisherSpy)
         )
         let target = document.contexts[0]
         #expect(await manager.getContext(id: target.id) == target)
@@ -81,9 +78,17 @@ struct ContextManagerTests {
         let publisherSpy = SnapshotPublisherSpy()
 
         let manager = try #require(
-            try? await ContextManager(repository: mockRepository, snapshotPublisher: publisherSpy)
+            try? await makeManager(repository: mockRepository, publisher: publisherSpy)
         )
         #expect(await manager.getContext(id: UUID()) == nil)
+    }
+
+    private func makeManager(
+        repository: MockSettingsRepository,
+        publisher: SnapshotPublisherSpy
+    ) async throws -> ContextManager {
+        let store = try await SettingsStore.make(repository: repository)
+        return ContextManager(store: store, snapshotPublisher: publisher)
     }
 
     private func createMockWorkspaceContext(count: Int) -> [WorkspaceContext] {
@@ -100,7 +105,7 @@ struct ContextManagerTests {
         let publisherSpy = SnapshotPublisherSpy()
 
         let manager = try #require(
-            try? await ContextManager(repository: mockRepository, snapshotPublisher: publisherSpy)
+            try? await makeManager(repository: mockRepository, publisher: publisherSpy)
         )
 
         let createdContext = try await manager.createContext(name: "Placeholder", symbol: "book", applications: [])
@@ -120,7 +125,7 @@ struct ContextManagerTests {
         let mockRepository = MockSettingsRepository(document: document)
 
         let manager = try #require(
-            try? await ContextManager(repository: mockRepository, snapshotPublisher: publisherSpy)
+            try? await makeManager(repository: mockRepository, publisher: publisherSpy)
         )
 
         context.name = "Placeholder 2"
@@ -148,7 +153,7 @@ struct ContextManagerTests {
         let publisherSpy = SnapshotPublisherSpy()
 
         let manager = try #require(
-            try? await ContextManager(repository: mockRepository, snapshotPublisher: publisherSpy)
+            try? await makeManager(repository: mockRepository, publisher: publisherSpy)
         )
 
         try await manager.deleteContext(id: deletedContext.id)
@@ -160,9 +165,9 @@ struct ContextManagerTests {
     func validationFailureDoesNotPublish() async throws {
         let repository = MockSettingsRepository()
         let publisher = SnapshotPublisherSpy()
-        let manager = try await ContextManager(
+        let manager = try await makeManager(
             repository: repository,
-            snapshotPublisher: publisher
+            publisher: publisher
         )
 
         await #expect(throws: SettingsStoreError.emptyContextName) {
@@ -180,9 +185,9 @@ struct ContextManagerTests {
     func persistenceFailureDoesNotPublish() async throws {
         let repository = MockSettingsRepository()
         let publisher = SnapshotPublisherSpy()
-        let manager = try await ContextManager(
+        let manager = try await makeManager(
             repository: repository,
-            snapshotPublisher: publisher
+            publisher: publisher
         )
 
         await repository.setShouldFailSave(true)
@@ -216,9 +221,9 @@ struct ContextManagerTests {
 
         let repository = MockSettingsRepository(document: document)
         let publisher = SnapshotPublisherSpy()
-        let manager = try await ContextManager(
+        let manager = try await makeManager(
             repository: repository,
-            snapshotPublisher: publisher
+            publisher: publisher
         )
 
         _ = await manager.getAvailableContexts()
@@ -234,9 +239,9 @@ struct ContextManagerTests {
         let repository = MockSettingsRepository()
         let publisher = SnapshotPublisherSpy()
 
-        let manager = try await ContextManager(
+        let manager = try await makeManager(
             repository: repository,
-            snapshotPublisher: publisher
+            publisher: publisher
         )
 
         try await withThrowingTaskGroup(of: Void.self) { group in
@@ -264,6 +269,204 @@ struct ContextManagerTests {
         #expect(publisher.publishedSnapshots.count == mutationCount)
         #expect(publicationsAreMonotonic)
         #expect(snapshotSizes.last == mutationCount)
+    }
+
+    @Test("returns persisted workspace activity")
+    func returnsWorkspaceActivity() async throws {
+        let context = WorkspaceContext(
+            name: "Work",
+            symbol: "briefcase"
+        )
+        let activeSince = Date(
+            timeIntervalSince1970: 100
+        )
+
+        var document = SettingsDocument.empty
+        document.contexts = [context]
+        document.workspaceActivity.activate(
+            contextID: context.id,
+            at: activeSince
+        )
+
+        let repository = MockSettingsRepository(
+            document: document
+        )
+        let manager = try await makeManager(
+            repository: repository,
+            publisher: SnapshotPublisherSpy()
+        )
+
+        let activity = await manager.getWorkspaceActivity()
+
+        #expect(activity.activeContextID == context.id)
+        #expect(activity.activeSince == activeSince)
+    }
+
+    @Test("recording activation returns and persists activity")
+    func recordsWorkspaceActivity() async throws {
+        let context = WorkspaceContext(
+            name: "Work",
+            symbol: "briefcase"
+        )
+        let activatedAt = Date(
+            timeIntervalSince1970: 100
+        )
+
+        var document = SettingsDocument.empty
+        document.contexts = [context]
+
+        let repository = MockSettingsRepository(
+            document: document
+        )
+        let manager = try await makeManager(
+            repository: repository,
+            publisher: SnapshotPublisherSpy()
+        )
+
+        let activity = try await manager.recordContextActivation(
+            contextID: context.id,
+            at: activatedAt
+        )
+
+        #expect(activity.activeContextID == context.id)
+        #expect(activity.activeSince == activatedAt)
+        #expect(
+            await repository.document?.workspaceActivity
+                == activity
+        )
+    }
+
+    @Test("stopping returns and persists inactive activity")
+    func stopsWorkspaceActivity() async throws {
+        let context = WorkspaceContext(
+            name: "Work",
+            symbol: "briefcase"
+        )
+        let stoppedAt = Date(
+            timeIntervalSince1970: 200
+        )
+
+        var document = SettingsDocument.empty
+        document.contexts = [context]
+        document.workspaceActivity.activate(
+            contextID: context.id,
+            at: Date(timeIntervalSince1970: 100)
+        )
+
+        let repository = MockSettingsRepository(
+            document: document
+        )
+        let manager = try await makeManager(
+            repository: repository,
+            publisher: SnapshotPublisherSpy()
+        )
+
+        let activity = try await manager.stopActiveContext(
+            at: stoppedAt
+        )
+
+        #expect(activity.activeContextID == nil)
+        #expect(
+            activity.lastActiveAt(for: context.id)
+                == stoppedAt
+        )
+        #expect(
+            await repository.document?.workspaceActivity
+                == activity
+        )
+    }
+
+    @Test("Retrieval returns active and archived contexts in stored order")
+    func retrievalKeepsStoredOrder() async throws {
+        let study = WorkspaceContext(name: "Study", symbol: "book")
+        let archived = WorkspaceContext(
+            name: "Old",
+            symbol: "archivebox",
+            isArchived: true
+        )
+        let games = WorkspaceContext(name: "Games", symbol: "gamecontroller")
+
+        var document: SettingsDocument = .empty
+        document.contexts = [study, archived, games]
+
+        let manager = try await makeManager(
+            repository: MockSettingsRepository(document: document),
+            publisher: SnapshotPublisherSpy()
+        )
+
+        #expect(await manager.getAvailableContexts() == [study, archived, games])
+        #expect(await manager.getContext(id: archived.id) == archived)
+    }
+
+    @Test("Archive publishes the stored list with the flag set")
+    func archivePublishesStoredList() async throws {
+        let study = WorkspaceContext(name: "Study", symbol: "book")
+        let games = WorkspaceContext(name: "Games", symbol: "gamecontroller")
+
+        var document: SettingsDocument = .empty
+        document.contexts = [study, games]
+
+        let publisher = SnapshotPublisherSpy()
+        let manager = try await makeManager(
+            repository: MockSettingsRepository(document: document),
+            publisher: publisher
+        )
+
+        try await manager.archiveContext(id: study.id)
+
+        let archivedStudy = WorkspaceContext(
+            id: study.id,
+            name: study.name,
+            symbol: study.symbol,
+            isArchived: true
+        )
+
+        #expect(publisher.publishedSnapshots == [[archivedStudy, games]])
+    }
+
+    @Test("Unarchive publishes the stored list with the flag cleared")
+    func unarchivePublishesStoredList() async throws {
+        let study = WorkspaceContext(name: "Study", symbol: "book")
+        let archived = WorkspaceContext(
+            name: "Old",
+            symbol: "archivebox",
+            isArchived: true
+        )
+
+        var document: SettingsDocument = .empty
+        document.contexts = [study, archived]
+
+        let publisher = SnapshotPublisherSpy()
+        let manager = try await makeManager(
+            repository: MockSettingsRepository(document: document),
+            publisher: publisher
+        )
+
+        try await manager.unarchiveContext(id: archived.id)
+
+        let restored = WorkspaceContext(
+            id: archived.id,
+            name: archived.name,
+            symbol: archived.symbol
+        )
+
+        #expect(publisher.publishedSnapshots == [[study, restored]])
+    }
+
+    @Test("Missing archive does not publish")
+    func missingArchiveDoesNotPublish() async throws {
+        let publisher = SnapshotPublisherSpy()
+        let manager = try await makeManager(
+            repository: MockSettingsRepository(),
+            publisher: publisher
+        )
+        let missingID = UUID()
+
+        await #expect(throws: SettingsStoreError.contextNotFound(missingID)) {
+            try await manager.archiveContext(id: missingID)
+        }
+
+        #expect(publisher.publishedSnapshots.isEmpty)
     }
 }
 
@@ -312,6 +515,7 @@ actor MockSettingsRepository: SettingsRepository {
     }
 }
 
+@MainActor
 final class SnapshotPublisherSpy: ContextSnapshotPublishing {
     private(set) var publishedSnapshots: [[WorkspaceContext]] = []
 

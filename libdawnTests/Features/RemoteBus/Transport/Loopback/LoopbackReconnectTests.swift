@@ -14,7 +14,7 @@ struct LoopbackReconnectTests {
 
         let remoteBus = RemoteEventBus(transport: link.client)
         let listener = RecordingListener()
-        remoteBus.addListener(listener, kinds: [.switchSpace])
+        remoteBus.addListener(listener, kinds: [.initialized])
 
         link.client.simulateDisconnect()
         #expect(!remoteBus.isConnected)
@@ -22,7 +22,7 @@ struct LoopbackReconnectTests {
         try await remoteBus.attemptReconnect()
         #expect(remoteBus.isConnected)
 
-        let event = Event.switchSpace(SwitchSpaceEvent(spaceIndex: 2))
+        let event = Event.initialized(InitializedEvent())
         hostBus.publish(event)
         try await Task.sleep(for: .milliseconds(200))
 

@@ -16,7 +16,7 @@ struct LoopbackRemoteEventTransportTests {
         let listener = RecordingListener()
         remoteBus.addListener(listener)
 
-        let event = Event.switchSpace(SwitchSpaceEvent(spaceIndex: 4))
+        let event = Event.initialized(InitializedEvent())
         remoteBus.publish(event)
 
         try await Task.sleep(for: .milliseconds(200))
@@ -100,7 +100,7 @@ struct LoopbackRemoteEventTransportTests {
         }
 
         link.client.close()
-        link.server.deliver(.switchSpace(SwitchSpaceEvent(spaceIndex: 1)))
+        link.server.deliver(.initialized(InitializedEvent()))
 
         #expect(delivered.snapshot().isEmpty)
     }

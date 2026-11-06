@@ -1,30 +1,66 @@
 import AppKit
-import libdawn
 import dawnLogging
+import libdawn
 
-typealias WindowManagerListenerFactory = @MainActor (EventBus) async throws -> WindowManagerListener
+struct AgentRuntimeComponents {
+    let workspace: WorkspaceRuntime
+}
+
+typealias AgentRuntimeFactory = @MainActor (EventBus, SettingsStore) async throws -> AgentRuntimeComponents
+typealias MenuBarControllerFactory = @MainActor (WorkspaceRuntime, Bool) -> any MenuBarControlling
 
 @MainActor
 final class AppDelegate: NSObject, NSApplicationDelegate {
     private let eventBusService: any EventBusServicing
-    private let makeWindowManagerListener: WindowManagerListenerFactory
+    private let makeMenuBarController: MenuBarControllerFactory
+    private let makeAgentRuntime: AgentRuntimeFactory
+    private var menuBarController: (any MenuBarControlling)?
+    private var workspaceRuntime: WorkspaceRuntime?
     private var windowManagerListener: WindowManagerListener?
     private var debugPingListener: DebugPingListener?
+    private var accessibilityTrustListener: AccessibilityTrustListener?
+    private var settingsListener: SettingsListener?
     private var startupTask: Task<Void, Never>?
     private var isStartingOrStarted = false
 
+    private var isPreparingToTerminate = false
+    private var repository: any SettingsRepository
+
     init(
         eventBusService: any EventBusServicing = EventBusService(),
-        makeWindowManagerListener: @escaping WindowManagerListenerFactory = { bus in
-            try await WindowManagerListener(bus: bus)
-        }
+        repository: any SettingsRepository = UserDefaultsSettingsRepository(),
+        makeMenuBarController: @escaping MenuBarControllerFactory = { workspace, isVisible in
+            MenuBarController(workspace: workspace, initiallyVisible: isVisible)
+        },
+        makeAgentRuntime: @escaping AgentRuntimeFactory = AppDelegate.makeAgentRuntime
     ) {
         self.eventBusService = eventBusService
-        self.makeWindowManagerListener = makeWindowManagerListener
+        self.repository = repository
+        self.makeMenuBarController = makeMenuBarController
+        self.makeAgentRuntime = makeAgentRuntime
+
         super.init()
     }
 
-    func applicationDidFinishLaunching(_ notification: Notification) {
+    private static func makeAgentRuntime(
+        bus: EventBus,
+        store: SettingsStore
+    ) async throws -> AgentRuntimeComponents {
+        let publisher = EventBusContextSnapshotPublisher(
+            bus: bus
+        )
+
+        let contextManager = ContextManager(
+            store: store,
+            snapshotPublisher: publisher
+        )
+
+        return AgentRuntimeComponents(
+            workspace: WorkspaceRuntime(contextManager: contextManager)
+        )
+    }
+
+    func applicationDidFinishLaunching(_: Notification) {
         guard ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"] == nil else {
             return
         }
@@ -49,17 +85,47 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
     }
 
-    func applicationWillTerminate(_ notification: Notification) {
+    func applicationWillTerminate(_: Notification) {
         startupTask?.cancel()
         startupTask = nil
+
+        menuBarController?.stop()
+        menuBarController = nil
 
         eventBusService.stop()
 
         windowManagerListener = nil
         debugPingListener = nil
+        accessibilityTrustListener = nil
+        settingsListener = nil
+        workspaceRuntime = nil
     }
 
-    func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {
+    func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
+        if isPreparingToTerminate {
+            return .terminateLater
+        }
+
+        guard let workspaceRuntime, workspaceRuntime.activeContextID != nil else {
+            return .terminateNow
+        }
+
+        isPreparingToTerminate = true
+
+        Task { @MainActor in
+            do {
+                try await workspaceRuntime.stopActiveContext()
+                sender.reply(toApplicationShouldTerminate: true)
+            } catch {
+                isPreparingToTerminate = false
+                sender.reply(toApplicationShouldTerminate: false)
+            }
+        }
+
+        return .terminateLater
+    }
+
+    func applicationShouldTerminateAfterLastWindowClosed(_: NSApplication) -> Bool {
         false
     }
 
@@ -68,45 +134,73 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         isStartingOrStarted = true
 
         do {
-            #log(
-                "Creating WindowManager listener",
-                level: .info,
-                category: .appLifecycle
+            #log("Creating workspace runtime", level: .info, category: .appLifecycle)
+
+            let store = try await SettingsStore.make(repository: repository)
+            let components = try await makeAgentRuntime(eventBusService.bus, store)
+
+            let workspaceRuntime = components.workspace
+            await workspaceRuntime.refresh()
+            let settings = await store.generalSettings()
+            try await reconcileRestoredActivity(in: workspaceRuntime)
+            #log("Workspace runtime created", level: .info, category: .appLifecycle)
+
+            let menuBarController = makeMenuBarController(workspaceRuntime, settings.showInMenuBar)
+            let applicator = SettingsApplicator(menuBarController: menuBarController)
+            await applicator.applySettings(settings)
+
+            registerListeners(
+                workspaceRuntime: workspaceRuntime,
+                store: store,
+                menuBarController: menuBarController,
+                applicator: applicator
             )
 
-            let windowManagerListener = try await makeWindowManagerListener(
-                eventBusService.bus
-            )
-
-            try Task.checkCancellation()
-
-            #log(
-                "WindowManager listener created",
-                level: .info,
-                category: .appLifecycle
-            )
-
-            self.windowManagerListener = windowManagerListener
-            self.debugPingListener = DebugPingListener(
-                bus: eventBusService.bus
-            )
-
-            #log(
-                "Starting dawnAgent event bus",
-                level: .info,
-                category: .eventBus
-            )
-
+            #log("Starting dawnAgent event bus", level: .info, category: .eventBus)
             eventBusService.start()
 
-            #log(
-                "dawnAgent startup completed",
-                level: .info,
-                category: .appLifecycle
-            )
+            #log("dawnAgent startup completed", level: .info, category: .appLifecycle)
         } catch {
             isStartingOrStarted = false
             throw error
         }
+    }
+
+    private func registerListeners(
+        workspaceRuntime: WorkspaceRuntime,
+        store: SettingsStore,
+        menuBarController: any MenuBarControlling,
+        applicator: any SettingsApplying
+    ) {
+        let windowManagerListener = WindowManagerListener(
+            bus: eventBusService.bus,
+            workspace: workspaceRuntime
+        )
+
+        let settingsListener = SettingsListener(
+            bus: eventBusService.bus,
+            settingsProvider: SettingsCoordinator(store: store),
+            applicator: applicator
+        )
+
+        let debugPingListener = DebugPingListener(bus: eventBusService.bus)
+        let accessibilityTrustListener = AccessibilityTrustListener(bus: eventBusService.bus)
+
+        self.workspaceRuntime = workspaceRuntime
+        self.windowManagerListener = windowManagerListener
+        self.debugPingListener = debugPingListener
+        self.accessibilityTrustListener = accessibilityTrustListener
+        self.settingsListener = settingsListener
+        self.menuBarController = menuBarController
+    }
+
+    private func reconcileRestoredActivity(in workspace: WorkspaceRuntime) async throws {
+        try Task.checkCancellation()
+
+        if workspace.activeContextID != nil {
+            try await workspace.stopActiveContext()
+        }
+
+        try Task.checkCancellation()
     }
 }

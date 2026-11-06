@@ -1,6 +1,6 @@
 import Foundation
-import libdawn
 import Testing
+import libdawn
 
 @testable import dawnAgent
 
@@ -13,7 +13,6 @@ struct WindowManagerListenerTests {
             (event: Event.debugPing(DebugPingEvent()), afterResult: false),
             (event: Event.initialized(InitializedEvent()), afterResult: true),
             (event: Event.getContexts(GetContextsEvent()), afterResult: true),
-            (event: Event.switchSpace(SwitchSpaceEvent(spaceIndex: 1)), afterResult: true),
             (
                 event: Event.createContext(
                     CreateContextEvent(name: "Placeholder", symbol: "book", applications: [])
@@ -25,6 +24,8 @@ struct WindowManagerListenerTests {
                 ), afterResult: true
             ),
             (event: Event.deleteContext(DeleteContextEvent(contextID: UUID())), afterResult: true),
+            (event: Event.archiveContext(ArchiveContextEvent(contextID: UUID())), afterResult: true),
+            (event: Event.unarchiveContext(UnarchiveContextEvent(contextID: UUID())), afterResult: true),
             (event: Event.switchContext(SwitchContextEvent(contextID: UUID())), afterResult: true),
         ]
 
@@ -35,7 +36,8 @@ struct WindowManagerListenerTests {
         }
 
         let mockContextManager = FakeContextManager()
-        let listener = WindowManagerListener(bus: mockBus, contextManager: mockContextManager)
+        let workspace = WorkspaceRuntime(contextManager: mockContextManager)
+        let listener = WindowManagerListener(bus: mockBus, workspace: workspace)
         for event in events {
             #expect(mockBus.hasListeners(for: event.event) == event.afterResult)
         }
@@ -47,7 +49,8 @@ struct WindowManagerListenerTests {
     func handle_GetContextsEvent() async throws {
         let mockBus = EventBus()
         let mockContextManager = FakeContextManager()
-        let listener = WindowManagerListener(bus: mockBus, contextManager: mockContextManager)
+        let workspace = WorkspaceRuntime(contextManager: mockContextManager)
+        let listener = WindowManagerListener(bus: mockBus, workspace: workspace)
 
         let event = Event.getContexts(GetContextsEvent())
         let eventResponse = try await mockBus.ask(event)
@@ -61,86 +64,16 @@ struct WindowManagerListenerTests {
         _ = listener  // Fix warning of not used variable
     }
 
-    @Test("switchSpace with valid index switches that context")
-    func handle_switchSpaceValidIndex() async {
-        let mockContextManager = FakeContextManager()
-        mockContextManager.contexts = createMockWorkspaceContext(3)
-        let switcherSpy = ContextSwitchingSpy()
-        let mockBus = EventBus()
-        let listener = WindowManagerListener(
-            bus: mockBus,
-            contextManager: mockContextManager,
-            contextSwitching: switcherSpy
-        )
-        let event = Event.switchSpace(SwitchSpaceEvent(spaceIndex: 1))
-
-        listener.handle(event, reply: nil)
-        await mockContextManager.waitUntilSwitched()
-
-        #expect(switcherSpy.switchedContexts == [mockContextManager.contexts[1]])
-    }
-
-    @Test("switchSpace with invalid index switches that context")
-    func handle_switchSpaceInvalidIndex() async {
-        let mockContextManager = FakeContextManager()
-        mockContextManager.contexts = createMockWorkspaceContext(1)
-        let switcherSpy = ContextSwitchingSpy()
-        let mockBus = EventBus()
-        let listener = WindowManagerListener(
-            bus: mockBus,
-            contextManager: mockContextManager,
-            contextSwitching: switcherSpy
-        )
-        let event = Event.switchSpace(SwitchSpaceEvent(spaceIndex: 2))
-
-        listener.handle(event, reply: nil)
-        await mockContextManager.waitUntilSwitched()
-
-        #expect(switcherSpy.switchedContexts == [])
-    }
-
     @Test("getAllContexts return the same of ContextManager")
     func getAllContextsRespectContextManagerReturns() async {
         let mockContextManager = FakeContextManager()
         mockContextManager.contexts = createMockWorkspaceContext(3)
+        let workspace = WorkspaceRuntime(contextManager: mockContextManager)
 
         let mockBus = EventBus()
-        let listener = WindowManagerListener(bus: mockBus, contextManager: mockContextManager)
+        let listener = WindowManagerListener(bus: mockBus, workspace: workspace)
 
         #expect(await listener.getAllContexts() == mockContextManager.contexts)
-    }
-
-    @Test("getAllContexts returns the same data as ContextManager")
-    func getAllContexts_returnsContextManagerValues() async {
-        let mockContextManager = FakeContextManager()
-        mockContextManager.contexts = createMockWorkspaceContext(3)
-
-        let mockBus = EventBus()
-        let listener = WindowManagerListener(bus: mockBus, contextManager: mockContextManager)
-
-        #expect(await listener.getContextWithIndex(0) == mockContextManager.contexts[0])
-    }
-
-    @Test("getContext with valid index returns the correct context")
-    func getContextWithIndex_correctContext() async {
-        let mockContextManager = FakeContextManager()
-        mockContextManager.contexts = createMockWorkspaceContext(3)
-
-        let mockBus = EventBus()
-        let listener = WindowManagerListener(bus: mockBus, contextManager: mockContextManager)
-
-        #expect(await listener.getContextWithIndex(1) == mockContextManager.contexts[1])
-    }
-
-    @Test("getContext with invalid index returns nil when context does not exist")
-    func getContextWithIndex_nilContext() async {
-        let mockContextManager = FakeContextManager()
-        mockContextManager.contexts = []
-
-        let mockBus = EventBus()
-        let listener = WindowManagerListener(bus: mockBus, contextManager: mockContextManager)
-
-        #expect(await listener.getContextWithIndex(1) == nil)
     }
 
     @Test("Create routes payload and replies with created context ID")
@@ -149,26 +82,33 @@ struct WindowManagerListenerTests {
             bundleIdentifier: "com.apple.Safari",
             displayName: "Safari"
         )
+        let transition = WorkspaceTransition(
+            activationPolicy: .merge
+        )
 
         let payload = CreateContextEvent(
             name: "Work",
             symbol: "briefcase",
-            applications: [application]
+            applications: [application],
+            transition: transition
         )
 
         let createdContext = WorkspaceContext(
             name: payload.name,
             symbol: payload.symbol,
-            applications: payload.applications
+            applications: payload.applications,
+            transition: payload.transition
         )
 
         let contextManager = FakeContextManager()
         contextManager.createResult = createdContext
 
+        let workspace = WorkspaceRuntime(contextManager: contextManager)
+
         let bus = EventBus()
         let listener = WindowManagerListener(
             bus: bus,
-            contextManager: contextManager
+            workspace: workspace
         )
 
         let response = try await bus.ask(.createContext(payload))
@@ -195,10 +135,12 @@ struct WindowManagerListenerTests {
         let contextManager = FakeContextManager()
         contextManager.createError = SettingsStoreError.emptyContextName
 
+        let workspace = WorkspaceRuntime(contextManager: contextManager)
+
         let bus = EventBus()
         let listener = WindowManagerListener(
             bus: bus,
-            contextManager: contextManager
+            workspace: workspace
         )
 
         let response = try await bus.ask(.createContext(payload))
@@ -224,10 +166,13 @@ struct WindowManagerListenerTests {
         )
 
         let contextManager = FakeContextManager()
+
+        let workspace = WorkspaceRuntime(contextManager: contextManager)
+
         let bus = EventBus()
         let listener = WindowManagerListener(
             bus: bus,
-            contextManager: contextManager
+            workspace: workspace
         )
 
         listener.handle(.createContext(payload), reply: nil)
@@ -249,11 +194,13 @@ struct WindowManagerListenerTests {
 
         context.name = "Updated Work"
 
+        let workspace = WorkspaceRuntime(contextManager: contextManager)
+
         let payload = UpdateContextEvent(context: context)
         let bus = EventBus()
         let listener = WindowManagerListener(
             bus: bus,
-            contextManager: contextManager
+            workspace: workspace
         )
 
         let response = try await bus.ask(.updateContext(payload))
@@ -283,10 +230,12 @@ struct WindowManagerListenerTests {
             context.id
         )
 
+        let workspace = WorkspaceRuntime(contextManager: contextManager)
+
         let bus = EventBus()
         let listener = WindowManagerListener(
             bus: bus,
-            contextManager: contextManager
+            workspace: workspace
         )
 
         let response = try await bus.ask(
@@ -317,10 +266,12 @@ struct WindowManagerListenerTests {
             missingID
         )
 
+        let workspace = WorkspaceRuntime(contextManager: contextManager)
+
         let bus = EventBus()
         let listener = WindowManagerListener(
             bus: bus,
-            contextManager: contextManager
+            workspace: workspace
         )
 
         let response = try await bus.ask(
@@ -353,11 +304,13 @@ struct WindowManagerListenerTests {
         let contextManager = FakeContextManager()
         contextManager.contexts = [context]
 
+        let workspace = WorkspaceRuntime(contextManager: contextManager)
+
         let payload = DeleteContextEvent(contextID: context.id)
         let bus = EventBus()
         let listener = WindowManagerListener(
             bus: bus,
-            contextManager: contextManager
+            workspace: workspace
         )
 
         let response = try await bus.ask(.deleteContext(payload))
@@ -386,11 +339,13 @@ struct WindowManagerListenerTests {
         contextManager.contexts = [context]
 
         let switcher = ContextSwitchingSpy()
+
+        let workspace = WorkspaceRuntime(contextManager: contextManager, contextSwitching: switcher)
+
         let bus = EventBus()
         let listener = WindowManagerListener(
             bus: bus,
-            contextManager: contextManager,
-            contextSwitching: switcher
+            workspace: workspace
         )
 
         let response = try await bus.ask(
@@ -400,6 +355,7 @@ struct WindowManagerListenerTests {
         )
 
         #expect(switcher.switchedContexts == [context])
+        #expect(workspace.activeContextID == context.id)
         #expect(
             response
                 == .contextMutationAcknowledged(
@@ -416,11 +372,13 @@ struct WindowManagerListenerTests {
 
         let contextManager = FakeContextManager()
         let switcher = ContextSwitchingSpy()
+
+        let workspace = WorkspaceRuntime(contextManager: contextManager, contextSwitching: switcher)
+
         let bus = EventBus()
         let listener = WindowManagerListener(
             bus: bus,
-            contextManager: contextManager,
-            contextSwitching: switcher
+            workspace: workspace
         )
 
         let response = try await bus.ask(
@@ -430,12 +388,150 @@ struct WindowManagerListenerTests {
         )
 
         #expect(switcher.switchedContexts.isEmpty)
+        #expect(workspace.activeContextID == nil)
         #expect(
             response
                 == .contextMutationAcknowledged(
                     .failure(
                         failure: .contextNotFound(missingID)
                     )
+                )
+        )
+
+        _ = listener
+    }
+
+    @Test("Archive routes ID and replies with success")
+    func archiveRoutesIDAndRepliesWithSuccess() async throws {
+        let context = WorkspaceContext(
+            name: "Work",
+            symbol: "briefcase",
+            applications: []
+        )
+
+        let contextManager = FakeContextManager()
+        contextManager.contexts = [context]
+
+        let workspace = WorkspaceRuntime(contextManager: contextManager)
+        let bus = EventBus()
+        let listener = WindowManagerListener(
+            bus: bus,
+            workspace: workspace
+        )
+
+        let response = try await bus.ask(
+            .archiveContext(ArchiveContextEvent(contextID: context.id))
+        )
+
+        #expect(contextManager.archivedContextIDs == [context.id])
+        #expect(workspace.contexts.map(\.isArchived) == [true])
+        #expect(
+            response
+                == .contextMutationAcknowledged(
+                    .success(contextID: context.id)
+                )
+        )
+
+        _ = listener
+    }
+
+    @Test("Archive replies with context-not-found failure")
+    func archiveRepliesWithMissingContextFailure() async throws {
+        let missingID = UUID()
+
+        let contextManager = FakeContextManager()
+        contextManager.archiveError = SettingsStoreError.contextNotFound(missingID)
+
+        let workspace = WorkspaceRuntime(contextManager: contextManager)
+        let bus = EventBus()
+        let listener = WindowManagerListener(
+            bus: bus,
+            workspace: workspace
+        )
+
+        let response = try await bus.ask(
+            .archiveContext(ArchiveContextEvent(contextID: missingID))
+        )
+
+        #expect(contextManager.archivedContextIDs == [missingID])
+        #expect(
+            response
+                == .contextMutationAcknowledged(
+                    .failure(failure: .contextNotFound(missingID))
+                )
+        )
+
+        _ = listener
+    }
+
+    @Test("Unarchive routes ID and replies with success")
+    func unarchiveRoutesIDAndRepliesWithSuccess() async throws {
+        let context = WorkspaceContext(
+            name: "Work",
+            symbol: "briefcase",
+            isArchived: true
+        )
+
+        let contextManager = FakeContextManager()
+        contextManager.contexts = [context]
+
+        let workspace = WorkspaceRuntime(contextManager: contextManager)
+        let bus = EventBus()
+        let listener = WindowManagerListener(
+            bus: bus,
+            workspace: workspace
+        )
+
+        let response = try await bus.ask(
+            .unarchiveContext(UnarchiveContextEvent(contextID: context.id))
+        )
+
+        #expect(contextManager.unarchivedContextIDs == [context.id])
+        #expect(workspace.contexts.map(\.id) == [context.id])
+        #expect(workspace.contexts.allSatisfy { !$0.isArchived })
+        #expect(
+            response
+                == .contextMutationAcknowledged(
+                    .success(contextID: context.id)
+                )
+        )
+
+        _ = listener
+    }
+
+    @Test("Switch context replies with context-archived failure")
+    func switchContextRepliesWithArchivedContextFailure() async throws {
+        let context = WorkspaceContext(
+            name: "Old",
+            symbol: "archivebox",
+            isArchived: true
+        )
+
+        let contextManager = FakeContextManager()
+        contextManager.contexts = [context]
+        let switcher = ContextSwitchingSpy()
+
+        let workspace = WorkspaceRuntime(
+            contextManager: contextManager,
+            contextSwitching: switcher
+        )
+
+        let bus = EventBus()
+        let listener = WindowManagerListener(
+            bus: bus,
+            workspace: workspace
+        )
+
+        let response = try await bus.ask(
+            .switchContext(SwitchContextEvent(contextID: context.id))
+        )
+
+        #expect(switcher.switchedContexts.isEmpty)
+        #expect(workspace.activeContextID == nil)
+        #expect(
+            response
+                == .contextMutationAcknowledged(
+                    .failure(failure: .contextArchived(context.id))
                 )
         )
 
@@ -452,10 +548,9 @@ struct WindowManagerListenerTests {
 }
 
 @MainActor
-final class FakeContextManager: ContextProviding {
+final class FakeContextManager: WorkspaceManaging {
     var contexts: [WorkspaceContext] = []
-
-    private var continuation: CheckedContinuation<Void, Never>?
+    var workspaceActivity: WorkspaceActivityState = .empty
 
     private(set) var createPayloads: [CreateContextEvent] = []
     var createResult: WorkspaceContext?
@@ -467,22 +562,32 @@ final class FakeContextManager: ContextProviding {
     private(set) var deletedContextIDs: [UUID] = []
     var deleteError: Error?
 
-    func getAvailableContexts() -> [WorkspaceContext] {
-        defer {
-            continuation?.resume()
-            continuation = nil
-        }
-        return contexts
+    private(set) var archivedContextIDs: [UUID] = []
+    var archiveError: Error?
+
+    private(set) var unarchivedContextIDs: [UUID] = []
+    var unarchiveError: Error?
+
+    func getAvailableContexts() async -> [WorkspaceContext] {
+        contexts
     }
 
-    func createContext(name: String, symbol: String, applications: [WorkspaceApplication]) async throws
-        -> WorkspaceContext
-    {
+    func getWorkspaceActivity() async -> WorkspaceActivityState {
+        workspaceActivity
+    }
+
+    func createContext(
+        name: String,
+        symbol: String,
+        applications: [WorkspaceApplication],
+        transition: WorkspaceTransition
+    ) async throws -> WorkspaceContext {
         createPayloads.append(
             CreateContextEvent(
                 name: name,
                 symbol: symbol,
-                applications: applications
+                applications: applications,
+                transition: transition
             )
         )
 
@@ -495,7 +600,8 @@ final class FakeContextManager: ContextProviding {
             ?? WorkspaceContext(
                 name: name,
                 symbol: symbol,
-                applications: applications
+                applications: applications,
+                transition: transition
             )
 
         contexts.append(context)
@@ -523,22 +629,78 @@ final class FakeContextManager: ContextProviding {
             throw deleteError
         }
 
+        workspaceActivity.removeContext(id: id)
         contexts.removeAll { $0.id == id }
+    }
+
+    func archiveContext(id: UUID) async throws {
+        archivedContextIDs.append(id)
+
+        if let archiveError {
+            throw archiveError
+        }
+
+        guard let index = contexts.firstIndex(where: { $0.id == id }) else {
+            throw SettingsStoreError.contextNotFound(id)
+        }
+
+        contexts[index].isArchived = true
+        workspaceActivity.clearActiveSession(for: id)
+    }
+
+    func unarchiveContext(id: UUID) async throws {
+        unarchivedContextIDs.append(id)
+
+        if let unarchiveError {
+            throw unarchiveError
+        }
+
+        guard let index = contexts.firstIndex(where: { $0.id == id }) else {
+            throw SettingsStoreError.contextNotFound(id)
+        }
+
+        contexts[index].isArchived = false
     }
 
     func getContext(id: UUID) async -> WorkspaceContext? {
         contexts.first { $0.id == id }
     }
 
-    func waitUntilSwitched() async {
-        await withCheckedContinuation { continuation = $0 }
+    func recordContextActivation(contextID: UUID, at date: Date) async throws -> WorkspaceActivityState {
+        guard contexts.contains(where: { $0.id == contextID }) else {
+            throw SettingsStoreError.contextNotFound(contextID)
+        }
+
+        workspaceActivity.activate(
+            contextID: contextID,
+            at: date
+        )
+
+        return workspaceActivity
+    }
+
+    func stopActiveContext(at date: Date) async throws -> WorkspaceActivityState {
+        workspaceActivity.stop(at: date)
+        return workspaceActivity
+    }
+
+    func getWorkspaceSnapshot() async -> WorkspaceSnapshot {
+        WorkspaceSnapshot(
+            contexts: contexts,
+            activity: workspaceActivity
+        )
     }
 }
 
 final class ContextSwitchingSpy: ContextSwitching {
     var switchedContexts: [WorkspaceContext] = []
+    var error: (any Error)?
 
-    func switchToContext(to context: WorkspaceContext) {
+    func switchToContext(to context: WorkspaceContext) async throws {
+        if let error {
+            throw error
+        }
+
         switchedContexts.append(context)
     }
 }

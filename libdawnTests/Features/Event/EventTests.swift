@@ -1,7 +1,6 @@
 import Foundation
-import Testing
-
 @testable import libdawn
+import Testing
 
 @Suite("Event")
 struct EventTests {
@@ -10,7 +9,6 @@ struct EventTests {
         arguments: [
             (event: Event.debugPing(DebugPingEvent()), kind: EventKind.debugPing),
             (event: Event.debugPong(DebugPongEvent()), kind: EventKind.debugPong),
-            (event: Event.switchSpace(SwitchSpaceEvent(spaceIndex: 2)), kind: EventKind.switchSpace),
             (event: Event.initialized(InitializedEvent()), kind: EventKind.initialized),
             (event: Event.getContexts(GetContextsEvent()), kind: EventKind.getContexts),
             (event: Event.contextsFetched(ContextsFetchedEvent(contexts: [])), kind: EventKind.contextsFetched),
@@ -33,6 +31,11 @@ struct EventTests {
                 kind: EventKind.updateContext
             ),
             (event: Event.deleteContext(DeleteContextEvent(contextID: UUID())), kind: EventKind.deleteContext),
+            (event: Event.archiveContext(ArchiveContextEvent(contextID: UUID())), kind: EventKind.archiveContext),
+            (
+                event: Event.unarchiveContext(UnarchiveContextEvent(contextID: UUID())),
+                kind: EventKind.unarchiveContext
+            ),
             (
                 event: Event.switchContext(SwitchContextEvent(contextID: UUID())),
                 kind: EventKind.switchContext
@@ -40,6 +43,42 @@ struct EventTests {
             (
                 event: Event.contextMutationAcknowledged(.success(contextID: UUID())),
                 kind: EventKind.contextMutationAcknowledged
+            ),
+            (
+                event: Event.getAccessibilityStatus(GetAccessibilityStatusEvent()),
+                kind: EventKind.getAccessibilityStatus
+            ),
+            (
+                event: Event.promptAccessibilityTrust(PromptAccessibilityTrustEvent()),
+                kind: EventKind.promptAccessibilityTrust
+            ),
+            (
+                event: Event.accessibilityStatus(AccessibilityStatusEvent(isTrusted: true)),
+                kind: EventKind.accessibilityStatus
+            ),
+            (
+                event: Event.getSettings(GetSettingsEvent()),
+                kind: EventKind.getSettings
+            ),
+            (
+                event: Event.settingsFetched(SettingsFetchedEvent(settings: Settings())),
+                kind: EventKind.settingsFetched
+            ),
+            (
+                event: Event.availableSettings(AvailableSettingsEvent(settings: Settings())),
+                kind: EventKind.availableSettings
+            ),
+            (
+                event: Event.settingsMutationAcknowledgement(SettingsMutationAcknowledgement.success),
+                kind: EventKind.settingsMutationAcknowledgement
+            ),
+            (
+                event: Event.updateSettings(UpdateSettingsEvent(settings: Settings())),
+                kind: EventKind.updateSettings
+            ),
+            (
+                event: Event.applySettings(ApplySettingsEvent()),
+                kind: EventKind.applySettings
             ),
         ]
     )
@@ -52,20 +91,33 @@ struct EventTests {
         arguments: [
             Event.debugPing(DebugPingEvent()),
             .debugPong(DebugPongEvent(message: "hello")),
-            .switchSpace(SwitchSpaceEvent(spaceIndex: 3)),
             .initialized(InitializedEvent()),
             .getContexts(GetContextsEvent()),
             .contextsFetched(ContextsFetchedEvent(contexts: [])),
             .createContext(CreateContextEvent(name: "placeholder", symbol: "book", applications: [])),
             .updateContext(UpdateContextEvent(context: WorkspaceContext(name: "placeholder", symbol: "book"))),
             .deleteContext(DeleteContextEvent(contextID: UUID())),
+            .archiveContext(ArchiveContextEvent(contextID: UUID())),
+            .unarchiveContext(UnarchiveContextEvent(contextID: UUID())),
             .switchContext(SwitchContextEvent(contextID: UUID())),
             .contextMutationAcknowledged(ContextMutationAcknowledgement.success(contextID: UUID())),
             .contextMutationAcknowledged(ContextMutationAcknowledgement.failure(failure: .emptyContextName)),
             .contextMutationAcknowledged(ContextMutationAcknowledgement.failure(failure: .contextNotFound(UUID()))),
             .availableContexts(
-                AvailableContextsEvent(contexts: [WorkspaceContext(name: "Placeholder", symbol: "book")])
-            )
+                AvailableContextsEvent(contexts: [
+                    WorkspaceContext(name: "Placeholder", symbol: "book"),
+                    WorkspaceContext(name: "Old", symbol: "archivebox", isArchived: true)
+                ])
+            ),
+            .getAccessibilityStatus(GetAccessibilityStatusEvent()),
+            .promptAccessibilityTrust(PromptAccessibilityTrustEvent()),
+            .accessibilityStatus(AccessibilityStatusEvent(isTrusted: false)),
+            .getSettings(GetSettingsEvent()),
+            .settingsFetched(SettingsFetchedEvent(settings: Settings())),
+            .availableSettings(AvailableSettingsEvent(settings: Settings())),
+            .settingsMutationAcknowledgement(SettingsMutationAcknowledgement.success),
+            .updateSettings(UpdateSettingsEvent(settings: Settings())),
+            .applySettings(ApplySettingsEvent()),
         ]
     )
     func roundTripsThroughJSON(_ event: Event) throws {
