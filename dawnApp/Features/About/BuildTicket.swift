@@ -15,13 +15,13 @@ enum BuildTicketValidationError: LocalizedError, Equatable {
 
     var errorDescription: String? {
         switch self {
-        case .emptyValue(let field):
+        case let .emptyValue(field):
             "\(field) cannot be empty"
         case .invalidYear:
             "The year must contain four digits."
         case .invalidCommitSHA:
             "The commit SHA must contain at least seven hexadecimal characters."
-        case .invalidURL(let field):
+        case let .invalidURL(field):
             "\(field) must be an absolute HTTPS URL"
         }
     }
@@ -35,6 +35,7 @@ struct BuildTicket: Equatable {
     let commit: Commit
     let privacyPolicyURL: URL
     let termsOfServiceURL: URL
+    let repositoryURL: URL
 
     struct Commit: Equatable {
         let sha: String
@@ -72,10 +73,10 @@ struct BuildTicket: Equatable {
             marketingURL,
             field: "marketingURL"
         )
-        self.commit = Commit(
+        commit = try Commit(
             sha: trimmedSHA,
-            reference: try Self.requiredValue(reference, field: "reference"),
-            url: try Self.httpsURL(
+            reference: Self.requiredValue(reference, field: "reference"),
+            url: Self.httpsURL(
                 "\(repository.absoluteString)/commit/\(trimmedSHA)",
                 field: "commit.url"
             )
@@ -88,6 +89,44 @@ struct BuildTicket: Equatable {
             termsOfServiceURL,
             field: "termsOfServiceURL"
         )
+        self.repositoryURL = repository
+    }
+
+    func feedbackIssueURL(
+        appVersion: String,
+        macosVersion: String
+    ) -> URL {
+        guard var components = URLComponents(
+            url: repositoryURL,
+            resolvingAgainstBaseURL: false
+        ) else {
+            return repositoryURL
+        }
+
+        components.path = repositoryURL.path + "/issues/new"
+        components.query = nil
+        components.fragment = nil
+
+        var items = [
+            URLQueryItem(name: "template", value: "feedback.yml")
+        ]
+        let fields = [
+            ("app-version", appVersion),
+            (
+                "build",
+                "\(commit.sha.prefix(7)) \(commit.reference)"
+            ),
+            ("macos", macosVersion),
+        ]
+        for (name, value) in fields {
+            let trimmed = value.trimmingCharacters(
+                in: .whitespacesAndNewlines
+            )
+            guard !trimmed.isEmpty else { continue }
+            items.append(URLQueryItem(name: name, value: trimmed))
+        }
+        components.queryItems = items
+        return components.url ?? repositoryURL
     }
 
     private static func year(from value: String) throws -> String {

@@ -38,6 +38,20 @@ struct BuildTicketTests {
             ticket.termsOfServiceURL.absoluteString
                 == "https://github.com/open-dawn/dawn"
         )
+        #expect(
+            ticket.repositoryURL.absoluteString
+                == "https://github.com/open-dawn/dawn"
+        )
+        let feedbackURL = ticket.feedbackIssueURL(
+            appVersion: "1.2.3",
+            macosVersion: "26.0.0"
+        )
+        let expectedFeedbackURL = "https://github.com/open-dawn/dawn/issues/new"
+            + "?template=feedback.yml"
+            + "&app-version=1.2.3"
+            + "&build=2b94d72%20stable"
+            + "&macos=26.0.0"
+        #expect(feedbackURL.absoluteString == expectedFeedbackURL)
     }
 
     @Test("rejects a year that is not four digits")
