@@ -145,6 +145,7 @@ xcuserdata
 # XcodeGen Generated Project
 *.xcodeproj
 Info.plist
+*.entitlements
 
 run.sh
 

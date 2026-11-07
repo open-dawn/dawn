@@ -36,9 +36,7 @@ targets:
     platform: macOS
     deploymentTarget: *deployversion
     sources:
-      - path: dawnApp
-        excludes:
-          - dawnApp.entitlements
+      - dawnApp
       - path: Generated/BuildTicket+Current.swift
       - path: Resources/AppIcon.icon
     preBuildScripts:
@@ -69,6 +67,11 @@ targets:
         LSApplicationCategoryType: public.app-category.utilities
         LSMinimumSystemVersion: "$(MACOSX_DEPLOYMENT_TARGET)"
         NSHumanReadableCopyright: "Copyright © 2026 Open Dawn"
+    entitlements:
+      path: dawnApp/dawnApp.entitlements
+      properties:
+        com.apple.security.application-groups:
+          - 2Q5VC69BFD.app.opendawn
     settings:
       base:
         PRODUCT_NAME: DAWN
@@ -78,8 +81,6 @@ targets:
       configs:
         Debug:
           ENABLE_TESTABILITY: YES
-        Release:
-          CODE_SIGN_ENTITLEMENTS: dawnApp/dawnApp.entitlements
     dependencies:
       - target: libdawn
       - target: libdawnUI
@@ -117,9 +118,7 @@ targets:
     platform: macOS
     deploymentTarget: *deployversion
     sources:
-      - path: dawnAgent
-        excludes:
-          - dawnAgent.entitlements
+      - dawnAgent
       - path: Resources/AppIcon.icon
     info:
       path: dawnAgent/Info.plist
@@ -131,6 +130,11 @@ targets:
         LSMinimumSystemVersion: "$(MACOSX_DEPLOYMENT_TARGET)"
         LSUIElement: true
         NSHumanReadableCopyright: "Copyright © 2026 Open Dawn"
+    entitlements:
+      path: dawnAgent/dawnAgent.entitlements
+      properties:
+        com.apple.security.application-groups:
+          - 2Q5VC69BFD.app.opendawn
     settings:
       base:
         PRODUCT_NAME: dawnAgent
@@ -140,8 +144,6 @@ targets:
       configs:
         Debug:
           ENABLE_TESTABILITY: YES
-        Release:
-          CODE_SIGN_ENTITLEMENTS: dawnAgent/dawnAgent.entitlements
     dependencies:
       - target: libdawn
       - target: libdawnUI
