@@ -2,10 +2,6 @@ import dawnLogging
 import libdawn
 import ServiceManagement
 
-/// Applies the user-facing Launch at Login setting.
-///
-/// Session start of dawnAgent is handled by `DawnAgentOpener`, not by registering
-/// the login item on every DAWN launch.
 enum SettingsLoginItem {
     static let helperBundleIdentifier = EventBusMachService.agentBundleIdentifier
 

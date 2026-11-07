@@ -12,10 +12,6 @@ protocol DawnAgentOpening {
     func open(at url: URL) async throws
 }
 
-/// Starts the embedded dawnAgent process.
-///
-/// Call `openDawnAgentIfNeeded()` when DAWN launches, or `openDawnAgent()` from a
-/// future button / event that should always attempt a launch.
 @MainActor
 struct DawnAgentOpener {
     static let bundleIdentifier = EventBusMachService.agentBundleIdentifier
@@ -105,8 +101,6 @@ struct DawnAgentOpener {
     }
 }
 
-/// Launches the embedded agent executable directly so Launch Services does not
-/// show the "can't be opened" dialog used for LoginItems `.app` bundles.
 @MainActor
 struct EmbeddedDawnAgentProcessLauncher: DawnAgentOpening {
     func open(at url: URL) async throws {

@@ -72,9 +72,9 @@ You can `attach` / `detach` any `RemoteEventTransportServer` (XPC from the accep
 
 > Note: This is specific to XPC and the dawnAgent implementation
 
-dawnAgent lives under `DAWN.app/Contents/Library/LoginItems` and listens with `NSXPCListener(machServiceName:)` using the helper’s bundle identifier. That name is how clients connect; do not archive `NSXPCListenerEndpoint` (it can only travel through an `NSXPCCoder` on a live XPC connection).
+dawnAgent listens with `NSXPCListener(machServiceName:)` using `EventBusMachService.serviceName`. That name is how clients connect; do not archive `NSXPCListenerEndpoint` (it can only travel through an `NSXPCCoder` on a live XPC connection).
 
-DAWN starts the agent for the session with `DawnAgentOpener.openDawnAgentIfNeeded()` when the helper is not already running. `DawnAgentOpener.openDawnAgent()` is the same launch path for a future button or event. The Launch at Login setting still uses `SMAppService` only for that preference; it is not required to open the agent with DAWN.
+How dawnAgent gets launched is separate from the host API. dawnApp may start an embedded copy when it opens; a CLI, login item, or another Open Dawn tool may start the same host later. The host only needs to be running and listening. Clients reconnect when they see the ready ping.
 
 ```swift
 let eventServer = EventServer(bus: bus)
@@ -87,10 +87,10 @@ acceptor.start()
 
 After `start()`, post an empty `DistributedNotificationCenter` ping so clients reconnect when dawnAgent comes up or restarts. Do not put the endpoint in the notification.
 
-- Mach service name: `EventBusMachService.serviceName` (the login item bundle ID)
+- Mach service name: `EventBusMachService.serviceName`
 - Ready ping: `EventBusMachService.readyNotification` (nil object, nil userInfo)
 
-Those values live in `EventBusMachService` so host and clients stay aligned. App-group Mach service names are for sandboxed apps. DAWN is not sandboxed, so a team app-group service name will not complete an XPC handshake.
+Those values live in `EventBusMachService` so every client stays aligned with the host.
 
 `acceptor.endpoint` is still available for in-process tests that use an anonymous listener (`machServiceName: nil`). Production dawnAgent does not share that endpoint.
 
