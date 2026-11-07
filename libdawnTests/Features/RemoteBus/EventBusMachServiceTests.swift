@@ -3,8 +3,18 @@ import libdawn
 
 @Suite("Event bus Mach service")
 struct EventBusMachServiceTests {
-    @Test("Service name is the dawnAgent bundle id")
-    func serviceNameIsAgentBundleIdentifier() {
-        #expect(EventBusMachService.serviceName == "app.opendawn.dawnAgent")
+    @Test("Keeps the DAWN process identities in one place")
+    func keepsProjectIdentities() {
+        #expect(EventBusMachService.appBundleIdentifier == "app.opendawn.dawnApp")
+        #expect(EventBusMachService.agentBundleIdentifier == "app.opendawn.dawnAgent")
+        #expect(EventBusMachService.serviceName == EventBusMachService.agentBundleIdentifier)
+        #expect(
+            EventBusMachService.readyNotificationName
+                == "app.opendawn.dawnAgent.eventBusReady"
+        )
+        #expect(
+            EventBusMachService.readyNotification.rawValue
+                == EventBusMachService.readyNotificationName
+        )
     }
 }

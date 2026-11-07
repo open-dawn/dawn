@@ -1,4 +1,5 @@
 import AppKit
+import libdawn
 
 struct AgentInstanceGuard: Equatable {
     let currentProcessIdentifier: Int32
@@ -11,7 +12,8 @@ struct AgentInstanceGuard: Equatable {
     }
 
     static func shouldTerminateCurrentInstance() -> Bool {
-        let bundleIdentifier = Bundle.main.bundleIdentifier ?? "app.opendawn.dawnAgent"
+        let bundleIdentifier = Bundle.main.bundleIdentifier
+            ?? EventBusMachService.agentBundleIdentifier
         let running = NSRunningApplication.runningApplications(
             withBundleIdentifier: bundleIdentifier
         ).map(\.processIdentifier)

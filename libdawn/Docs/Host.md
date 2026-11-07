@@ -80,17 +80,17 @@ DAWN registers the login item when it launches so the Mach service exists for th
 let eventServer = EventServer(bus: bus)
 let acceptor = XPCRemoteEventTransportAcceptor(
     eventServer: eventServer,
-    machServiceName: "app.opendawn.dawnAgent"
+    machServiceName: EventBusMachService.serviceName
 )
 acceptor.start()
 ```
 
 After `start()`, post an empty `DistributedNotificationCenter` ping so clients reconnect when dawnAgent comes up or restarts. Do not put the endpoint in the notification.
 
-- Mach service name: `app.opendawn.dawnAgent` (the login item bundle ID)
-- Ready ping: `app.opendawn.dawnAgent.eventBusReady` (nil object, nil userInfo)
+- Mach service name: `EventBusMachService.serviceName` (the login item bundle ID)
+- Ready ping: `EventBusMachService.readyNotification` (nil object, nil userInfo)
 
-App-group Mach service names are for sandboxed apps. DAWN is not sandboxed, so a team app-group service name will not complete an XPC handshake.
+Those values live in `EventBusMachService` so host and clients stay aligned. App-group Mach service names are for sandboxed apps. DAWN is not sandboxed, so a team app-group service name will not complete an XPC handshake.
 
 `acceptor.endpoint` is still available for in-process tests that use an anonymous listener (`machServiceName: nil`). Production dawnAgent does not share that endpoint.
 

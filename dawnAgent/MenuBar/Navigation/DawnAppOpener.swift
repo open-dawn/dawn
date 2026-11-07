@@ -53,10 +53,8 @@ enum DawnAppOpenError: Error {
 }
 
 enum DawnAppHostLocator {
-    static let appBundleIdentifier = "app.opendawn.dawnApp"
+    static let appBundleIdentifier = EventBusMachService.appBundleIdentifier
 
-    /// Prefer the DAWN.app that embeds this login item so a DerivedData agent
-    /// does not open an older copy registered for the `opendawn` URL scheme.
     static func hostAppURL(
         agentBundleURL: URL = Bundle.main.bundleURL,
         urlForApplication: (String) -> URL? = {

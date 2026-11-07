@@ -1,12 +1,16 @@
 import Foundation
 
-/// Mach service the event bus listens on.
+/// Shared DAWN process identities for the event-bus rendezvous.
 ///
-/// dawnAgent is a Login Item. launchd advertises a Mach service named as the
-/// helper's bundle identifier after `SMAppService` registers it. dawnApp and
-/// dawnAgent both use that name. App-group Mach services are for sandboxed
-/// apps; DAWN is not sandboxed, so the team app-group name cannot complete an
-/// XPC handshake.
+/// Keep bundle ids, the Mach service name, and the ready ping here so host and
+/// clients do not hardcode the same strings in several targets.
 public enum EventBusMachService {
-    public static let serviceName = "app.opendawn.dawnAgent"
+    public static let appBundleIdentifier = "app.opendawn.dawnApp"
+    public static let agentBundleIdentifier = "app.opendawn.dawnAgent"
+
+    /// launchd advertises this name after the login-item agent is registered.
+    public static let serviceName = agentBundleIdentifier
+
+    public static let readyNotificationName = "app.opendawn.dawnAgent.eventBusReady"
+    public static let readyNotification = Notification.Name(readyNotificationName)
 }

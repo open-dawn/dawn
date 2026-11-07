@@ -1,11 +1,10 @@
 import dawnLogging
+import libdawn
 import ServiceManagement
 
 enum SettingsLoginItem {
-    static let helperBundleIdentifier = "app.opendawn.dawnAgent"
+    static let helperBundleIdentifier = EventBusMachService.agentBundleIdentifier
 
-    /// Registers the embedded agent so launchd advertises its Mach service.
-    /// DAWN needs this for the event bus even when launch at login is off.
     static func registerIfNeeded() {
         let service = SMAppService.loginItem(identifier: helperBundleIdentifier)
 
@@ -40,8 +39,6 @@ enum SettingsLoginItem {
         }
     }
 
-    /// Updates the launch-at-login preference without dropping the Mach service
-    /// while DAWN is open. Turning the setting off unregisters on terminate.
     static func apply(launchAtLogin: Bool) {
         guard launchAtLogin else { return }
         registerIfNeeded()

@@ -4,13 +4,14 @@ import libdawn
 
 @Suite("Settings event bus rendezvous")
 struct SettingsEventBusRendezvousTests {
-    @Test("Client connects to the agent bundle id")
-    func clientUsesAgentBundleIdentifier() {
+    @Test("Client uses the shared Mach service and ready ping")
+    func clientUsesSharedRendezvous() {
         #expect(
             SettingsEventBusRendezvous.machServiceName == EventBusMachService.serviceName
         )
         #expect(
-            SettingsEventBusRendezvous.machServiceName == "app.opendawn.dawnAgent"
+            SettingsEventBusRendezvous.readyNotification
+                == EventBusMachService.readyNotification
         )
     }
 }
