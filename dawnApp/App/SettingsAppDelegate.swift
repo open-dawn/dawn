@@ -31,9 +31,6 @@ final class SettingsAppDelegate: NSObject, NSApplicationDelegate {
         contextStore.start()
         settingsStore.start()
         SettingsLoginItem.registerIfNeeded()
-        #if !DEBUG
-        EmbeddedAgentLauncher.launchIfNeeded()
-        #endif
         eventBusService.start()
         updaterService.start()
     }
