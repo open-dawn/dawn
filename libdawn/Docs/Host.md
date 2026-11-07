@@ -74,7 +74,7 @@ You can `attach` / `detach` any `RemoteEventTransportServer` (XPC from the accep
 
 dawnAgent is a Login Item under `DAWN.app/Contents/Library/LoginItems`. After `SMAppService.loginItem(identifier:)` registers it, launchd advertises a Mach service named as the helper’s bundle identifier. That name is how clients connect; do not archive `NSXPCListenerEndpoint` (it can only travel through an `NSXPCCoder` on a live XPC connection).
 
-DAWN registers the login item when it launches so the Mach service exists for the session. Launch at login only controls whether that registration remains after DAWN quits.
+DAWN ensures the login item is registered when it launches so the Mach service exists for the session. If dawnAgent quit cleanly, launchd will not restart it while the login item stays enabled, so DAWN unregisters and registers again to start the helper immediately. Launch at login only controls whether that registration remains after DAWN quits.
 
 ```swift
 let eventServer = EventServer(bus: bus)

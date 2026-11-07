@@ -130,6 +130,7 @@ final class SettingsEventBusService {
             } catch {
                 connectionState = .disconnected
                 isConnected = false
+                SettingsLoginItem.ensureRunning()
             }
         }
     }
