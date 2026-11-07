@@ -30,15 +30,12 @@ final class SettingsAppDelegate: NSObject, NSApplicationDelegate {
 
         contextStore.start()
         settingsStore.start()
-        SettingsLoginItem.ensureRunning()
+        DawnAgentOpener.openDawnAgentIfNeeded()
         eventBusService.start()
         updaterService.start()
     }
 
     func applicationWillTerminate(_: Notification) {
-        SettingsLoginItem.applyForTermination(
-            launchAtLogin: settingsStore.settings.launchAtLogin
-        )
         contextStore.stop()
         settingsStore.stop()
         eventBusService.stop()
