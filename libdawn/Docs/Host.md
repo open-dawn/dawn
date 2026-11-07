@@ -72,21 +72,28 @@ You can `attach` / `detach` any `RemoteEventTransportServer` (XPC from the accep
 
 > Note: This is specific to XPC and the dawnAgent implementation
 
-dawnAgent is a login item. Launchd advertises a Mach service named as the helper’s bundle identifier. That name is how clients connect; do not archive `NSXPCListenerEndpoint` (it can only travel through an `NSXPCCoder` on a live XPC connection).
+dawnAgent listens with `NSXPCListener(machServiceName:)`. dawnApp connects with the same name. Do not archive `NSXPCListenerEndpoint` (it can only travel through an `NSXPCCoder` on a live XPC connection).
+
+Release builds are signed with Developer ID team `2Q5VC69BFD`. Both `DAWN.app` and the embedded agent have the app group `2Q5VC69BFD.app.opendawn`. macOS authorizes that group from the team prefix in the signature, so the agent can listen after DAWN opens it. No provisioning profile is required.
 
 ```swift
 let eventServer = EventServer(bus: bus)
 let acceptor = XPCRemoteEventTransportAcceptor(
     eventServer: eventServer,
-    machServiceName: "app.opendawn.dawnAgent"
+    machServiceName: "2Q5VC69BFD.app.opendawn.eventbus"
 )
 acceptor.start()
 ```
 
+Debug builds keep the service name `app.opendawn.dawnAgent`. Xcode does not sign those builds with the Developer ID team, so the team app group would not be honored. Run the `dawnApp` and `dawnAgent` schemes separately.
+
 After `start()`, post an empty `DistributedNotificationCenter` ping so clients reconnect when dawnAgent comes up or restarts. Do not put the endpoint in the notification.
 
-- Mach service name: `app.opendawn.dawnAgent` (the login item bundle ID)
+- Release Mach service: `2Q5VC69BFD.app.opendawn.eventbus`
+- Debug Mach service: `app.opendawn.dawnAgent`
 - Ready ping: `app.opendawn.dawnAgent.eventBusReady` (nil object, nil userInfo)
+
+The login item still only controls launch at login. It does not choose the Mach service name.
 
 `acceptor.endpoint` is still available for in-process tests that use an anonymous listener (`machServiceName: nil`). Production dawnAgent does not share that endpoint.
 
