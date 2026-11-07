@@ -63,13 +63,6 @@ targets:
         LSApplicationCategoryType: public.app-category.utilities
         LSMinimumSystemVersion: "$(MACOSX_DEPLOYMENT_TARGET)"
         NSHumanReadableCopyright: "Copyright © 2026 Open Dawn"
-        DawnAppGroupIdentifier: "$(TeamIdentifierPrefix)app.opendawn"
-        DawnEventBusMachService: "$(TeamIdentifierPrefix)app.opendawn.eventbus"
-    entitlements:
-      path: dawnApp/dawnApp.entitlements
-      properties:
-        com.apple.security.application-groups:
-          - $(TeamIdentifierPrefix)app.opendawn
     settings:
       base:
         PRODUCT_NAME: DAWN
@@ -128,13 +121,6 @@ targets:
         LSMinimumSystemVersion: "$(MACOSX_DEPLOYMENT_TARGET)"
         LSUIElement: true
         NSHumanReadableCopyright: "Copyright © 2026 Open Dawn"
-        DawnAppGroupIdentifier: "$(TeamIdentifierPrefix)app.opendawn"
-        DawnEventBusMachService: "$(TeamIdentifierPrefix)app.opendawn.eventbus"
-    entitlements:
-      path: dawnAgent/dawnAgent.entitlements
-      properties:
-        com.apple.security.application-groups:
-          - $(TeamIdentifierPrefix)app.opendawn
     settings:
       base:
         PRODUCT_NAME: dawnAgent

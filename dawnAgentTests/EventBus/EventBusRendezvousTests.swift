@@ -4,8 +4,9 @@ import libdawn
 
 @Suite("Event bus rendezvous")
 struct EventBusRendezvousTests {
-    @Test("Host listens on the shared service name")
-    func hostUsesSharedServiceName() {
+    @Test("Host listens on the agent bundle id")
+    func hostUsesAgentBundleIdentifier() {
         #expect(EventBusRendezvous.machServiceName == EventBusMachService.serviceName)
+        #expect(EventBusRendezvous.machServiceName == "app.opendawn.dawnAgent")
     }
 }

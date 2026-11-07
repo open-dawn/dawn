@@ -72,31 +72,25 @@ You can `attach` / `detach` any `RemoteEventTransportServer` (XPC from the accep
 
 > Note: This is specific to XPC and the dawnAgent implementation
 
-dawnAgent listens with `NSXPCListener(machServiceName:)`. dawnApp connects with the same name. Do not archive `NSXPCListenerEndpoint` (it can only travel through an `NSXPCCoder` on a live XPC connection).
+dawnAgent is a Login Item under `DAWN.app/Contents/Library/LoginItems`. After `SMAppService.loginItem(identifier:)` registers it, launchd advertises a Mach service named as the helper’s bundle identifier. That name is how clients connect; do not archive `NSXPCListenerEndpoint` (it can only travel through an `NSXPCCoder` on a live XPC connection).
 
-Release builds use a team-prefixed app group. `DawnAppGroupIdentifier` and `DawnEventBusMachService` in each app's Info.plist expand `$(TeamIdentifierPrefix)` at build time. Official CI signs with Developer ID team `2Q5VC69BFD`, which yields `2Q5VC69BFD.app.opendawn.eventbus`. macOS authorizes that group from the team prefix in the signature, so the agent can listen after DAWN opens it. No provisioning profile is required.
-
-For a local Release smoke test under your own Apple Development team, copy `Config/LocalRelease.xcconfig.example` to `Config/LocalRelease.xcconfig` (gitignored) and set `DEVELOPMENT_TEAM` there. Then regenerate with XcodeGen, clean, and run the Release scheme. The Mach service follows your team automatically.
+DAWN registers the login item when it launches so the Mach service exists for the session. Launch at login only controls whether that registration remains after DAWN quits.
 
 ```swift
 let eventServer = EventServer(bus: bus)
 let acceptor = XPCRemoteEventTransportAcceptor(
     eventServer: eventServer,
-    machServiceName: EventBusMachService.serviceName
+    machServiceName: "app.opendawn.dawnAgent"
 )
 acceptor.start()
 ```
 
-Debug builds keep the service name `app.opendawn.dawnAgent`. Xcode does not sign those builds for the team app group. Run the `dawnApp` and `dawnAgent` schemes separately.
-
 After `start()`, post an empty `DistributedNotificationCenter` ping so clients reconnect when dawnAgent comes up or restarts. Do not put the endpoint in the notification.
 
-- Official Release Mach service: `2Q5VC69BFD.app.opendawn.eventbus`
-- Local Release Mach service: `<your-team-id>.app.opendawn.eventbus`
-- Debug Mach service: `app.opendawn.dawnAgent`
+- Mach service name: `app.opendawn.dawnAgent` (the login item bundle ID)
 - Ready ping: `app.opendawn.dawnAgent.eventBusReady` (nil object, nil userInfo)
 
-The login item still only controls launch at login. It does not choose the Mach service name.
+App-group Mach service names are for sandboxed apps. DAWN is not sandboxed, so a team app-group service name will not complete an XPC handshake.
 
 `acceptor.endpoint` is still available for in-process tests that use an anonymous listener (`machServiceName: nil`). Production dawnAgent does not share that endpoint.
 
