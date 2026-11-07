@@ -147,6 +147,9 @@ xcuserdata
 Info.plist
 *.entitlements
 
+# Local Release signing override (copy from LocalRelease.xcconfig.example)
+Config/LocalRelease.xcconfig
+
 run.sh
 
 # Log files

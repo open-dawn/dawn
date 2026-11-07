@@ -15,12 +15,8 @@ settings:
     MARKETING_VERSION: &mktversion "0.1.0"
     CURRENT_PROJECT_VERSION: &buildversion "1"
 
-  configs:
-    Release:
-      CODE_SIGN_STYLE: Manual
-      CODE_SIGN_IDENTITY: "Developer ID Application"
-      DEVELOPMENT_TEAM: "2Q5VC69BFD"
-      ENABLE_HARDENED_RUNTIME: YES
+configFiles:
+  Release: Config/Release.xcconfig
 
 packages:
   dawnLogging:
@@ -67,11 +63,13 @@ targets:
         LSApplicationCategoryType: public.app-category.utilities
         LSMinimumSystemVersion: "$(MACOSX_DEPLOYMENT_TARGET)"
         NSHumanReadableCopyright: "Copyright © 2026 Open Dawn"
+        DawnAppGroupIdentifier: "$(TeamIdentifierPrefix)app.opendawn"
+        DawnEventBusMachService: "$(TeamIdentifierPrefix)app.opendawn.eventbus"
     entitlements:
       path: dawnApp/dawnApp.entitlements
       properties:
         com.apple.security.application-groups:
-          - 2Q5VC69BFD.app.opendawn
+          - $(TeamIdentifierPrefix)app.opendawn
     settings:
       base:
         PRODUCT_NAME: DAWN
@@ -130,11 +128,13 @@ targets:
         LSMinimumSystemVersion: "$(MACOSX_DEPLOYMENT_TARGET)"
         LSUIElement: true
         NSHumanReadableCopyright: "Copyright © 2026 Open Dawn"
+        DawnAppGroupIdentifier: "$(TeamIdentifierPrefix)app.opendawn"
+        DawnEventBusMachService: "$(TeamIdentifierPrefix)app.opendawn.eventbus"
     entitlements:
       path: dawnAgent/dawnAgent.entitlements
       properties:
         com.apple.security.application-groups:
-          - 2Q5VC69BFD.app.opendawn
+          - $(TeamIdentifierPrefix)app.opendawn
     settings:
       base:
         PRODUCT_NAME: dawnAgent

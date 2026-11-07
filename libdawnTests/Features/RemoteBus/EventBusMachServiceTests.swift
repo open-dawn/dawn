@@ -3,16 +3,18 @@ import libdawn
 
 @Suite("Event bus Mach service")
 struct EventBusMachServiceTests {
-    @Test("Release service name is inside the Developer ID app group")
-    func releaseServiceNameUsesAppGroup() {
-        #expect(EventBusMachService.appGroupIdentifier == "2Q5VC69BFD.app.opendawn")
+    @Test("Official Release names stay inside the Developer ID app group")
+    func officialReleaseNamesUseAppGroup() {
         #expect(
-            EventBusMachService.releaseServiceName
+            EventBusMachService.officialAppGroupIdentifier == "2Q5VC69BFD.app.opendawn"
+        )
+        #expect(
+            EventBusMachService.officialReleaseServiceName
                 == "2Q5VC69BFD.app.opendawn.eventbus"
         )
         #expect(
-            EventBusMachService.releaseServiceName.hasPrefix(
-                EventBusMachService.appGroupIdentifier + "."
+            EventBusMachService.officialReleaseServiceName.hasPrefix(
+                EventBusMachService.officialAppGroupIdentifier + "."
             )
         )
     }
@@ -28,6 +30,11 @@ struct EventBusMachServiceTests {
         #expect(EventBusMachService.serviceName == EventBusMachService.debugServiceName)
         #else
         #expect(EventBusMachService.serviceName == EventBusMachService.releaseServiceName)
+        #expect(
+            EventBusMachService.releaseServiceName.hasPrefix(
+                EventBusMachService.appGroupIdentifier + "."
+            )
+        )
         #endif
     }
 }

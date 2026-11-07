@@ -74,22 +74,25 @@ You can `attach` / `detach` any `RemoteEventTransportServer` (XPC from the accep
 
 dawnAgent listens with `NSXPCListener(machServiceName:)`. dawnApp connects with the same name. Do not archive `NSXPCListenerEndpoint` (it can only travel through an `NSXPCCoder` on a live XPC connection).
 
-Release builds are signed with Developer ID team `2Q5VC69BFD`. Both `DAWN.app` and the embedded agent have the app group `2Q5VC69BFD.app.opendawn`. macOS authorizes that group from the team prefix in the signature, so the agent can listen after DAWN opens it. No provisioning profile is required.
+Release builds use a team-prefixed app group. `DawnAppGroupIdentifier` and `DawnEventBusMachService` in each app's Info.plist expand `$(TeamIdentifierPrefix)` at build time. Official CI signs with Developer ID team `2Q5VC69BFD`, which yields `2Q5VC69BFD.app.opendawn.eventbus`. macOS authorizes that group from the team prefix in the signature, so the agent can listen after DAWN opens it. No provisioning profile is required.
+
+For a local Release smoke test under your own Apple Development team, copy `Config/LocalRelease.xcconfig.example` to `Config/LocalRelease.xcconfig` (gitignored) and set `DEVELOPMENT_TEAM` there. Then regenerate with XcodeGen, clean, and run the Release scheme. The Mach service follows your team automatically.
 
 ```swift
 let eventServer = EventServer(bus: bus)
 let acceptor = XPCRemoteEventTransportAcceptor(
     eventServer: eventServer,
-    machServiceName: "2Q5VC69BFD.app.opendawn.eventbus"
+    machServiceName: EventBusMachService.serviceName
 )
 acceptor.start()
 ```
 
-Debug builds keep the service name `app.opendawn.dawnAgent`. Xcode does not sign those builds with the Developer ID team, so the team app group would not be honored. Run the `dawnApp` and `dawnAgent` schemes separately.
+Debug builds keep the service name `app.opendawn.dawnAgent`. Xcode does not sign those builds for the team app group. Run the `dawnApp` and `dawnAgent` schemes separately.
 
 After `start()`, post an empty `DistributedNotificationCenter` ping so clients reconnect when dawnAgent comes up or restarts. Do not put the endpoint in the notification.
 
-- Release Mach service: `2Q5VC69BFD.app.opendawn.eventbus`
+- Official Release Mach service: `2Q5VC69BFD.app.opendawn.eventbus`
+- Local Release Mach service: `<your-team-id>.app.opendawn.eventbus`
 - Debug Mach service: `app.opendawn.dawnAgent`
 - Ready ping: `app.opendawn.dawnAgent.eventBusReady` (nil object, nil userInfo)
 
