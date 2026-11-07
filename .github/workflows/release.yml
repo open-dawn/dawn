@@ -97,7 +97,9 @@ jobs:
 
           ARTIFACT_DIRECTORY="$RUNNER_TEMP/release-artifacts"
           ARCHIVE_PATH="$RUNNER_TEMP/DAWN-${RELEASE_VERSION}.xcarchive"
-          APP_PATH="$ARCHIVE_PATH/Products/Applications/DAWN.app"
+          EXPORT_PATH="$RUNNER_TEMP/export"
+          EXPORT_OPTIONS_PATH="$RUNNER_TEMP/ExportOptions.plist"
+          APP_PATH="$EXPORT_PATH/DAWN.app"
           DMG_PATH="$ARTIFACT_DIRECTORY/DAWN-${RELEASE_VERSION}.dmg"
           CHECKSUM_PATH="$DMG_PATH.sha256"
           CERTIFICATE_PATH="$RUNNER_TEMP/DeveloperIDApplication.p12"
@@ -122,6 +124,8 @@ jobs:
             echo "EXPECTED_MARKETING_VERSION=$MARKETING_VERSION"
             echo "ARTIFACT_DIRECTORY=$ARTIFACT_DIRECTORY"
             echo "ARCHIVE_PATH=$ARCHIVE_PATH"
+            echo "EXPORT_PATH=$EXPORT_PATH"
+            echo "EXPORT_OPTIONS_PATH=$EXPORT_OPTIONS_PATH"
             echo "APP_PATH=$APP_PATH"
             echo "DMG_PATH=$DMG_PATH"
             echo "CHECKSUM_PATH=$CHECKSUM_PATH"
@@ -274,6 +278,36 @@ jobs:
             archive 2>&1 |
             xcbeautify --renderer github-actions
 
+      - name: Export Developer ID application
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          cat > "$EXPORT_OPTIONS_PATH" <<EOF
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0">
+          <dict>
+            <key>destination</key>
+            <string>export</string>
+            <key>method</key>
+            <string>developer-id</string>
+            <key>signingCertificate</key>
+            <string>Developer ID Application</string>
+            <key>signingStyle</key>
+            <string>manual</string>
+            <key>teamID</key>
+            <string>${APPLE_TEAM_ID}</string>
+          </dict>
+          </plist>
+          EOF
+
+          xcodebuild \
+            -exportArchive \
+            -archivePath "$ARCHIVE_PATH" \
+            -exportPath "$EXPORT_PATH" \
+            -exportOptionsPlist "$EXPORT_OPTIONS_PATH"
+
       - name: Validate Sparkle release tool
         shell: bash
         run: |
@@ -295,7 +329,7 @@ jobs:
           fi
 
           TOP_LEVEL_APP_COUNT="$(
-            find "$ARCHIVE_PATH/Products/Applications" \
+            find "$EXPORT_PATH" \
               -maxdepth 1 \
               -name "*.app" \
               -print |
@@ -358,12 +392,22 @@ jobs:
             --verbose=2 \
             "$APP_PATH"
 
-          for SIGNED_APP in "$APP_PATH" "$AGENT_PATH"; do
+          SPARKLE_PATH="$APP_PATH/Contents/Frameworks/Sparkle.framework/Versions/B"
+
+          for SIGNED_ITEM in \
+            "$APP_PATH" \
+            "$AGENT_PATH" \
+            "$APP_PATH/Contents/Frameworks/Sparkle.framework" \
+            "$SPARKLE_PATH/Updater.app" \
+            "$SPARKLE_PATH/Autoupdate" \
+            "$SPARKLE_PATH/XPCServices/Downloader.xpc" \
+            "$SPARKLE_PATH/XPCServices/Installer.xpc"; do
+
             SIGNING_INFORMATION="$(
               codesign \
                 --display \
                 --verbose=4 \
-                "$SIGNED_APP" 2>&1
+                "$SIGNED_ITEM" 2>&1
             )"
 
             printf '%s\n' "$SIGNING_INFORMATION"
