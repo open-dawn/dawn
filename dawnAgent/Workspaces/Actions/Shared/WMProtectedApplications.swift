@@ -1,4 +1,5 @@
 import Foundation
+import libdawn
 
 enum WMProtectedApplications {
     static var bundleIdentifiers: Set<String> {
@@ -11,8 +12,8 @@ enum WMProtectedApplications {
         ]
 
         identifiers.formUnion([
-            "app.opendawn.dawnApp",
-            "app.opendawn.dawnAgent",
+            EventBusMachService.appBundleIdentifier,
+            EventBusMachService.agentBundleIdentifier,
         ])
 
         if let own = Bundle.main.bundleIdentifier {

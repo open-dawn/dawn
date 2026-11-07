@@ -13,14 +13,10 @@ settings:
   base:
     SWIFT_VERSION: &swiftversion "6"
     MARKETING_VERSION: &mktversion "1.0.0"
-    CURRENT_PROJECT_VERSION: &buildversion "2"
+    CURRENT_PROJECT_VERSION: &buildversion "3"
 
-  configs:
-    Release:
-      CODE_SIGN_STYLE: Manual
-      CODE_SIGN_IDENTITY: "Developer ID Application"
-      DEVELOPMENT_TEAM: "2Q5VC69BFD"
-      ENABLE_HARDENED_RUNTIME: YES
+configFiles:
+  Release: Config/Release.xcconfig
 
 packages:
   dawnLogging:

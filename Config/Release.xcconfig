@@ -1,0 +1,10 @@
+// Official Release signing for CI and notarized builds.
+// For a local Release smoke test, copy LocalRelease.xcconfig.example to
+// LocalRelease.xcconfig (gitignored) so your Apple Development team wins.
+
+CODE_SIGN_STYLE = Manual
+CODE_SIGN_IDENTITY = Developer ID Application
+DEVELOPMENT_TEAM = 2Q5VC69BFD
+ENABLE_HARDENED_RUNTIME = YES
+
+#include? "LocalRelease.xcconfig"

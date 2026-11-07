@@ -12,7 +12,7 @@ dawnAgent advertises a Mach service named as its bundle ID. Connect with that na
 import libdawn
 
 let transport = XPCRemoteEventTransportClient(
-    machServiceName: "app.opendawn.dawnAgent"
+    machServiceName: EventBusMachService.serviceName
 )
 let remote = RemoteEventBus(transport: transport)
 
@@ -20,7 +20,7 @@ remote.isConnected  // true only after a transport handshake with the host
 remote.disconnect()
 ```
 
-On launch, subscribe to the host’s empty distributed notification (`app.opendawn.dawnAgent.eventBusReady`). Keep one `RemoteEventBus` and call `attemptReconnect()` when the ping fires, and once when a live connection drops. Do not retry in a loop after a failed handshake; wait for the next ready ping.
+On launch, subscribe to the host’s empty distributed notification (`EventBusMachService.readyNotification`). Keep one `RemoteEventBus` and call `attemptReconnect()` when the ping fires, and once when a live connection drops. Do not retry in a loop after a failed handshake; wait for the next ready ping.
 
 `publish` is best-effort. Use `ask` when you need confirmation from a host listener.
 

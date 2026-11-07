@@ -65,6 +65,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             return
         }
 
+        guard !AgentInstanceGuard.shouldTerminateCurrentInstance() else {
+            #log(
+                "Another dawnAgent is already running; quitting this instance",
+                level: .info,
+                category: .appLifecycle
+            )
+            NSApplication.shared.terminate(nil)
+            return
+        }
+
         #log(
             "dawnAgent application finished launching",
             level: .info,

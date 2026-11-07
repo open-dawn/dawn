@@ -1,0 +1,6 @@
+// Copy to LocalRelease.xcconfig for a local Release run under your team.
+// LocalRelease.xcconfig is gitignored and must not be committed.
+
+CODE_SIGN_STYLE = Automatic
+CODE_SIGN_IDENTITY = Apple Development
+DEVELOPMENT_TEAM = YOUR_TEAM_ID
