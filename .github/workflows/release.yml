@@ -638,7 +638,7 @@ jobs:
 
               PREVIOUS_BUILD="$(
                 /usr/bin/xmllint \
-                  --xpath "string((//*[local-name()='item'])[1]/*[local-name()='enclosure']/@*[local-name()='version'])" \
+                  --xpath "string((//*[local-name()='item'])[1]/*[local-name()='version'])" \
                   "$APPCAST_PATH"
               )"
 
