@@ -1,9 +1,9 @@
 #!/bin/bash
 # Fixes dawnApp ↔ dawnAgent XPC handshake failures caused by a stale launchd
-# Lightweight Code Requirement (LWCR) after Debug rebuilds.
+# Lightweight Code Requirement (LWCR) after Debug or Release rebuilds.
 #
 # Symptoms:
-#   - Debug UI shows agent disconnected / handshake failed
+#   - UI shows agent disconnected / handshake failed
 #   - `launchctl print gui/$(id -u)/app.opendawn.dawnAgent` shows
 #     `needs LWCR update`, `last exit code = 78: EX_CONFIG`, `job state = spawn failed`
 #
@@ -17,16 +17,22 @@ PRODUCTS="${1:-}"
 if [[ -z "${PRODUCTS}" ]]; then
   PRODUCTS="$(
     /usr/bin/find "${HOME}/Library/Developer/Xcode/DerivedData" \
-      -path '*/Build/Products/Debug/DAWN.app' \
-      -print -quit 2>/dev/null || true
+      \( -path '*/Build/Products/Release/DAWN.app' -o -path '*/Build/Products/Debug/DAWN.app' \) \
+      -print \
+      2>/dev/null |
+      /usr/bin/awk '
+        /\/Release\/DAWN\.app$/ { print; found=1; exit }
+        /\/Debug\/DAWN\.app$/ { debug=$0 }
+        END { if (!found && debug != "") print debug }
+      ' || true
   )"
   PRODUCTS="${PRODUCTS%/DAWN.app}"
 fi
 
 APP="${PRODUCTS}/DAWN.app"
 if [[ ! -d "${APP}" ]]; then
-  echo "error: DAWN.app not found under DerivedData Debug products" >&2
-  echo "usage: $0 [/path/to/Build/Products/Debug]" >&2
+  echo "error: DAWN.app not found under DerivedData products" >&2
+  echo "usage: $0 [/path/to/Build/Products/Debug|Release]" >&2
   exit 1
 fi
 

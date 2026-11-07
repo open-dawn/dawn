@@ -72,21 +72,25 @@ You can `attach` / `detach` any `RemoteEventTransportServer` (XPC from the accep
 
 > Note: This is specific to XPC and the dawnAgent implementation
 
-dawnAgent is a login item. Launchd advertises a Mach service named as the helper’s bundle identifier. That name is how clients connect; do not archive `NSXPCListenerEndpoint` (it can only travel through an `NSXPCCoder` on a live XPC connection).
+dawnAgent is a Login Item under `DAWN.app/Contents/Library/LoginItems`. After `SMAppService.loginItem(identifier:)` registers it, launchd advertises a Mach service named as the helper’s bundle identifier. That name is how clients connect; do not archive `NSXPCListenerEndpoint` (it can only travel through an `NSXPCCoder` on a live XPC connection).
+
+DAWN registers the login item when it launches so the Mach service exists for the session. Launch at login only controls whether that registration remains after DAWN quits.
 
 ```swift
 let eventServer = EventServer(bus: bus)
 let acceptor = XPCRemoteEventTransportAcceptor(
     eventServer: eventServer,
-    machServiceName: "app.opendawn.dawnAgent"
+    machServiceName: EventBusMachService.serviceName
 )
 acceptor.start()
 ```
 
 After `start()`, post an empty `DistributedNotificationCenter` ping so clients reconnect when dawnAgent comes up or restarts. Do not put the endpoint in the notification.
 
-- Mach service name: `app.opendawn.dawnAgent` (the login item bundle ID)
-- Ready ping: `app.opendawn.dawnAgent.eventBusReady` (nil object, nil userInfo)
+- Mach service name: `EventBusMachService.serviceName` (the login item bundle ID)
+- Ready ping: `EventBusMachService.readyNotification` (nil object, nil userInfo)
+
+Those values live in `EventBusMachService` so host and clients stay aligned. App-group Mach service names are for sandboxed apps. DAWN is not sandboxed, so a team app-group service name will not complete an XPC handshake.
 
 `acceptor.endpoint` is still available for in-process tests that use an anonymous listener (`machServiceName: nil`). Production dawnAgent does not share that endpoint.
 
