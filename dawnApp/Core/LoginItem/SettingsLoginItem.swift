@@ -5,6 +5,40 @@ import ServiceManagement
 enum SettingsLoginItem {
     static let helperBundleIdentifier = EventBusMachService.agentBundleIdentifier
 
+    static func clearRegistration() {
+        let service = SMAppService.loginItem(identifier: helperBundleIdentifier)
+
+        #log(
+            "dawnAgent login-item status before clear: \(service.status.rawValue)",
+            level: .info,
+            category: .appLifecycle
+        )
+
+        switch service.status {
+        case .notRegistered, .notFound:
+            return
+        case .enabled, .requiresApproval:
+            break
+        @unknown default:
+            break
+        }
+
+        do {
+            try service.unregister()
+            #log(
+                "Cleared dawnAgent login-item registration so a process-launched agent can own the Mach service",
+                level: .info,
+                category: .appLifecycle
+            )
+        } catch {
+            #log(
+                "dawnAgent login-item clear failed: \(error.localizedDescription, privacy: .public)",
+                level: .error,
+                category: .appLifecycle
+            )
+        }
+    }
+
     static func apply(launchAtLogin: Bool) {
         let service = SMAppService.loginItem(identifier: helperBundleIdentifier)
 

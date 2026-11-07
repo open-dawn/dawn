@@ -76,6 +76,8 @@ dawnAgent listens with `NSXPCListener(machServiceName:)` using `EventBusMachServ
 
 How dawnAgent gets launched is separate from the host API. dawnApp may start an embedded copy when it opens; a CLI, login item, or another Open Dawn tool may start the same host later. The host only needs to be running and listening. Clients reconnect when they see the ready ping.
 
+A leftover `SMAppService` login-item job can still own the Mach service name. If that job is stuck (`spawn failed`, exit `78 EX_CONFIG`), dawnApp connects to launchd’s broken endpoint even while a separately started dawnAgent process is alive. Clear or reset that registration before relying on a process-launched host.
+
 ```swift
 let eventServer = EventServer(bus: bus)
 let acceptor = XPCRemoteEventTransportAcceptor(

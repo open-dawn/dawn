@@ -1,8 +1,10 @@
 #!/bin/bash
 # Fixes dawnApp ↔ dawnAgent XPC handshake failures caused by a stale launchd
-# Lightweight Code Requirement (LWCR) after Debug or Release rebuilds.
+# Lightweight Code Requirement (LWCR) after Debug or Release rebuilds, or after
+# moving DAWN.app while an old SMAppService login-item job still points at it.
 #
 # Symptoms:
+#   - dawnAgent process is running, but dawnApp stays disconnected
 #   - UI shows agent disconnected / handshake failed
 #   - `launchctl print gui/$(id -u)/app.opendawn.dawnAgent` shows
 #     `needs LWCR update`, `last exit code = 78: EX_CONFIG`, `job state = spawn failed`
