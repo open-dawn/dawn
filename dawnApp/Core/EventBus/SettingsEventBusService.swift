@@ -102,11 +102,10 @@ final class SettingsEventBusService {
 
         if droppedWhileConnected {
             retryAfterInitialHandshake = false
-            if SettingsLoginItem.isAgentRunning() {
-                reconnectIfNeeded()
-            } else {
+            if !SettingsLoginItem.isAgentRunning() {
                 SettingsLoginItem.clearRegistration()
             }
+            reconnectIfNeeded()
             return
         }
 
