@@ -96,7 +96,10 @@ struct AppShellView: View {
                     availableUpdate: availableUpdate,
                     selectedDestination: $navigation.selectedDestination,
                     onCreateContext: { viewModel.presentContextCreator() },
-                    onDismissError: dismissSidebarError
+                    onDismissError: dismissSidebarError,
+                    onRestartAgent: {
+                        SettingsLoginItem.ensureRunning()
+                    }
                 )
                 .background {
                     SplitViewDividerFix()

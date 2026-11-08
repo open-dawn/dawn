@@ -43,7 +43,7 @@ final class SettingsViewStore: Listener {
 
         settings = payload.settings
         error = nil
-        SettingsLoginItem.apply(launchAtLogin: payload.settings.launchAtLogin)
+        // SettingsLoginItem.apply(launchAtLogin: payload.settings.launchAtLogin)
     }
 
     func refresh() async {
@@ -60,12 +60,12 @@ final class SettingsViewStore: Listener {
             case let .settingsFetched(payload):
                 settings = payload.settings
                 error = nil
-                SettingsLoginItem.apply(launchAtLogin: payload.settings.launchAtLogin)
+                // SettingsLoginItem.apply(launchAtLogin: payload.settings.launchAtLogin)
 
             case let .availableSettings(payload):
                 settings = payload.settings
                 error = nil
-                SettingsLoginItem.apply(launchAtLogin: payload.settings.launchAtLogin)
+                // SettingsLoginItem.apply(launchAtLogin: payload.settings.launchAtLogin)
 
             default:
                 error = .unexpectedResponse(response.kind)
@@ -91,7 +91,7 @@ final class SettingsViewStore: Listener {
             case .success:
                 self.settings = settings
                 error = nil
-                SettingsLoginItem.apply(launchAtLogin: settings.launchAtLogin)
+                // SettingsLoginItem.apply(launchAtLogin: settings.launchAtLogin)
             case let .failure(failure):
                 throw SettingsViewStoreError.mutationRejected(failure)
             }

@@ -219,7 +219,7 @@ final class MenuBarController: NSObject, MenuBarControlling {
         alert.messageText = "Quit DAWN Agent?"
         alert.informativeText = """
             DAWN will stop managing your workspaces and its menu bar item will disappear. \
-            Because DAWN Agent is a login item, it will start again the next time you sign in.
+            Open DAWN and choose Restart when you want the agent running again.
             """
 
         let quitButton = alert.addButton(withTitle: "Quit")

@@ -8,6 +8,7 @@ struct SidebarFooter: View {
     @Binding var selectedDestination: SidebarDestination?
 
     let onDismissError: () -> Void
+    let onRestartAgent: () -> Void
 
     var body: some View {
         VStack(alignment: .leading, spacing: SidebarMetrics.footerSpacing) {
@@ -55,23 +56,33 @@ struct SidebarFooter: View {
     }
 
     private var agentWarning: some View {
-        HStack(spacing: 6) {
-            Image(systemName: "exclamationmark.triangle.fill")
-                .font(DawnTextStyle.sidebarIcon)
-                .accessibilityHidden(true)
+        VStack(spacing: 8) {
+            HStack(spacing: 6) {
+                Image(systemName: "exclamationmark.triangle.fill")
+                    .font(DawnTextStyle.sidebarIcon)
+                    .accessibilityHidden(true)
 
-            Text("The DAWN Agent is not running")
-                .font(DawnTextStyle.sidebarWarning)
-                .lineLimit(1)
+                Text("The DAWN Agent is not running")
+                    .font(DawnTextStyle.sidebarWarning)
+                    .lineLimit(1)
+            }
+            .foregroundStyle(DawnColors.sidebarWarningForeground)
+            .frame(maxWidth: .infinity)
+
+            DButton(style: .warning, action: onRestartAgent) {
+                Text("Restart")
+                    .frame(maxWidth: .infinity)
+                    .font(.caption2)
+            }
+            .accessibilityLabel("Restart DAWN Agent")
         }
-        .foregroundStyle(DawnColors.sidebarWarningForeground)
-        .frame(maxWidth: .infinity)
         .padding(.vertical, SidebarMetrics.warningVerticalPadding)
+        .padding(.horizontal, 8)
         .background {
             RoundedRectangle(cornerRadius: SidebarMetrics.cornerRadius, style: .continuous)
                 .fill(DawnColors.sidebarWarningBackground)
         }
-        .accessibilityElement(children: .ignore)
+        .accessibilityElement(children: .contain)
         .accessibilityLabel("The DAWN Agent is not running")
     }
 

@@ -30,8 +30,6 @@ final class SettingsAppDelegate: NSObject, NSApplicationDelegate {
 
         contextStore.start()
         settingsStore.start()
-        SettingsLoginItem.clearRegistration()
-        DawnAgentOpener.openDawnAgentIfNeeded()
         eventBusService.start()
         updaterService.start()
     }

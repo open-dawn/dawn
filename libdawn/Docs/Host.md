@@ -74,9 +74,9 @@ You can `attach` / `detach` any `RemoteEventTransportServer` (XPC from the accep
 
 dawnAgent listens with `NSXPCListener(machServiceName:)` using `EventBusMachService.serviceName`. That name is how clients connect; do not archive `NSXPCListenerEndpoint` (it can only travel through an `NSXPCCoder` on a live XPC connection).
 
-How dawnAgent gets launched is separate from the host API. dawnApp may start an embedded copy when it opens; a CLI, login item, or another Open Dawn tool may start the same host later. The host only needs to be running and listening. Clients reconnect when they see the ready ping.
+How dawnAgent gets launched is separate from the host API. A CLI or another Open Dawn tool may start the same host. For XPC over `EventBusMachService.serviceName`, launchd must advertise that Mach service. dawnApp does that by registering the embedded login item with `SMAppService` (`SettingsLoginItem.ensureRunning()`). Starting the agent executable alone leaves the process running, but clients get `bootstrap look-up: No such process` because the named Mach service is missing.
 
-A leftover `SMAppService` login-item job can still own the Mach service name. If that job is stuck (`spawn failed`, exit `78 EX_CONFIG`), dawnApp connects to launchd’s broken endpoint even while a separately started dawnAgent process is alive. Clear or reset that registration before relying on a process-launched host.
+`DawnAgentOpener` remains available for a future button or non-XPC launch path. If a leftover login-item job is stuck (`spawn failed`, exit `78 EX_CONFIG`), reset it with `Scripts/reset_agent_registration.sh`.
 
 ```swift
 let eventServer = EventServer(bus: bus)

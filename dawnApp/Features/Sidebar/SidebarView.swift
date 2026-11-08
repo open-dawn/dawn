@@ -7,6 +7,7 @@ struct SidebarView: View {
     @Binding private var selectedDestination: SidebarDestination?
     private let onCreateContext: () -> Void
     private let onDismissError: () -> Void
+    private let onRestartAgent: () -> Void
 
     @State private var searchText: String
     @State private var isSearchPresented: Bool
@@ -18,12 +19,14 @@ struct SidebarView: View {
         selectedDestination: Binding<SidebarDestination?>,
         initialSearch: SidebarSearchState = SidebarSearchState(),
         onCreateContext: @escaping () -> Void,
-        onDismissError: @escaping () -> Void = {}
+        onDismissError: @escaping () -> Void = {},
+        onRestartAgent: @escaping () -> Void = {}
     ) {
         self.content = content
         self.availableUpdate = availableUpdate
         self.onCreateContext = onCreateContext
         self.onDismissError = onDismissError
+        self.onRestartAgent = onRestartAgent
         _selectedDestination = selectedDestination
         _searchText = State(initialValue: initialSearch.text)
         _isSearchPresented = State(initialValue: initialSearch.isPresented)
@@ -75,7 +78,8 @@ struct SidebarView: View {
             content: content,
             availableUpdate: availableUpdate,
             selectedDestination: $selectedDestination,
-            onDismissError: onDismissError
+            onDismissError: onDismissError,
+            onRestartAgent: onRestartAgent
         )
         .padding(.horizontal, SidebarMetrics.horizontalPadding)
         .padding(.top, SidebarMetrics.footerSpacing)
