@@ -10,6 +10,8 @@ struct SidebarFooter: View {
     let onDismissError: () -> Void
     let onRestartAgent: () -> Void
 
+    @State private var isRestartingAgent = false
+
     var body: some View {
         VStack(alignment: .leading, spacing: SidebarMetrics.footerSpacing) {
             errorNotice
@@ -53,6 +55,11 @@ struct SidebarFooter: View {
                 )
             }
         }
+        .onChange(of: content.isAgentRunning) { _, isRunning in
+            if isRunning {
+                isRestartingAgent = false
+            }
+        }
     }
 
     private var agentWarning: some View {
@@ -69,12 +76,21 @@ struct SidebarFooter: View {
             .foregroundStyle(DawnColors.sidebarWarningForeground)
             .frame(maxWidth: .infinity)
 
-            DButton(style: .warning, action: onRestartAgent) {
-                Text("Restart")
-                    .frame(maxWidth: .infinity)
-                    .font(.caption2)
+            DButton(style: .warning, action: restartAgent) {
+                Group {
+                    if isRestartingAgent {
+                        ProgressView()
+                            .controlSize(.small)
+                    } else {
+                        Text("Restart")
+                            .font(.caption2)
+                    }
+                }
+                .frame(maxWidth: .infinity)
             }
+            .disabled(isRestartingAgent)
             .accessibilityLabel("Restart DAWN Agent")
+            .accessibilityValue(isRestartingAgent ? "Loading" : "Ready")
         }
         .padding(.vertical, SidebarMetrics.warningVerticalPadding)
         .padding(.horizontal, 8)
@@ -84,6 +100,18 @@ struct SidebarFooter: View {
         }
         .accessibilityElement(children: .contain)
         .accessibilityLabel("The DAWN Agent is not running")
+    }
+
+    private func restartAgent() {
+        guard !isRestartingAgent else { return }
+
+        isRestartingAgent = true
+        onRestartAgent()
+
+        Task { @MainActor in
+            try? await Task.sleep(for: .seconds(10))
+            isRestartingAgent = false
+        }
     }
 
     private var accessibilityError: some View {
