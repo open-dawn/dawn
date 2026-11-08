@@ -100,7 +100,17 @@ final class SettingsEventBusService {
             retryAfterInitialHandshake = false
         }
 
-        if droppedWhileConnected || initialHandshakeFailed {
+        if droppedWhileConnected {
+            retryAfterInitialHandshake = false
+            if SettingsLoginItem.isAgentRunning() {
+                reconnectIfNeeded()
+            } else {
+                SettingsLoginItem.clearRegistration()
+            }
+            return
+        }
+
+        if initialHandshakeFailed {
             retryAfterInitialHandshake = false
             reconnectIfNeeded()
         }

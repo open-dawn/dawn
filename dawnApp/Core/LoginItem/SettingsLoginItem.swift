@@ -6,12 +6,53 @@ import ServiceManagement
 enum SettingsLoginItem {
     static let helperBundleIdentifier = EventBusMachService.agentBundleIdentifier
 
-    static func ensureRunning(
-        isAgentRunning: () -> Bool = {
-            !NSRunningApplication.runningApplications(
-                withBundleIdentifier: helperBundleIdentifier
-            ).isEmpty
+    static func isAgentRunning() -> Bool {
+        !NSRunningApplication.runningApplications(
+            withBundleIdentifier: helperBundleIdentifier
+        ).isEmpty
+    }
+
+    static func clearRegistration() {
+        let service = SMAppService.loginItem(identifier: helperBundleIdentifier)
+
+        #log(
+            "dawnAgent login-item status before clear: \(service.status.rawValue)",
+            level: .info,
+            category: .appLifecycle
+        )
+
+        switch service.status {
+        case .notRegistered, .notFound:
+            return
+        case .enabled, .requiresApproval:
+            break
+        @unknown default:
+            break
         }
+
+        do {
+            try service.unregister()
+            #log(
+                "Cleared dawnAgent login-item registration so launchd will not demand-start it",
+                level: .info,
+                category: .appLifecycle
+            )
+        } catch {
+            #log(
+                "dawnAgent login-item clear failed: \(error.localizedDescription, privacy: .public)",
+                level: .error,
+                category: .appLifecycle
+            )
+        }
+    }
+
+    static func clearRegistrationIfAgentStopped() {
+        guard !isAgentRunning() else { return }
+        clearRegistration()
+    }
+
+    static func ensureRunning(
+        isAgentRunning: () -> Bool = { SettingsLoginItem.isAgentRunning() }
     ) {
         let service = SMAppService.loginItem(identifier: helperBundleIdentifier)
         let action = AgentLoginItemAction.resolve(

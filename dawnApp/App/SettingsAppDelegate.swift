@@ -9,6 +9,8 @@ final class SettingsAppDelegate: NSObject, NSApplicationDelegate {
     let accessibilityPermissionService: AccessibilityPermissionService
 
     override init() {
+        SettingsLoginItem.clearRegistrationIfAgentStopped()
+
         let eventBusService = SettingsEventBusService()
         let updateClient = SparkleUpdateClient()
 
