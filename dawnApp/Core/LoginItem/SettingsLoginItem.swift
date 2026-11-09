@@ -38,32 +38,4 @@ enum SettingsLoginItem {
             )
         }
     }
-
-    static func apply(launchAtLogin: Bool) {
-        guard launchAtLogin else { return }
-        registerIfNeeded()
-    }
-
-    static func applyForTermination(launchAtLogin: Bool) {
-        guard !launchAtLogin else { return }
-
-        let service = SMAppService.loginItem(identifier: helperBundleIdentifier)
-
-        guard service.status == .enabled else { return }
-
-        do {
-            try service.unregister()
-            #log(
-                "Unregistered dawnAgent login item because launch at login is off",
-                level: .info,
-                category: .appLifecycle
-            )
-        } catch {
-            #log(
-                "dawnAgent login-item unregister failed: \(error.localizedDescription, privacy: .public)",
-                level: .error,
-                category: .appLifecycle
-            )
-        }
-    }
 }
