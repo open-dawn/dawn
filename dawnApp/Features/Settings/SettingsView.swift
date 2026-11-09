@@ -74,11 +74,6 @@ struct SettingsContent: View {
 
             VStack(spacing: 12) {
                 settingsToggleRow(
-                    title: "Launch at login",
-                    systemImage: "power",
-                    isOn: $viewModel.draft.launchAtLogin
-                )
-                settingsToggleRow(
                     title: "Show Menu Bar Icon",
                     systemImage: "menubar.dock.rectangle",
                     isOn: $viewModel.draft.showInMenuBar
