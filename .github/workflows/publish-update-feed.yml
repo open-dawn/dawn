@@ -4,6 +4,12 @@ on:
   release:
     types:
       - published
+  workflow_dispatch:
+    inputs:
+      release_tag:
+        description: Stable release tag to publish
+        required: true
+        type: string
 
 permissions:
   contents: read
@@ -15,17 +21,15 @@ concurrency:
 jobs:
   publish:
     name: Publish stable update feed
-    if: github.event.release.prerelease == false
+    if: github.event_name == 'workflow_dispatch' || github.event.release.prerelease == false
     runs-on: macos-26
     timeout-minutes: 15
     environment: release
 
     env:
-      RELEASE_TAG: ${{ github.event.release.tag_name }}
+      RELEASE_TAG: ${{ github.event.release.tag_name || inputs.release_tag }}
       SOURCE_REPOSITORY: ${{ github.repository }}
       PAGES_REPOSITORY: open-dawn/open-dawn.github.io
-      PAGES_DIRECTORY: ${{ runner.temp }}/pages
-      ARTIFACT_DIRECTORY: ${{ runner.temp }}/update-feed
 
     steps:
       - name: Initialize publication
@@ -41,6 +45,8 @@ jobs:
           RELEASE_VERSION="${BASH_REMATCH[1]}"
           RELEASE_NOTES_FILENAME="DAWN-${RELEASE_VERSION}.html"
           DMG_FILENAME="DAWN-${RELEASE_VERSION}.dmg"
+          PAGES_DIRECTORY="$RUNNER_TEMP/pages"
+          ARTIFACT_DIRECTORY="$RUNNER_TEMP/update-feed"
           APPCAST_PATH="$ARTIFACT_DIRECTORY/appcast.xml"
           RELEASE_NOTES_PATH="$ARTIFACT_DIRECTORY/$RELEASE_NOTES_FILENAME"
 
@@ -52,6 +58,8 @@ jobs:
             echo "DMG_FILENAME=$DMG_FILENAME"
             echo "APPCAST_PATH=$APPCAST_PATH"
             echo "RELEASE_NOTES_PATH=$RELEASE_NOTES_PATH"
+            echo "PAGES_DIRECTORY=$PAGES_DIRECTORY"
+            echo "ARTIFACT_DIRECTORY=$ARTIFACT_DIRECTORY"
           } >> "$GITHUB_ENV"
 
       - name: Download release assets
