@@ -41,6 +41,10 @@ struct EventTests {
                 kind: EventKind.switchContext
             ),
             (
+                event: Event.stopContext(StopContextEvent(contextID: UUID())),
+                kind: EventKind.stopContext
+            ),
+            (
                 event: Event.contextMutationAcknowledged(.success(contextID: UUID())),
                 kind: EventKind.contextMutationAcknowledged
             ),
@@ -100,14 +104,24 @@ struct EventTests {
             .archiveContext(ArchiveContextEvent(contextID: UUID())),
             .unarchiveContext(UnarchiveContextEvent(contextID: UUID())),
             .switchContext(SwitchContextEvent(contextID: UUID())),
+            .stopContext(StopContextEvent(contextID: UUID())),
             .contextMutationAcknowledged(ContextMutationAcknowledgement.success(contextID: UUID())),
             .contextMutationAcknowledged(ContextMutationAcknowledgement.failure(failure: .emptyContextName)),
             .contextMutationAcknowledged(ContextMutationAcknowledgement.failure(failure: .contextNotFound(UUID()))),
+            .contextMutationAcknowledged(ContextMutationAcknowledgement.failure(failure: .contextNotActive(UUID()))),
             .availableContexts(
-                AvailableContextsEvent(contexts: [
-                    WorkspaceContext(name: "Placeholder", symbol: "book"),
-                    WorkspaceContext(name: "Old", symbol: "archivebox", isArchived: true)
-                ])
+                AvailableContextsEvent(
+                    contexts: [
+                        WorkspaceContext(name: "Placeholder", symbol: "book"),
+                        WorkspaceContext(name: "Old", symbol: "archivebox", isArchived: true)
+                    ],
+                    activity: WorkspaceActivityState(
+                        activeSession: .init(
+                            contextID: UUID(),
+                            startedAt: Date(timeIntervalSince1970: 100)
+                        )
+                    )
+                )
             ),
             .getAccessibilityStatus(GetAccessibilityStatusEvent()),
             .promptAccessibilityTrust(PromptAccessibilityTrustEvent()),
@@ -127,5 +141,17 @@ struct EventTests {
         let data = try encoder.encode(event)
         let decoded = try decoder.decode(Event.self, from: data)
         #expect(decoded == event)
+    }
+
+    @Test("Context snapshots decode activity from older payloads as empty")
+    func contextSnapshotsDecodeOlderPayloads() throws {
+        let data = Data(#"{"contexts":[]}"#.utf8)
+        let decoder = JSONDecoder()
+
+        let available = try decoder.decode(AvailableContextsEvent.self, from: data)
+        let fetched = try decoder.decode(ContextsFetchedEvent.self, from: data)
+
+        #expect(available.activity == .empty)
+        #expect(fetched.activity == .empty)
     }
 }

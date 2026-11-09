@@ -27,6 +27,7 @@ final class WorkspaceRuntime: WorkspaceCoordinating {
     private let contextManager: any WorkspaceManaging
     private let contextSwitching: any ContextSwitching
     private let clock: any WorkspaceClock
+    private let snapshotPublisher: (any ContextSnapshotPublishing)?
 
     @ObservationIgnored
     private var refreshGeneration: UInt = 0
@@ -45,11 +46,13 @@ final class WorkspaceRuntime: WorkspaceCoordinating {
     init(
         contextManager: any WorkspaceManaging,
         contextSwitching: any ContextSwitching = DefaultContextSwitching(),
-        clock: any WorkspaceClock = SystemWorkspaceClock()
+        clock: any WorkspaceClock = SystemWorkspaceClock(),
+        snapshotPublisher: (any ContextSnapshotPublishing)? = nil
     ) {
         self.contextManager = contextManager
         self.contextSwitching = contextSwitching
         self.clock = clock
+        self.snapshotPublisher = snapshotPublisher
     }
 
     func refresh() async {
@@ -127,13 +130,22 @@ final class WorkspaceRuntime: WorkspaceCoordinating {
             contextID: context.id,
             at: clock.now
         )
+        publishSnapshot()
     }
 
     func stopActiveContext() async throws {
         workspaceActivity = try await contextManager.stopActiveContext(at: clock.now)
+        publishSnapshot()
     }
 
     func lastActiveAt(for contextID: UUID) -> Date? {
         workspaceActivity.lastActiveAt(for: contextID)
+    }
+
+    private func publishSnapshot() {
+        snapshotPublisher?.publishAvailableContexts(
+            contexts,
+            activity: workspaceActivity
+        )
     }
 }

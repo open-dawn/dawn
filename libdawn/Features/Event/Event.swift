@@ -12,6 +12,7 @@ public enum Event: Codable, Sendable, Equatable {
     case deleteContext(DeleteContextEvent)
     case archiveContext(ArchiveContextEvent)
     case unarchiveContext(UnarchiveContextEvent)
+    case stopContext(StopContextEvent)
 
     case availableContexts(AvailableContextsEvent)
     case contextMutationAcknowledged(ContextMutationAcknowledgement)
@@ -41,6 +42,7 @@ public enum Event: Codable, Sendable, Equatable {
         case .archiveContext: .archiveContext
         case .unarchiveContext: .unarchiveContext
         case .switchContext: .switchContext
+        case .stopContext: .stopContext
         case .contextMutationAcknowledged: .contextMutationAcknowledged
         case .availableContexts: .availableContexts
         case .getAccessibilityStatus: .getAccessibilityStatus

@@ -52,6 +52,11 @@ struct ContextDetailView: View {
                                 onDelete(context)
                             }
                         }
+                    },
+                    onStop: {
+                        Task {
+                            await viewModel.stopContext(context)
+                        }
                     }
                 )
 

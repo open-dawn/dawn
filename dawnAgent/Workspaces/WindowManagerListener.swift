@@ -43,6 +43,7 @@ final class WindowManagerListener: Listener {
                 .archiveContext,
                 .unarchiveContext,
                 .switchContext,
+                .stopContext,
             ]
         )
     }
@@ -52,7 +53,14 @@ final class WindowManagerListener: Listener {
         case .getContexts:
             Task { @MainActor in
                 let contexts = await getAllContexts()
-                reply?(.contextsFetched(ContextsFetchedEvent(contexts: contexts)))
+                reply?(
+                    .contextsFetched(
+                        ContextsFetchedEvent(
+                            contexts: contexts,
+                            activity: workspace.workspaceActivity
+                        )
+                    )
+                )
             }
 
         case .initialized:
@@ -62,23 +70,26 @@ final class WindowManagerListener: Listener {
                 category: .appLifecycle
             )
 
-        case let .createContext(payload):
+        case .createContext(let payload):
             handleCreateContext(payload, reply: reply)
 
-        case let .updateContext(payload):
+        case .updateContext(let payload):
             handleUpdateContext(payload, reply: reply)
 
-        case let .deleteContext(payload):
+        case .deleteContext(let payload):
             handleDeleteContext(payload, reply: reply)
 
-        case let .archiveContext(payload):
+        case .archiveContext(let payload):
             handleArchiveContext(payload, reply: reply)
 
-        case let .unarchiveContext(payload):
+        case .unarchiveContext(let payload):
             handleUnarchiveContext(payload, reply: reply)
 
-        case let .switchContext(payload):
+        case .switchContext(let payload):
             handleSwitchContext(payload, reply: reply)
+
+        case .stopContext(let payload):
+            handleStopContext(payload, reply: reply)
 
         default:
             return
@@ -222,6 +233,44 @@ final class WindowManagerListener: Listener {
                 reply(
                     .contextMutationAcknowledged(
                         .success(contextID: payload.contextID)
+                    )
+                )
+            } catch {
+                reply(
+                    .contextMutationAcknowledged(
+                        .failure(
+                            failure: mutationFailure(from: error)
+                        )
+                    )
+                )
+            }
+        }
+    }
+
+    private func handleStopContext(_ payload: StopContextEvent, reply: (@Sendable (Event) -> Void)?) {
+        guard let reply else { return }
+
+        Task { @MainActor in
+            do {
+                guard workspace.activeContextID == payload.contextID else {
+                    reply(
+                        .contextMutationAcknowledged(
+                            .failure(
+                                failure: .contextNotActive(payload.contextID)
+                            )
+                        )
+                    )
+
+                    return
+                }
+
+                try await workspace.stopActiveContext()
+
+                reply(
+                    .contextMutationAcknowledged(
+                        .success(
+                            contextID: payload.contextID
+                        )
                     )
                 )
             } catch {

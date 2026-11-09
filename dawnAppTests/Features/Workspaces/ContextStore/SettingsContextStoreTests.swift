@@ -53,13 +53,23 @@ struct SettingsContextStoreTests {
             name: "Second",
             symbol: "2.circle"
         )
+        var active = WorkspaceActivityState.empty
+        active.activate(
+            contextID: first.id,
+            at: Date(timeIntervalSince1970: 100)
+        )
 
         store.handle(
             .availableContexts(
-                AvailableContextsEvent(contexts: [first])
+                AvailableContextsEvent(
+                    contexts: [first],
+                    activity: active
+                )
             ),
             reply: nil
         )
+
+        #expect(store.activity.activeContextID == first.id)
 
         store.handle(
             .availableContexts(
@@ -69,6 +79,7 @@ struct SettingsContextStoreTests {
         )
 
         #expect(store.contexts == [second])
+        #expect(store.activity.activeContextID == nil)
     }
 
     @Test("Available contexts snapshot keeps archived contexts in the same list")
@@ -107,10 +118,18 @@ struct SettingsContextStoreTests {
             name: "Work",
             symbol: "briefcase"
         )
+        var activity = WorkspaceActivityState.empty
+        activity.activate(
+            contextID: context.id,
+            at: Date(timeIntervalSince1970: 100)
+        )
 
         let bus = ContextEventBusSpy()
         bus.askResponse = .contextsFetched(
-            ContextsFetchedEvent(contexts: [context])
+            ContextsFetchedEvent(
+                contexts: [context],
+                activity: activity
+            )
         )
 
         let store = SettingsContextStore(bus: bus)
@@ -124,6 +143,7 @@ struct SettingsContextStoreTests {
         )
         #expect(bus.requestedTimeouts == [.seconds(5)])
         #expect(store.contexts == [context])
+        #expect(store.activity == activity)
         #expect(store.error == nil)
         #expect(!store.isLoading)
     }
@@ -267,6 +287,26 @@ struct SettingsContextStoreTests {
         )
 
         #expect(store.contexts == [existingContext])
+        #expect(store.error == nil)
+    }
+
+    @Test("Stop sends the expected request")
+    func stopSendsExpectedRequest() async throws {
+        let contextID = UUID()
+        let bus = ContextEventBusSpy()
+        bus.askResponse = .contextMutationAcknowledged(
+            .success(contextID: contextID)
+        )
+        let store = SettingsContextStore(bus: bus)
+
+        try await store.stopContext(id: contextID)
+
+        #expect(
+            bus.askedEvents == [
+                .stopContext(StopContextEvent(contextID: contextID))
+            ]
+        )
+        #expect(bus.requestedTimeouts == [.seconds(5)])
         #expect(store.error == nil)
     }
 

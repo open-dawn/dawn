@@ -16,6 +16,7 @@ final class SettingsContextStore: Listener {
     private var isStarted = false
 
     private(set) var contexts: [WorkspaceContext] = []
+    private(set) var activity: WorkspaceActivityState = .empty
     private(set) var isLoading = false
     private(set) var error: SettingsContextStoreError?
 
@@ -49,6 +50,7 @@ final class SettingsContextStore: Listener {
         }
 
         contexts = payload.contexts
+        activity = payload.activity
         error = nil
     }
 
@@ -65,10 +67,12 @@ final class SettingsContextStore: Listener {
             switch response {
             case let .contextsFetched(payload):
                 contexts = payload.contexts
+                activity = payload.activity
                 error = nil
 
             case let .availableContexts(payload):
                 contexts = payload.contexts
+                activity = payload.activity
                 error = nil
 
             default:
@@ -166,6 +170,13 @@ final class SettingsContextStore: Listener {
     func switchContext(id: UUID) async throws(SettingsContextStoreError) {
         _ = try await askForAcknowledgement(
             .switchContext(SwitchContextEvent(contextID: id)),
+            expectedContextID: id
+        )
+    }
+
+    func stopContext(id: UUID) async throws(SettingsContextStoreError) {
+        _ = try await askForAcknowledgement(
+            .stopContext(StopContextEvent(contextID: id)),
             expectedContextID: id
         )
     }
