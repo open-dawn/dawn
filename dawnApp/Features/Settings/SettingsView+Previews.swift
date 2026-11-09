@@ -26,7 +26,6 @@ import libdawnUI
             protectedApps: []
         )
     ) { viewModel in
-        viewModel.draft.launchAtLogin = true
         viewModel.draft.showInMenuBar = true
         viewModel.draft.forceAppsToQuit = false
         viewModel.draft.analyticsEnabled = true

@@ -74,7 +74,7 @@ You can `attach` / `detach` any `RemoteEventTransportServer` (XPC from the accep
 
 dawnAgent is a Login Item under `DAWN.app/Contents/Library/LoginItems`. After `SMAppService.loginItem(identifier:)` registers it, launchd advertises a Mach service named as the helper’s bundle identifier. That name is how clients connect; do not archive `NSXPCListenerEndpoint` (it can only travel through an `NSXPCCoder` on a live XPC connection).
 
-DAWN registers the login item when it launches so the Mach service exists for the session. Launch at login only controls whether that registration remains after DAWN quits.
+DAWN registers the embedded dawnAgent login item so launchd advertises the event-bus Mach service. The registration remains active when the main DAWN application quits. DAWN does not currently expose a launch-at-login preference.
 
 ```swift
 let eventServer = EventServer(bus: bus)
@@ -98,7 +98,7 @@ Client reconnect (subscribe to the ping, connect with `XPCRemoteEventTransportCl
 
 ## Tests without a real transport
 
-Testing can use the `LoopbackEventLink` class. It is a pair of local client and server implementations. 
+Testing can use the `LoopbackEventLink` class. It is a pair of local client and server implementations.
 
 ```swift
 let hostBus = EventBus()
