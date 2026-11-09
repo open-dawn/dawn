@@ -94,10 +94,10 @@ jobs:
           }
 
           BUILD_VERSION="$(
-            xml_value "$ITEM_XPATH/*[local-name()='enclosure']/@*[local-name()='version']"
+            xml_value "$ITEM_XPATH/*[local-name()='version']"
           )"
           MARKETING_VERSION="$(
-            xml_value "$ITEM_XPATH/*[local-name()='enclosure']/@*[local-name()='shortVersionString']"
+            xml_value "$ITEM_XPATH/*[local-name()='shortVersionString']"
           )"
           DOWNLOAD_URL="$(
             xml_value "$ITEM_XPATH/*[local-name()='enclosure']/@url"
@@ -183,7 +183,7 @@ jobs:
 
             CURRENT_BUILD="$(
               /usr/bin/xmllint \
-                --xpath "string((//*[local-name()='item'])[1]/*[local-name()='enclosure']/@*[local-name()='version'])" \
+                --xpath "string((//*[local-name()='item'])[1]/*[local-name()='version'])" \
                 "$CURRENT_APPCAST_PATH"
             )"
 
@@ -255,7 +255,7 @@ jobs:
 
               LIVE_BUILD="$(
                 /usr/bin/xmllint \
-                  --xpath "string((//*[local-name()='item'])[1]/*[local-name()='enclosure']/@*[local-name()='version'])" \
+                  --xpath "string((//*[local-name()='item'])[1]/*[local-name()='version'])" \
                   "$LIVE_APPCAST"
               )"
 

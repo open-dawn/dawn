@@ -37,7 +37,7 @@
 
 DAWN is an open-source macOS application designed by OpenDawn. It manages workspace contexts: the apps and windows that belong to a workspace, and the switch from one workspace to another.
 
-The first alpha supports macOS 26 on Apple Silicon.
+The first release supports macOS 26 on Apple Silicon.
 
 ## 2. Usage
 
