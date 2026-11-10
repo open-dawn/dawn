@@ -118,7 +118,6 @@ struct AppShellView: View {
             .background {
                 WindowTranslucency()
             }
-            .preferredColorScheme(.dark)
             .onChange(of: store.contexts) { _, contexts in
                 navigation.contextsDidChange(contexts)
                 viewModel.reconcileActiveContext(with: contexts.filter { !$0.isArchived })
