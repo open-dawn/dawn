@@ -37,7 +37,7 @@
 
 DAWN is an open-source macOS application designed by OpenDawn. It manages workspace contexts: the apps and windows that belong to a workspace, and the switch from one workspace to another.
 
-The first release supports macOS 26 on Apple Silicon.
+The first release supports macOS 15 or later on Apple Silicon.
 
 ## 2. Usage
 
@@ -51,7 +51,7 @@ Place the file at `docs/media/demo.gif`, then replace this note with:
 
 ## 3. Installation
 
-DAWN runs on macOS 26 on Apple Silicon. Install a published build. Building from source is covered in [Development](#04-development).
+DAWN runs on macOS 15 or later on Apple Silicon. Install a published build. Building from source is covered in [Development](#04-development).
 
 ### 3.1. GitHub Release
 
@@ -67,7 +67,7 @@ These steps build DAWN from source. Continuous integration uses the same generat
 
 You need:
 * An Apple Silicon Mac
-* macOS 26
+* macOS 15 or later
 * [Xcode](https://developer.apple.com/xcode/) 26.5
 * [XcodeGen](https://github.com/yonaskolb/XcodeGen) 2.46.0
 * [SwiftLint](https://github.com/realm/SwiftLint) 0.65.1
