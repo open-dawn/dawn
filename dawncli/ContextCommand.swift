@@ -7,6 +7,15 @@ struct JSONOutput: ParsableArguments {
     var json = false
 }
 
+struct ActivationChoice: ExpressibleByArgument, Equatable {
+    let policy: WorkspaceActivationPolicy
+
+    init?(argument: String) {
+        guard let policy = WorkspaceActivationPolicy(rawValue: argument) else { return nil }
+        self.policy = policy
+    }
+}
+
 struct ContextIdentifier: ExpressibleByArgument, Equatable {
     let uuid: UUID
 
@@ -28,6 +37,8 @@ struct ContextCommand: AsyncParsableCommand {
             List.self,
             Show.self,
             Switch.self,
+            Create.self,
+            Update.self,
             Delete.self,
             Archive.self,
             Unarchive.self
@@ -159,6 +170,168 @@ extension ContextCommand {
                 event: .unarchiveContext(UnarchiveContextEvent(contextID: id.uuid)),
                 json: output.json
             )
+        }
+    }
+
+    struct Create: AsyncParsableCommand {
+        static let configuration = CommandConfiguration(
+            abstract: "Create a workspace context."
+        )
+
+        @Option(name: .long, help: "Context name.")
+        var name: String?
+
+        @Option(name: .long, help: "SF Symbol name.")
+        var symbol: String?
+
+        @Option(
+            name: .customLong("app"),
+            parsing: .singleValue,
+            help: "Bundle identifier to include. Repeat for each app."
+        )
+        var apps: [String] = []
+
+        @Option(name: .long, help: "How other apps are treated: hide, merge, or close.")
+        var activation: ActivationChoice?
+
+        @Option(
+            name: .customLong("terminal-command"),
+            help: "Shell command to run when the context opens."
+        )
+        var terminalCommand: String?
+
+        @Option(
+            name: .long,
+            help: "JSON file with name, symbol, applications, and transition. Replaces the other flags."
+        )
+        var from: String?
+
+        @OptionGroup var output: JSONOutput
+
+        mutating func validate() throws {
+            if from != nil {
+                if hasFieldFlags {
+                    throw ValidationError("Pass either --from or the field flags, not both.")
+                }
+                return
+            }
+
+            guard let name, !name.isEmpty, let symbol, !symbol.isEmpty else {
+                throw ValidationError("Pass --name and --symbol, or --from.")
+            }
+        }
+
+        func run() async throws {
+            let request = try makeRequest()
+            let text = try await AgentSession.perform { ask in
+                try await ContextClient.create(
+                    request: request,
+                    json: output.json,
+                    ask: ask
+                )
+            }
+            print(text)
+        }
+
+        private var hasFieldFlags: Bool {
+            name != nil || symbol != nil || !apps.isEmpty || activation != nil || terminalCommand != nil
+        }
+
+        private func makeRequest() throws -> CreateContextEvent {
+            if let from {
+                return try CLIJSON.decode(CreateContextEvent.self, from: from)
+            }
+
+            let command = terminalCommand?.isEmpty == true ? nil : terminalCommand
+            return CreateContextEvent(
+                name: name ?? "",
+                symbol: symbol ?? "",
+                applications: ContextClient.applications(from: apps),
+                transition: WorkspaceTransition(
+                    activationPolicy: activation?.policy ?? .hide,
+                    terminalCommand: command
+                )
+            )
+        }
+    }
+
+    struct Update: AsyncParsableCommand {
+        static let configuration = CommandConfiguration(
+            abstract: "Change a workspace context."
+        )
+
+        @Argument(help: "Context identifier.")
+        var id: ContextIdentifier
+
+        @Option(name: .long, help: "Context name.")
+        var name: String?
+
+        @Option(name: .long, help: "SF Symbol name.")
+        var symbol: String?
+
+        @Option(
+            name: .customLong("app"),
+            parsing: .singleValue,
+            help: "Replace the app list with these bundle identifiers."
+        )
+        var apps: [String] = []
+
+        @Option(name: .long, help: "How other apps are treated: hide, merge, or close.")
+        var activation: ActivationChoice?
+
+        @Option(
+            name: .customLong("terminal-command"),
+            help: "Shell command to run when the context opens. Pass an empty string to clear it."
+        )
+        var terminalCommand: String?
+
+        @Option(
+            name: .long,
+            help: "JSON file for the whole context. Its id must match the argument."
+        )
+        var from: String?
+
+        @OptionGroup var output: JSONOutput
+
+        mutating func validate() throws {
+            if from != nil {
+                if hasFieldFlags {
+                    throw ValidationError("Pass either --from or the field flags, not both.")
+                }
+                return
+            }
+
+            guard hasFieldFlags else {
+                throw ValidationError("Pass a field to change, or --from.")
+            }
+        }
+
+        func run() async throws {
+            let replacement = try from.map {
+                try CLIJSON.decode(WorkspaceContext.self, from: $0)
+            }
+            let edits = ContextEdits(
+                name: name,
+                symbol: symbol,
+                bundleIdentifiers: apps.isEmpty ? nil : apps,
+                activation: activation?.policy,
+                terminalCommand: terminalCommand?.isEmpty == true ? nil : terminalCommand,
+                clearsTerminalCommand: terminalCommand?.isEmpty == true
+            )
+            let text = try await AgentSession.perform { ask in
+                try await ContextClient.update(
+                    id: id.uuid,
+                    edits: edits,
+                    replacement: replacement,
+                    json: output.json,
+                    ask: ask
+                )
+            }
+            print(text)
+        }
+
+        private var hasFieldFlags: Bool {
+            name != nil || symbol != nil || !apps.isEmpty || activation != nil || terminalCommand != nil
         }
     }
 }

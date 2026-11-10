@@ -145,4 +145,72 @@ struct ContextClientTests {
             }
         }
     }
+
+    @Test("create sends the request and prints the new id")
+    func createSendsTheRequest() async throws {
+        let created = UUID(uuidString: "BBBBBBBB-BBBB-CCCC-DDDD-EEEEEEEEEEEE")!
+        let request = CreateContextEvent(
+            name: "Focus",
+            symbol: "star",
+            applications: ContextClient.applications(from: ["com.apple.Safari"]),
+            transition: WorkspaceTransition(
+                activationPolicy: .merge,
+                terminalCommand: "echo hi"
+            )
+        )
+        let text = try await ContextClient.create(request: request, json: false) { event in
+            #expect(event == .createContext(request))
+            return .contextMutationAcknowledged(.success(contextID: created))
+        }
+
+        #expect(text == "created \(created.uuidString)")
+    }
+
+    @Test("update sends the edited context")
+    func updateSendsTheEditedContext() async throws {
+        let text = try await ContextClient.update(
+            id: focusID,
+            edits: ContextEdits(
+                name: "Deep",
+                bundleIdentifiers: ["com.apple.mail"],
+                activation: .close,
+                clearsTerminalCommand: true
+            ),
+            replacement: nil,
+            json: false
+        ) { event in
+            switch event {
+            case .getContexts:
+                var current = focus
+                current.transition.terminalCommand = "echo hi"
+                return .contextsFetched(ContextsFetchedEvent(contexts: [current]))
+            case let .updateContext(payload):
+                #expect(payload.context.name == "Deep")
+                #expect(payload.context.symbol == "star")
+                #expect(payload.context.applications.map(\.bundleIdentifier) == ["com.apple.mail"])
+                #expect(payload.context.transition.activationPolicy == .close)
+                #expect(payload.context.transition.terminalCommand == nil)
+                return .contextMutationAcknowledged(.success(contextID: focusID))
+            default:
+                throw AgentError.unexpectedResponse(event.kind)
+            }
+        }
+
+        #expect(text == "updated \(focusID.uuidString)")
+    }
+
+    @Test("update rejects a file whose id does not match")
+    func updateRejectsMismatchedFile() async {
+        await #expect(throws: CLIError.contextIdentifierMismatch(expected: focusID, received: oldID)) {
+            try await ContextClient.update(
+                id: focusID,
+                edits: ContextEdits(),
+                replacement: archived,
+                json: false
+            ) { _ in
+                Issue.record("update should fail before asking")
+                return .debugPong(DebugPongEvent())
+            }
+        }
+    }
 }

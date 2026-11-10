@@ -7,6 +7,15 @@ struct ContextMutationResult: Codable, Equatable {
     let contextID: UUID
 }
 
+struct ContextEdits: Equatable {
+    var name: String?
+    var symbol: String?
+    var bundleIdentifiers: [String]?
+    var activation: WorkspaceActivationPolicy?
+    var terminalCommand: String?
+    var clearsTerminalCommand = false
+}
+
 enum ContextClient {
     static func list(
         archivedOnly: Bool,
@@ -52,14 +61,101 @@ enum ContextClient {
         return "\(verb) \(contextID.uuidString)"
     }
 
-    private static func acknowledgedID(_ reply: Event, expected: UUID) throws -> UUID {
+    static func create(
+        request: CreateContextEvent,
+        json: Bool,
+        ask: AgentAsk
+    ) async throws -> String {
+        let contextID = try acknowledgedID(
+            try await ask(.createContext(request)),
+            expected: nil
+        )
+
+        if json {
+            return try CLIJSON.encode(ContextMutationResult(contextID: contextID))
+        }
+
+        return "created \(contextID.uuidString)"
+    }
+
+    static func update(
+        id: UUID,
+        edits: ContextEdits,
+        replacement: WorkspaceContext?,
+        json: Bool,
+        ask: AgentAsk
+    ) async throws -> String {
+        let context = try await contextToSave(
+            id: id,
+            edits: edits,
+            replacement: replacement,
+            ask: ask
+        )
+
+        return try await mutate(
+            id: id,
+            verb: "updated",
+            event: .updateContext(UpdateContextEvent(context: context)),
+            json: json,
+            ask: ask
+        )
+    }
+
+    static func applications(from bundleIdentifiers: [String]) -> [WorkspaceApplication] {
+        bundleIdentifiers.map { bundleIdentifier in
+            WorkspaceApplication(
+                bundleIdentifier: bundleIdentifier,
+                displayName: bundleIdentifier
+            )
+        }
+    }
+
+    private static func contextToSave(
+        id: UUID,
+        edits: ContextEdits,
+        replacement: WorkspaceContext?,
+        ask: AgentAsk
+    ) async throws -> WorkspaceContext {
+        if let replacement {
+            guard replacement.id == id else {
+                throw CLIError.contextIdentifierMismatch(expected: id, received: replacement.id)
+            }
+            return replacement
+        }
+
+        guard var context = try await fetch(ask).first(where: { $0.id == id }) else {
+            throw CLIError.contextNotFound(id)
+        }
+
+        if let name = edits.name {
+            context.name = name
+        }
+        if let symbol = edits.symbol {
+            context.symbol = symbol
+        }
+        if let bundleIdentifiers = edits.bundleIdentifiers {
+            context.applications = applications(from: bundleIdentifiers)
+        }
+        if let activation = edits.activation {
+            context.transition.activationPolicy = activation
+        }
+        if edits.clearsTerminalCommand {
+            context.transition.terminalCommand = nil
+        } else if let terminalCommand = edits.terminalCommand {
+            context.transition.terminalCommand = terminalCommand
+        }
+
+        return context
+    }
+
+    private static func acknowledgedID(_ reply: Event, expected: UUID?) throws -> UUID {
         guard case let .contextMutationAcknowledged(acknowledgement) = reply else {
             throw AgentError.unexpectedResponse(reply.kind)
         }
 
         switch acknowledgement {
         case let .success(contextID):
-            guard contextID == expected else {
+            if let expected, contextID != expected {
                 throw CLIError.contextIdentifierMismatch(
                     expected: expected,
                     received: contextID
