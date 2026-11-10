@@ -7,7 +7,8 @@ struct DawnCLI: AsyncParsableCommand {
         subcommands: [
             Status.self,
             ContextCommand.self,
-            SettingsCommand.self
+            SettingsCommand.self,
+            AccessibilityCommand.self
         ]
     )
 }

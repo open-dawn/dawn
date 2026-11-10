@@ -84,6 +84,7 @@ struct DawnCLITests {
       status                  Ask dawnAgent whether it is reachable.
       context                 List and change workspace contexts.
       settings                Read and change DAWN settings.
+      accessibility           Check or prompt for accessibility trust.
 
       See 'dawncli help <subcommand>' for detailed help.
     """
