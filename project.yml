@@ -2,7 +2,7 @@ name: dawn
 options:
   bundleIdPrefix: app.opendawn
   deploymentTarget:
-    macOS: &deployversion "26.0"
+    macOS: &deployversion "15.0"
   preGenCommand: bash Scripts/generate_build_ticket.sh
   fileTypes:
     icon:
@@ -144,7 +144,7 @@ targets:
   libdawn:
     type: framework
     platform: macOS
-    deploymentTarget: "15.0"
+    deploymentTarget: *deployversion
     sources:
       - path: libdawn
         excludes:
