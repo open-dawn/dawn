@@ -84,6 +84,12 @@ targets:
         copy:
           destination: wrapper
           subpath: Contents/Library/LoginItems
+      - target: dawncli
+        link: false
+        embed: true
+        codeSign: true
+        copy:
+          destination: executables
       - package: dawnLogging
       - package: Sparkle
     postCompileScripts:
