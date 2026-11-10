@@ -45,7 +45,7 @@ jobs:
           RELEASE_VERSION="${BASH_REMATCH[1]}"
           RELEASE_NOTES_FILENAME="DAWN-${RELEASE_VERSION}.html"
           DMG_FILENAME="DAWN-${RELEASE_VERSION}.dmg"
-          PAGES_DIRECTORY="$RUNNER_TEMP/pages"
+          PAGES_DIRECTORY="$GITHUB_WORKSPACE/pages"
           ARTIFACT_DIRECTORY="$RUNNER_TEMP/update-feed"
           APPCAST_PATH="$ARTIFACT_DIRECTORY/appcast.xml"
           RELEASE_NOTES_PATH="$ARTIFACT_DIRECTORY/$RELEASE_NOTES_FILENAME"
@@ -173,7 +173,7 @@ jobs:
         with:
           repository: ${{ env.PAGES_REPOSITORY }}
           ref: main
-          path: ${{ runner.temp }}/pages
+          path: pages
           ssh-key: ${{ secrets.PAGES_DEPLOY_KEY }}
           persist-credentials: true
           fetch-depth: 0

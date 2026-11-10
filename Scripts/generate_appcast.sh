@@ -100,8 +100,8 @@ xml_value() {
     "$OUTPUT_APPCAST_PATH"
 }
 
-BUILD_VERSION="$(xml_value "$ITEM_XPATH/*[local-name()='enclosure']/@*[local-name()='version']")"
-MARKETING_VERSION="$(xml_value "$ITEM_XPATH/*[local-name()='enclosure']/@*[local-name()='shortVersionString']")"
+BUILD_VERSION="$(xml_value "$ITEM_XPATH/*[local-name()='version']")"
+MARKETING_VERSION="$(xml_value "$ITEM_XPATH/*[local-name()='shortVersionString']")"
 DOWNLOAD_URL="$(xml_value "$ITEM_XPATH/*[local-name()='enclosure']/@url")"
 CONTENT_LENGTH="$(xml_value "$ITEM_XPATH/*[local-name()='enclosure']/@length")"
 ED_SIGNATURE="$(xml_value "$ITEM_XPATH/*[local-name()='enclosure']/@*[local-name()='edSignature']")"
