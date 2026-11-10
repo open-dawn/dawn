@@ -3,6 +3,10 @@ import libdawn
 
 typealias AgentAsk = @Sendable (Event) async throws -> Event
 
+struct ContextMutationResult: Codable, Equatable {
+    let contextID: UUID
+}
+
 enum ContextClient {
     static func list(
         archivedOnly: Bool,
@@ -30,6 +34,41 @@ enum ContextClient {
         }
 
         return details(context)
+    }
+
+    static func mutate(
+        id: UUID,
+        verb: String,
+        event: Event,
+        json: Bool,
+        ask: AgentAsk
+    ) async throws -> String {
+        let contextID = try acknowledgedID(try await ask(event), expected: id)
+
+        if json {
+            return try CLIJSON.encode(ContextMutationResult(contextID: contextID))
+        }
+
+        return "\(verb) \(contextID.uuidString)"
+    }
+
+    private static func acknowledgedID(_ reply: Event, expected: UUID) throws -> UUID {
+        guard case let .contextMutationAcknowledged(acknowledgement) = reply else {
+            throw AgentError.unexpectedResponse(reply.kind)
+        }
+
+        switch acknowledgement {
+        case let .success(contextID):
+            guard contextID == expected else {
+                throw CLIError.contextIdentifierMismatch(
+                    expected: expected,
+                    received: contextID
+                )
+            }
+            return contextID
+        case let .failure(failure):
+            throw failure
+        }
     }
 
     static func fetch(_ ask: AgentAsk) async throws -> [WorkspaceContext] {

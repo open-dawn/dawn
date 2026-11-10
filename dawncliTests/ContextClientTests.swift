@@ -91,6 +91,52 @@ struct ContextClientTests {
         """)
     }
 
+    @Test("id commands report the acknowledged context", arguments: [
+        "switched",
+        "deleted",
+        "archived",
+        "unarchived"
+    ])
+    func mutationsReportTheContext(verb: String) async throws {
+        let event = mutationEvent(verb: verb, id: focusID)
+        let text = try await ContextClient.mutate(
+            id: focusID,
+            verb: verb,
+            event: event,
+            json: false
+        ) { received in
+            #expect(received == event)
+            return .contextMutationAcknowledged(.success(contextID: focusID))
+        }
+
+        #expect(text == "\(verb) \(focusID.uuidString)")
+    }
+
+    @Test("a rejected mutation surfaces the agent failure")
+    func mutationSurfacesFailure() async {
+        await #expect(throws: ContextMutationAcknowledgement.Failure.contextArchived(focusID)) {
+            try await ContextClient.mutate(
+                id: focusID,
+                verb: "switched",
+                event: .switchContext(SwitchContextEvent(contextID: focusID)),
+                json: false
+            ) { _ in
+                .contextMutationAcknowledged(
+                    .failure(failure: .contextArchived(focusID))
+                )
+            }
+        }
+    }
+
+    private func mutationEvent(verb: String, id: UUID) -> Event {
+        switch verb {
+        case "deleted": .deleteContext(DeleteContextEvent(contextID: id))
+        case "archived": .archiveContext(ArchiveContextEvent(contextID: id))
+        case "unarchived": .unarchiveContext(UnarchiveContextEvent(contextID: id))
+        default: .switchContext(SwitchContextEvent(contextID: id))
+        }
+    }
+
     @Test("show fails when the id is missing")
     func showRequiresAKnownContext() async {
         await #expect(throws: CLIError.contextNotFound(focusID)) {
