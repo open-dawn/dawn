@@ -5,7 +5,8 @@ struct DawnCLI: AsyncParsableCommand {
         commandName: "dawncli",
         abstract: "Talk to dawnAgent.",
         subcommands: [
-            Status.self
+            Status.self,
+            ContextCommand.self
         ]
     )
 }

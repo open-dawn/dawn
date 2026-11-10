@@ -3,10 +3,11 @@ import Testing
 
 @Suite("DawnCLI")
 struct DawnCLITests {
-    @Test("registers status on the root command")
-    func registersStatus() {
-        let names = DawnCLI.configuration.subcommands.map { String(describing: $0) }
-        #expect(names == ["Status"])
+    @Test("registers the root commands")
+    func registersRootCommands() {
+        let help = DawnCLI.helpMessage(includeHidden: false, columns: 80)
+        #expect(help.contains("status"))
+        #expect(help.contains("context"))
     }
 
     @Test("help lists every command")
@@ -81,6 +82,7 @@ struct DawnCLITests {
 
     SUBCOMMANDS:
       status                  Ask dawnAgent whether it is reachable.
+      context                 List and change workspace contexts.
 
       See 'dawncli help <subcommand>' for detailed help.
     """
