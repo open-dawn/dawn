@@ -14,12 +14,14 @@ struct SettingsView: View {
     private var eventBusService
 
     @State private var viewModel: SettingsViewModel?
+    @State private var commandLineTool = CommandLineToolInstallModel()
 
     var body: some View {
         Group {
             if let viewModel {
                 SettingsContent(
                     viewModel: viewModel,
+                    commandLineTool: commandLineTool,
                     accessibilityPermissionService: accessibilityPermissionService,
                     isAgentConnected: eventBusService.isConnected
                 )
@@ -37,11 +39,15 @@ struct SettingsView: View {
                 await viewModel?.load()
             }
         }
+        .task {
+            await commandLineTool.refresh()
+        }
     }
 }
 
 struct SettingsContent: View {
     @Bindable var viewModel: SettingsViewModel
+    let commandLineTool: CommandLineToolInstallModel
     let accessibilityPermissionService: AccessibilityPermissionService
     let isAgentConnected: Bool
 
@@ -57,13 +63,23 @@ struct SettingsContent: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 32) {
+            if commandLineTool.showsBanner {
+                CommandLineToolBanner(model: commandLineTool)
+            }
+
+            settingsForm
+            Spacer(minLength: 0)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+    }
+
+    private var settingsForm: some View {
+        VStack(alignment: .leading, spacing: 32) {
             generalSettingsSection
             protectedAppsSection
             permissionsSection
             optionsSection
-            Spacer(minLength: 0)
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         .disabled(interactionsDisabled)
         .opacity(isAgentConnected ? 1 : 0.45)
     }
@@ -287,5 +303,48 @@ struct SettingsContent: View {
         return applicationURL.map {
             NSWorkspace.shared.icon(forFile: $0.path(percentEncoded: false))
         } ?? NSWorkspace.shared.icon(for: .application)
+    }
+}
+
+private struct CommandLineToolBanner: View {
+    let model: CommandLineToolInstallModel
+
+    var body: some View {
+        HStack(alignment: .center, spacing: 12) {
+            VStack(alignment: .leading, spacing: 4) {
+                Text("dawncli is available to install.")
+                    .font(DawnTextStyle.body)
+                    .foregroundStyle(DawnColors.primaryForeground)
+
+                Text("Adds the command to Terminal.")
+                    .font(DawnTextStyle.caption)
+                    .foregroundStyle(DawnColors.secondaryForeground)
+
+                if let errorMessage = model.errorMessage {
+                    Text(errorMessage)
+                        .font(DawnTextStyle.caption)
+                        .foregroundStyle(DawnColors.dangerForeground)
+                }
+            }
+
+            Spacer(minLength: 12)
+
+            DButton(style: .primary) {
+                Task {
+                    await model.install()
+                }
+            } content: {
+                Text("Install")
+            }
+            .disabled(model.isInstalling)
+            .opacity(model.isInstalling ? 0.25 : 1)
+            .accessibilityLabel("Install dawncli")
+        }
+        .padding(16)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background {
+            RoundedRectangle(cornerRadius: 8, style: .continuous)
+                .fill(DawnColors.secondaryBackground)
+        }
     }
 }
