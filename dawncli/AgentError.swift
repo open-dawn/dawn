@@ -1,7 +1,7 @@
 import Foundation
 import libdawn
 
-enum AgentStatusError: Error, Equatable, LocalizedError {
+enum AgentError: Error, Equatable, LocalizedError {
     case notConnected
     case noHandler
     case timeout
@@ -10,8 +10,8 @@ enum AgentStatusError: Error, Equatable, LocalizedError {
     case unknown
 
     init(_ error: any Error) {
-        if let statusError = error as? Self {
-            self = statusError
+        if let agentError = error as? Self {
+            self = agentError
             return
         }
 
@@ -39,7 +39,7 @@ enum AgentStatusError: Error, Equatable, LocalizedError {
     var errorDescription: String? {
         switch self {
         case .notConnected: "dawnAgent is not reachable."
-        case .noHandler: "dawnAgent cannot handle status."
+        case .noHandler: "dawnAgent cannot handle that request."
         case .timeout: "dawnAgent did not respond in time."
         case .invalidPayload, .unexpectedResponse: "dawnAgent returned an invalid response."
         case .unknown: "An unexpected error occurred."

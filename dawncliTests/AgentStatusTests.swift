@@ -26,7 +26,7 @@ struct AgentStatusTests {
     func queryFailsWhenUnreachable() async {
         let bus = RemoteEventBus(transport: RejectingTransport())
 
-        await #expect(throws: AgentStatusError.notConnected) {
+        await #expect(throws: AgentError.notConnected) {
             try await AgentStatus.query(bus: bus)
         }
     }
@@ -43,7 +43,7 @@ struct AgentStatusTests {
 
         let bus = RemoteEventBus(transport: link.client)
 
-        await #expect(throws: AgentStatusError.unexpectedResponse(.initialized)) {
+        await #expect(throws: AgentError.unexpectedResponse(.initialized)) {
             try await AgentStatus.query(bus: bus)
         }
 
