@@ -24,6 +24,9 @@ packages:
   Sparkle:
     url: https://github.com/sparkle-project/Sparkle
     exactVersion: 2.10.0
+  ArgumentParser:
+    url: https://github.com/apple/swift-argument-parser
+    exactVersion: 1.8.2
 
 targets:
 
@@ -202,6 +205,36 @@ targets:
         - libdawnUITests
       gatherCoverageData: true
 
+  dawncli:
+    type: tool
+    platform: macOS
+    deploymentTarget: *deployversion
+    sources:
+      - dawncli
+    settings:
+      base:
+        PRODUCT_NAME: dawncli
+        PRODUCT_MODULE_NAME: dawncli
+        MARKETING_VERSION: *mktversion
+        CURRENT_PROJECT_VERSION: *buildversion
+        SWIFT_VERSION: *swiftversion
+        GENERATE_INFOPLIST_FILE: YES
+        SKIP_INSTALL: YES
+        LD_RUNPATH_SEARCH_PATHS: $(inherited) @executable_path @executable_path/../Frameworks
+      configs:
+        Debug:
+          ENABLE_TESTABILITY: YES
+    dependencies:
+      - target: libdawn
+      - package: ArgumentParser
+        product: ArgumentParser
+    postCompileScripts:
+      - *swiftlint
+    scheme:
+      testTargets:
+        - dawncliTests
+      gatherCoverageData: true
+
   libdawnTests:
     type: bundle.unit-test
     platform: macOS
@@ -265,6 +298,25 @@ targets:
     postCompileScripts:
       - *swiftlint
 
+  dawncliTests:
+    type: bundle.unit-test
+    platform: macOS
+    deploymentTarget: *deployversion
+    sources:
+      - dawncliTests
+      - path: dawncli
+        excludes:
+          - Main.swift
+    settings:
+      GENERATE_INFOPLIST_FILE: YES
+      SWIFT_VERSION: *swiftversion
+    dependencies:
+      - target: libdawn
+      - package: ArgumentParser
+        product: ArgumentParser
+    postCompileScripts:
+      - *swiftlint
+
 schemes:
   dawn:
     build:
@@ -273,10 +325,12 @@ schemes:
         dawnAgent: all
         dawnApp: all
         libdawnUI: all
+        dawncli: all
         libdawnTests: [test]
         dawnAgentTests: [test]
         dawnAppTests: [test]
         libdawnUITests: [test]
+        dawncliTests: [test]
     test:
       gatherCoverageData: true
       targets:
@@ -284,4 +338,5 @@ schemes:
         - dawnAgentTests
         - dawnAppTests
         - libdawnUITests
+        - dawncliTests
         - package: dawnLogging/dawnLoggingTests
