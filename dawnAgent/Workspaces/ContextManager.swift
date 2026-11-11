@@ -69,8 +69,11 @@ final class ContextManager: WorkspaceManaging {
     }
 
     private func publishAvailableContexts() async {
-        let contexts = await store.snapshot().contexts
-        snapshotPublisher.publishAvailableContexts(contexts)
+        let snapshot = await store.snapshot()
+        snapshotPublisher.publishAvailableContexts(
+            snapshot.contexts,
+            activity: snapshot.workspaceActivity
+        )
     }
 
     func getWorkspaceActivity() async -> WorkspaceActivityState {

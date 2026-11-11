@@ -13,6 +13,7 @@ public enum EventKind: String, Codable, Sendable, Hashable, CaseIterable {
     case deleteContext
     case archiveContext
     case unarchiveContext
+    case stopContext
 
     case availableContexts
     case contextMutationAcknowledged

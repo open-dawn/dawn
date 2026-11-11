@@ -518,8 +518,13 @@ actor MockSettingsRepository: SettingsRepository {
 @MainActor
 final class SnapshotPublisherSpy: ContextSnapshotPublishing {
     private(set) var publishedSnapshots: [[WorkspaceContext]] = []
+    private(set) var publishedActivities: [WorkspaceActivityState] = []
 
-    func publishAvailableContexts(_ contexts: [libdawn.WorkspaceContext]) {
+    func publishAvailableContexts(
+        _ contexts: [libdawn.WorkspaceContext],
+        activity: WorkspaceActivityState
+    ) {
         publishedSnapshots.append(contexts)
+        publishedActivities.append(activity)
     }
 }

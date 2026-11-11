@@ -56,7 +56,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         )
 
         return AgentRuntimeComponents(
-            workspace: WorkspaceRuntime(contextManager: contextManager)
+            workspace: WorkspaceRuntime(
+                contextManager: contextManager,
+                snapshotPublisher: publisher
+            )
         )
     }
 

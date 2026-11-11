@@ -9,7 +9,10 @@ import libdawn
 
 @MainActor
 protocol ContextSnapshotPublishing: AnyObject {
-    func publishAvailableContexts(_ contexts: [WorkspaceContext])
+    func publishAvailableContexts(
+        _ contexts: [WorkspaceContext],
+        activity: WorkspaceActivityState
+    )
 }
 
 @MainActor
@@ -20,10 +23,16 @@ final class EventBusContextSnapshotPublisher: ContextSnapshotPublishing {
         self.bus = bus
     }
 
-    func publishAvailableContexts(_ contexts: [WorkspaceContext]) {
+    func publishAvailableContexts(
+        _ contexts: [WorkspaceContext],
+        activity: WorkspaceActivityState
+    ) {
         bus.publish(
             .availableContexts(
-                AvailableContextsEvent(contexts: contexts)
+                AvailableContextsEvent(
+                    contexts: contexts,
+                    activity: activity
+                )
             )
         )
     }
