@@ -97,6 +97,41 @@ final class SettingsViewModel {
         draft.protectedApps.removeAll { $0.id == id }
     }
 
+    func applyProtectedApplicationSelection(_ selected: [ProtectedApplication]) {
+        var merged: [ProtectedApplication] = []
+        var consumedBundleIdentifiers = Set<String>()
+
+        for application in draft.protectedApps {
+            let bundleIdentifier = normalizedBundleIdentifier(application.bundleIdentifier)
+            guard selected.contains(where: {
+                normalizedBundleIdentifier($0.bundleIdentifier) == bundleIdentifier
+            }) else {
+                continue
+            }
+
+            guard consumedBundleIdentifiers.insert(bundleIdentifier).inserted else {
+                continue
+            }
+
+            merged.append(application)
+        }
+
+        for application in selected {
+            let bundleIdentifier = normalizedBundleIdentifier(application.bundleIdentifier)
+            guard consumedBundleIdentifiers.insert(bundleIdentifier).inserted else {
+                continue
+            }
+
+            merged.append(application)
+        }
+
+        guard merged != draft.protectedApps else {
+            return
+        }
+
+        draft.protectedApps = merged
+    }
+
     private func addProtectedApp(using selector: any ApplicationSelecting) async {
         guard !isLoading else {
             return
@@ -130,5 +165,11 @@ final class SettingsViewModel {
         } catch {
             applicationSelectionError = .unknown
         }
+    }
+
+    private func normalizedBundleIdentifier(_ bundleIdentifier: String) -> String {
+        bundleIdentifier
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+            .lowercased()
     }
 }

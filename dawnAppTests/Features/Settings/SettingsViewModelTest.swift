@@ -293,6 +293,96 @@ struct SettingsViewModelTests {
 
         #expect(viewModel.draft.protectedApps.isEmpty)
     }
+
+    @Test("A protected app selection keeps existing rows, appends new ones, and drops the rest")
+    func applyProtectedApplicationSelectionMergesByBundleIdentifier() async {
+        let kept = ProtectedApplication(
+            bundleIdentifier: "com.apple.Safari",
+            displayName: "Safari"
+        )
+        let removed = ProtectedApplication(
+            bundleIdentifier: "com.apple.mail",
+            displayName: "Mail"
+        )
+        let added = ProtectedApplication(
+            bundleIdentifier: "com.apple.Notes",
+            displayName: "Notes"
+        )
+        let viewModel = SettingsViewModel(
+            client: SettingsViewStoreClientSpy(
+                settings: Settings(protectedApps: [kept, removed])
+            )
+        )
+
+        await viewModel.load()
+        viewModel.applyProtectedApplicationSelection([
+            ProtectedApplication(
+                bundleIdentifier: kept.bundleIdentifier,
+                displayName: "Renamed Safari"
+            ),
+            added,
+        ])
+
+        #expect(viewModel.draft.protectedApps == [kept, added])
+        #expect(viewModel.draft.protectedApps.first?.id == kept.id)
+        #expect(viewModel.hasUnsavedChanges)
+    }
+
+    @Test("A case-different bundle identifier keeps the existing protected app")
+    func applyProtectedApplicationSelectionMatchesBundleIdentifierCaseInsensitively() async {
+        let existing = ProtectedApplication(
+            bundleIdentifier: "com.apple.Safari",
+            displayName: "Safari"
+        )
+        let viewModel = SettingsViewModel(
+            client: SettingsViewStoreClientSpy(
+                settings: Settings(protectedApps: [existing])
+            )
+        )
+
+        await viewModel.load()
+        viewModel.applyProtectedApplicationSelection([
+            ProtectedApplication(
+                bundleIdentifier: "  COM.APPLE.SAFARI  ",
+                displayName: "Safari Browser"
+            ),
+        ])
+
+        #expect(viewModel.draft.protectedApps == [existing])
+        #expect(!viewModel.hasUnsavedChanges)
+    }
+
+    @Test("A selection that matches the current protected apps does not dirty the draft")
+    func applyProtectedApplicationSelectionSkipsUnchangedList() async {
+        let safari = ProtectedApplication(
+            bundleIdentifier: "com.apple.Safari",
+            displayName: "Safari"
+        )
+        let mail = ProtectedApplication(
+            bundleIdentifier: "com.apple.mail",
+            displayName: "Mail"
+        )
+        let viewModel = SettingsViewModel(
+            client: SettingsViewStoreClientSpy(
+                settings: Settings(protectedApps: [safari, mail])
+            )
+        )
+
+        await viewModel.load()
+        viewModel.applyProtectedApplicationSelection([
+            ProtectedApplication(
+                bundleIdentifier: mail.bundleIdentifier,
+                displayName: "Mail"
+            ),
+            ProtectedApplication(
+                bundleIdentifier: safari.bundleIdentifier,
+                displayName: "Renamed Safari"
+            ),
+        ])
+
+        #expect(viewModel.draft.protectedApps == [safari, mail])
+        #expect(!viewModel.hasUnsavedChanges)
+    }
 }
 
 @MainActor
