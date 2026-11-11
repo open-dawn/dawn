@@ -52,6 +52,29 @@ struct ApplicationsDirectoryProviderTests {
         )
     }
 
+    @Test("An application with the hidden flag is included")
+    func includesHiddenFlaggedApplication() async throws {
+        let fixture = try ApplicationScanFixture()
+        defer { fixture.remove() }
+
+        try fixture.makeApplication(
+            named: "Safari",
+            bundleIdentifier: "com.apple.Safari",
+            displayName: "Safari",
+            in: fixture.applications
+        )
+        var safariURL = fixture.applications.appendingPathComponent("Safari.app")
+        var values = URLResourceValues()
+        values.isHidden = true
+        try safariURL.setResourceValues(values)
+
+        let found = try await ApplicationsDirectoryProvider(
+            directories: [fixture.applications]
+        ).applications()
+
+        #expect(found.map(\.bundleIdentifier) == ["com.apple.Safari"])
+    }
+
     @Test("Hidden applications are skipped")
     func skipsHiddenApplications() async throws {
         let fixture = try ApplicationScanFixture()

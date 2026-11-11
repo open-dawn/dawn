@@ -57,29 +57,18 @@ extension ApplicationsDirectoryProvider {
         }
     }
 
-    /// `FileManager.enumerator` omits symbolic links. Safari.app is a symlink, so a manual
-    /// walk is required for it to appear. Directory symlinks are not followed.
     private static func collectApplications(
         in directory: URL,
         fileManager: FileManager,
         applications: inout [WorkspaceApplication],
         bundleIdentifiers: inout Set<String>
     ) {
-        guard
-            let children = try? fileManager.contentsOfDirectory(
-                at: directory,
-                includingPropertiesForKeys: [
-                    .isSymbolicLinkKey,
-                    .isDirectoryKey,
-                    .isPackageKey,
-                ],
-                options: [.skipsHiddenFiles]
-            )
-        else {
+        guard let names = try? fileManager.contentsOfDirectory(atPath: directory.path) else {
             return
         }
 
-        for url in children {
+        for name in names where !name.hasPrefix(".") {
+            let url = directory.appendingPathComponent(name)
             if url.pathExtension.localizedCaseInsensitiveCompare("app") == .orderedSame {
                 guard let application = makeApplication(at: url),
                     bundleIdentifiers.insert(application.bundleIdentifier).inserted
