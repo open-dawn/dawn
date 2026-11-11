@@ -42,33 +42,12 @@ extension ApplicationsDirectoryProvider {
         var bundleIdentifiers = Set<String>()
 
         for directory in directories {
-            guard
-                let enumerator = fileManager.enumerator(
-                    at: directory,
-                    includingPropertiesForKeys: [
-                        .isDirectoryKey,
-                        .isPackageKey,
-                    ],
-                    options: [
-                        .skipsHiddenFiles,
-                        .skipsPackageDescendants,
-                    ]
-                )
-            else {
-                continue
-            }
-
-            for case let applicationURL as URL in enumerator {
-                guard let application = makeApplication(at: applicationURL) else {
-                    continue
-                }
-
-                guard bundleIdentifiers.insert(application.bundleIdentifier).inserted else {
-                    continue
-                }
-
-                applications.append(application)
-            }
+            collectApplications(
+                in: directory,
+                fileManager: fileManager,
+                applications: &applications,
+                bundleIdentifiers: &bundleIdentifiers
+            )
         }
 
         return applications.sorted {
@@ -76,6 +55,71 @@ extension ApplicationsDirectoryProvider {
                 $1.displayName
             ) == .orderedAscending
         }
+    }
+
+    /// `FileManager.enumerator` omits symbolic links. Safari.app is a symlink, so a manual
+    /// walk is required for it to appear. Directory symlinks are not followed.
+    private static func collectApplications(
+        in directory: URL,
+        fileManager: FileManager,
+        applications: inout [WorkspaceApplication],
+        bundleIdentifiers: inout Set<String>
+    ) {
+        guard
+            let children = try? fileManager.contentsOfDirectory(
+                at: directory,
+                includingPropertiesForKeys: [
+                    .isSymbolicLinkKey,
+                    .isDirectoryKey,
+                    .isPackageKey,
+                ],
+                options: [.skipsHiddenFiles]
+            )
+        else {
+            return
+        }
+
+        for url in children {
+            if url.pathExtension.localizedCaseInsensitiveCompare("app") == .orderedSame {
+                guard let application = makeApplication(at: url),
+                    bundleIdentifiers.insert(application.bundleIdentifier).inserted
+                else {
+                    continue
+                }
+
+                applications.append(application)
+                continue
+            }
+
+            guard isTraversableDirectory(url) else {
+                continue
+            }
+
+            collectApplications(
+                in: url,
+                fileManager: fileManager,
+                applications: &applications,
+                bundleIdentifiers: &bundleIdentifiers
+            )
+        }
+    }
+
+    private static func isTraversableDirectory(_ url: URL) -> Bool {
+        guard
+            let values = try? url.resourceValues(forKeys: [
+                .isSymbolicLinkKey,
+                .isDirectoryKey,
+                .isPackageKey,
+            ])
+        else {
+            return false
+        }
+
+        guard values.isSymbolicLink != true else {
+            return false
+        }
+
+        return values.isDirectory == true && values.isPackage != true
     }
 
     private static func makeApplication(at applicationURL: URL) -> WorkspaceApplication? {
