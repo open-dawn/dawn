@@ -41,13 +41,10 @@ final class CommandLineToolInstallModel {
                 from: bundleCommandURL,
                 to: CommandLineToolPaths.linkURL
             )
-        } catch let error as CommandLineToolInstallError {
+        } catch let error {
             if case .failed(let message) = error {
                 errorMessage = message
             }
-            return
-        } catch {
-            errorMessage = "Could not install dawncli."
             return
         }
 
