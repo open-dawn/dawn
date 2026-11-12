@@ -246,7 +246,7 @@ extension ContextCommand {
             return CreateContextEvent(
                 name: name ?? "",
                 symbol: symbol ?? "",
-                applications: ContextClient.applications(from: apps),
+                applications: try ContextClient.applications(from: apps),
                 transition: WorkspaceTransition(
                     activationPolicy: activation?.policy ?? .hide,
                     terminalCommand: command

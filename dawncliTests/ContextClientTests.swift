@@ -149,10 +149,14 @@ struct ContextClientTests {
     @Test("create sends the request and prints the new id")
     func createSendsTheRequest() async throws {
         let created = UUID(uuidString: "BBBBBBBB-BBBB-CCCC-DDDD-EEEEEEEEEEEE")!
+        let safariURL = URL(filePath: "/Applications/Safari.app")
         let request = CreateContextEvent(
             name: "Focus",
             symbol: "star",
-            applications: ContextClient.applications(from: ["com.apple.Safari"]),
+            applications: try ContextClient.applications(
+                from: ["com.apple.Safari"],
+                urlForApplication: { _ in safariURL }
+            ),
             transition: WorkspaceTransition(
                 activationPolicy: .merge,
                 terminalCommand: "echo hi"
@@ -166,8 +170,35 @@ struct ContextClientTests {
         #expect(text == "created \(created.uuidString)")
     }
 
+    @Test("applications resolves the bundle name and URL")
+    func applicationsResolvesInstalledApp() throws {
+        let appURL = URL(filePath: "/System/Applications/Calculator.app")
+        let resolved = try ContextClient.applications(
+            from: ["com.apple.calculator"],
+            urlForApplication: { bundleIdentifier in
+                bundleIdentifier == "com.apple.calculator" ? appURL : nil
+            }
+        )
+
+        #expect(resolved.count == 1)
+        #expect(resolved[0].bundleIdentifier == "com.apple.calculator")
+        #expect(resolved[0].displayName == "Calculator")
+        #expect(resolved[0].applicationURL == appURL)
+    }
+
+    @Test("applications fails when the bundle identifier is not installed")
+    func applicationsRejectsUnknownApp() {
+        #expect(throws: CLIError.applicationNotFound("com.example.missing")) {
+            try ContextClient.applications(
+                from: ["com.example.missing"],
+                urlForApplication: { _ in nil }
+            )
+        }
+    }
+
     @Test("update sends the edited context")
     func updateSendsTheEditedContext() async throws {
+        let mailURL = URL(filePath: "/System/Applications/Mail.app")
         let text = try await ContextClient.update(
             id: focusID,
             edits: ContextEdits(
@@ -177,24 +208,29 @@ struct ContextClientTests {
                 clearsTerminalCommand: true
             ),
             replacement: nil,
-            json: false
-        ) { event in
-            switch event {
-            case .getContexts:
-                var current = focus
-                current.transition.terminalCommand = "echo hi"
-                return .contextsFetched(ContextsFetchedEvent(contexts: [current]))
-            case let .updateContext(payload):
-                #expect(payload.context.name == "Deep")
-                #expect(payload.context.symbol == "star")
-                #expect(payload.context.applications.map(\.bundleIdentifier) == ["com.apple.mail"])
-                #expect(payload.context.transition.activationPolicy == .close)
-                #expect(payload.context.transition.terminalCommand == nil)
-                return .contextMutationAcknowledged(.success(contextID: focusID))
-            default:
-                throw AgentError.unexpectedResponse(event.kind)
+            json: false,
+            urlForApplication: { bundleIdentifier in
+                bundleIdentifier == "com.apple.mail" ? mailURL : nil
+            },
+            ask: { event in
+                switch event {
+                case .getContexts:
+                    var current = focus
+                    current.transition.terminalCommand = "echo hi"
+                    return .contextsFetched(ContextsFetchedEvent(contexts: [current]))
+                case let .updateContext(payload):
+                    #expect(payload.context.name == "Deep")
+                    #expect(payload.context.symbol == "star")
+                    #expect(payload.context.applications.map(\.bundleIdentifier) == ["com.apple.mail"])
+                    #expect(payload.context.applications.map(\.applicationURL) == [mailURL])
+                    #expect(payload.context.transition.activationPolicy == .close)
+                    #expect(payload.context.transition.terminalCommand == nil)
+                    return .contextMutationAcknowledged(.success(contextID: focusID))
+                default:
+                    throw AgentError.unexpectedResponse(event.kind)
+                }
             }
-        }
+        )
 
         #expect(text == "updated \(focusID.uuidString)")
     }

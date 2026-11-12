@@ -1,3 +1,4 @@
+import AppKit
 import Foundation
 import libdawn
 
@@ -83,12 +84,16 @@ enum ContextClient {
         edits: ContextEdits,
         replacement: WorkspaceContext?,
         json: Bool,
+        urlForApplication: (String) -> URL? = {
+            NSWorkspace.shared.urlForApplication(withBundleIdentifier: $0)
+        },
         ask: AgentAsk
     ) async throws -> String {
         let context = try await contextToSave(
             id: id,
             edits: edits,
             replacement: replacement,
+            urlForApplication: urlForApplication,
             ask: ask
         )
 
@@ -101,11 +106,27 @@ enum ContextClient {
         )
     }
 
-    static func applications(from bundleIdentifiers: [String]) -> [WorkspaceApplication] {
-        bundleIdentifiers.map { bundleIdentifier in
-            WorkspaceApplication(
+    static func applications(
+        from bundleIdentifiers: [String],
+        urlForApplication: (String) -> URL? = {
+            NSWorkspace.shared.urlForApplication(withBundleIdentifier: $0)
+        }
+    ) throws -> [WorkspaceApplication] {
+        try bundleIdentifiers.map { bundleIdentifier in
+            guard let applicationURL = urlForApplication(bundleIdentifier) else {
+                throw CLIError.applicationNotFound(bundleIdentifier)
+            }
+
+            let bundle = Bundle(url: applicationURL)
+            let displayName =
+                bundle?.object(forInfoDictionaryKey: "CFBundleDisplayName") as? String
+                ?? bundle?.object(forInfoDictionaryKey: "CFBundleName") as? String
+                ?? applicationURL.deletingPathExtension().lastPathComponent
+
+            return WorkspaceApplication(
                 bundleIdentifier: bundleIdentifier,
-                displayName: bundleIdentifier
+                displayName: displayName,
+                applicationURL: applicationURL
             )
         }
     }
@@ -114,6 +135,7 @@ enum ContextClient {
         id: UUID,
         edits: ContextEdits,
         replacement: WorkspaceContext?,
+        urlForApplication: (String) -> URL?,
         ask: AgentAsk
     ) async throws -> WorkspaceContext {
         if let replacement {
@@ -121,6 +143,10 @@ enum ContextClient {
                 throw CLIError.contextIdentifierMismatch(expected: id, received: replacement.id)
             }
             return replacement
+        }
+
+        let resolvedApplications = try edits.bundleIdentifiers.map {
+            try applications(from: $0, urlForApplication: urlForApplication)
         }
 
         guard var context = try await fetch(ask).first(where: { $0.id == id }) else {
@@ -133,8 +159,8 @@ enum ContextClient {
         if let symbol = edits.symbol {
             context.symbol = symbol
         }
-        if let bundleIdentifiers = edits.bundleIdentifiers {
-            context.applications = applications(from: bundleIdentifiers)
+        if let resolvedApplications {
+            context.applications = resolvedApplications
         }
         if let activation = edits.activation {
             context.transition.activationPolicy = activation
