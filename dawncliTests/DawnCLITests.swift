@@ -72,6 +72,40 @@ struct DawnCLITests {
         )
     }
 
+    @Test("context update accepts --clear-apps by itself")
+    func contextUpdateAcceptsClearApps() throws {
+        let command = try DawnCLI.parseAsRoot([
+            "context",
+            "update",
+            "AAAAAAAA-BBBB-CCCC-DDDD-EEEEEEEEEEEE",
+            "--clear-apps"
+        ])
+        let update = try #require(command as? ContextCommand.Update)
+        #expect(update.clearApps)
+        #expect(update.apps.isEmpty)
+    }
+
+    @Test("context update rejects --app with --clear-apps")
+    func contextUpdateRejectsAppAndClearApps() {
+        expectValidationFailure(
+            [
+                "context",
+                "update",
+                "AAAAAAAA-BBBB-CCCC-DDDD-EEEEEEEEEEEE",
+                "--app",
+                "com.apple.Safari",
+                "--clear-apps"
+            ],
+            """
+            Error: Pass either --app or --clear-apps, not both.
+            Usage: dawncli context update <id> [--name <name>] [--symbol <symbol>] \
+            [--app <app> ...] [--clear-apps] [--activation <activation>] \
+            [--terminal-command <terminal-command>] [--from <from>] [--json]
+              See 'dawncli context update --help' for more information.
+            """
+        )
+    }
+
     private static let help = """
     OVERVIEW: Talk to dawnAgent.
 

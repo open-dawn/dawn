@@ -235,6 +235,28 @@ struct ContextClientTests {
         #expect(text == "updated \(focusID.uuidString)")
     }
 
+    @Test("update can clear the application list")
+    func updateClearsApplications() async throws {
+        let text = try await ContextClient.update(
+            id: focusID,
+            edits: ContextEdits(clearsApplications: true),
+            replacement: nil,
+            json: false
+        ) { event in
+            switch event {
+            case .getContexts:
+                return .contextsFetched(ContextsFetchedEvent(contexts: [focus]))
+            case let .updateContext(payload):
+                #expect(payload.context.applications.isEmpty)
+                return .contextMutationAcknowledged(.success(contextID: focusID))
+            default:
+                throw AgentError.unexpectedResponse(event.kind)
+            }
+        }
+
+        #expect(text == "updated \(focusID.uuidString)")
+    }
+
     @Test("update rejects a file whose id does not match")
     func updateRejectsMismatchedFile() async {
         await #expect(throws: CLIError.contextIdentifierMismatch(expected: focusID, received: oldID)) {

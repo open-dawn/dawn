@@ -12,6 +12,7 @@ struct ContextEdits: Equatable {
     var name: String?
     var symbol: String?
     var bundleIdentifiers: [String]?
+    var clearsApplications = false
     var activation: WorkspaceActivationPolicy?
     var terminalCommand: String?
     var clearsTerminalCommand = false
@@ -159,7 +160,9 @@ enum ContextClient {
         if let symbol = edits.symbol {
             context.symbol = symbol
         }
-        if let resolvedApplications {
+        if edits.clearsApplications {
+            context.applications = []
+        } else if let resolvedApplications {
             context.applications = resolvedApplications
         }
         if let activation = edits.activation {

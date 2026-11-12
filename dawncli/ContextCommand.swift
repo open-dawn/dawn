@@ -276,6 +276,12 @@ extension ContextCommand {
         )
         var apps: [String] = []
 
+        @Flag(
+            name: .customLong("clear-apps"),
+            help: "Remove every app from the context."
+        )
+        var clearApps = false
+
         @Option(name: .long, help: "How other apps are treated: hide, merge, or close.")
         var activation: ActivationChoice?
 
@@ -301,6 +307,10 @@ extension ContextCommand {
                 return
             }
 
+            if !apps.isEmpty, clearApps {
+                throw ValidationError("Pass either --app or --clear-apps, not both.")
+            }
+
             guard hasFieldFlags else {
                 throw ValidationError("Pass a field to change, or --from.")
             }
@@ -314,6 +324,7 @@ extension ContextCommand {
                 name: name,
                 symbol: symbol,
                 bundleIdentifiers: apps.isEmpty ? nil : apps,
+                clearsApplications: clearApps,
                 activation: activation?.policy,
                 terminalCommand: terminalCommand?.isEmpty == true ? nil : terminalCommand,
                 clearsTerminalCommand: terminalCommand?.isEmpty == true
@@ -331,7 +342,12 @@ extension ContextCommand {
         }
 
         private var hasFieldFlags: Bool {
-            name != nil || symbol != nil || !apps.isEmpty || activation != nil || terminalCommand != nil
+            name != nil
+                || symbol != nil
+                || !apps.isEmpty
+                || clearApps
+                || activation != nil
+                || terminalCommand != nil
         }
     }
 }
