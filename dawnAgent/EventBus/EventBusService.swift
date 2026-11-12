@@ -18,16 +18,26 @@ final class EventBusService: EventBusServicing {
     var bus: EventBus { runtime.bus }
 
     init(
-        runtime: EventBusRuntime = EventBusRuntime(),
+        runtime: EventBusRuntime? = nil,
         readyNotifier: EventBusReadyNotifier = EventBusReadyNotifier()
     ) {
-        self.runtime = runtime
+        self.runtime = runtime ?? Self.makeRuntime()
         self.readyNotifier = readyNotifier
+    }
+
+    private static func makeRuntime() -> EventBusRuntime {
+        #if DEBUG
+        EventBusRuntime(
+            distributedNotificationServiceName: EventBusMachService.developmentServiceName
+        )
+        #else
+        EventBusRuntime()
+        #endif
     }
 
     func start() {
         #log(
-            "Starting dawnAgent XPC runtime",
+            "Starting dawnAgent event bus transport",
             level: .info,
             category: .eventBus
         )
@@ -35,7 +45,7 @@ final class EventBusService: EventBusServicing {
         _ = runtime.start()
 
         #log(
-            "dawnAgent XPC runtime start requested",
+            "dawnAgent event bus transport start requested",
             level: .info,
             category: .eventBus
         )

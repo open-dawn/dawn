@@ -88,6 +88,11 @@ Run a scheme:
 * `dawnAgent` launches the menu bar agent
 * `dawn` is the scheme continuous integration tests
 
+For local development, run the `dawnAgent` and `dawnApp` Debug schemes in either
+order. Debug builds rendezvous directly and `dawnApp` does not register or launch
+the embedded agent. Release builds continue to use the registered login-item Mach
+service.
+
 ```sh
 swiftlint lint --strict
 xcodebuild \

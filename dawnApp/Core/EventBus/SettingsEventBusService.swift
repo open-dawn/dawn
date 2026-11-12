@@ -18,16 +18,27 @@ final class SettingsEventBusService {
     private(set) var connectionState: RemoteConnectionState = .disconnected
 
     init(
-        transport: any RemoteEventTransportClient = XPCRemoteEventTransportClient(
-            machServiceName: SettingsEventBusRendezvous.machServiceName
-        ),
+        transport: (any RemoteEventTransportClient)? = nil,
         readyObserver: SettingsEventBusReadyObserver = SettingsEventBusReadyObserver()
     ) {
+        let transport = transport ?? Self.makeTransport()
         self.transport = transport
         self.readyObserver = readyObserver
         self.bus = RemoteEventBus(transport: transport)
         self.connectionState = transport.connectionState
         self.isConnected = transport.connectionState == .connected
+    }
+
+    private static func makeTransport() -> any RemoteEventTransportClient {
+        #if DEBUG
+        DistributedRemoteEventTransportClient(
+            serviceName: EventBusMachService.developmentServiceName
+        )
+        #else
+        XPCRemoteEventTransportClient(
+            machServiceName: SettingsEventBusRendezvous.machServiceName
+        )
+        #endif
     }
 
     func start() {
