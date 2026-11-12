@@ -35,6 +35,8 @@ enum AppUpdateFailureReason: Equatable, Sendable {
     case invalidMetadata
     case invalidUpdate
     case installationFailed
+    case componentPreparationFailed
+    case componentRecoveryFailed
     case unknown
 }
 

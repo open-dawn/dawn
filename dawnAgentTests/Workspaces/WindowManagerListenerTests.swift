@@ -38,7 +38,7 @@ struct WindowManagerListenerTests {
 
         let mockContextManager = FakeContextManager()
         let workspace = WorkspaceRuntime(contextManager: mockContextManager)
-        let listener = WindowManagerListener(bus: mockBus, workspace: workspace)
+        let listener = WindowManagerListener(bus: mockBus, workspace: workspace, lifecycle: AgentLifecycleState())
         for event in events {
             #expect(mockBus.hasListeners(for: event.event) == event.afterResult)
         }
@@ -51,7 +51,7 @@ struct WindowManagerListenerTests {
         let mockBus = EventBus()
         let mockContextManager = FakeContextManager()
         let workspace = WorkspaceRuntime(contextManager: mockContextManager)
-        let listener = WindowManagerListener(bus: mockBus, workspace: workspace)
+        let listener = WindowManagerListener(bus: mockBus, workspace: workspace, lifecycle: AgentLifecycleState())
 
         let event = Event.getContexts(GetContextsEvent())
         let eventResponse = try await mockBus.ask(event)
@@ -72,7 +72,7 @@ struct WindowManagerListenerTests {
         let workspace = WorkspaceRuntime(contextManager: mockContextManager)
 
         let mockBus = EventBus()
-        let listener = WindowManagerListener(bus: mockBus, workspace: workspace)
+        let listener = WindowManagerListener(bus: mockBus, workspace: workspace, lifecycle: AgentLifecycleState())
 
         #expect(await listener.getAllContexts() == mockContextManager.contexts)
     }
@@ -109,7 +109,8 @@ struct WindowManagerListenerTests {
         let bus = EventBus()
         let listener = WindowManagerListener(
             bus: bus,
-            workspace: workspace
+            workspace: workspace,
+            lifecycle: AgentLifecycleState()
         )
 
         let response = try await bus.ask(.createContext(payload))
@@ -141,7 +142,8 @@ struct WindowManagerListenerTests {
         let bus = EventBus()
         let listener = WindowManagerListener(
             bus: bus,
-            workspace: workspace
+            workspace: workspace,
+            lifecycle: AgentLifecycleState()
         )
 
         let response = try await bus.ask(.createContext(payload))
@@ -173,7 +175,8 @@ struct WindowManagerListenerTests {
         let bus = EventBus()
         let listener = WindowManagerListener(
             bus: bus,
-            workspace: workspace
+            workspace: workspace,
+            lifecycle: AgentLifecycleState()
         )
 
         listener.handle(.createContext(payload), reply: nil)
@@ -201,7 +204,8 @@ struct WindowManagerListenerTests {
         let bus = EventBus()
         let listener = WindowManagerListener(
             bus: bus,
-            workspace: workspace
+            workspace: workspace,
+            lifecycle: AgentLifecycleState()
         )
 
         let response = try await bus.ask(.updateContext(payload))
@@ -236,7 +240,8 @@ struct WindowManagerListenerTests {
         let bus = EventBus()
         let listener = WindowManagerListener(
             bus: bus,
-            workspace: workspace
+            workspace: workspace,
+            lifecycle: AgentLifecycleState()
         )
 
         let response = try await bus.ask(
@@ -272,7 +277,8 @@ struct WindowManagerListenerTests {
         let bus = EventBus()
         let listener = WindowManagerListener(
             bus: bus,
-            workspace: workspace
+            workspace: workspace,
+            lifecycle: AgentLifecycleState()
         )
 
         let response = try await bus.ask(
@@ -311,7 +317,8 @@ struct WindowManagerListenerTests {
         let bus = EventBus()
         let listener = WindowManagerListener(
             bus: bus,
-            workspace: workspace
+            workspace: workspace,
+            lifecycle: AgentLifecycleState()
         )
 
         let response = try await bus.ask(.deleteContext(payload))
@@ -346,7 +353,8 @@ struct WindowManagerListenerTests {
         let bus = EventBus()
         let listener = WindowManagerListener(
             bus: bus,
-            workspace: workspace
+            workspace: workspace,
+            lifecycle: AgentLifecycleState()
         )
 
         let response = try await bus.ask(
@@ -379,7 +387,8 @@ struct WindowManagerListenerTests {
         let bus = EventBus()
         let listener = WindowManagerListener(
             bus: bus,
-            workspace: workspace
+            workspace: workspace,
+            lifecycle: AgentLifecycleState()
         )
 
         let response = try await bus.ask(
@@ -420,7 +429,7 @@ struct WindowManagerListenerTests {
         await workspace.refresh()
 
         let bus = EventBus()
-        let listener = WindowManagerListener(bus: bus, workspace: workspace)
+        let listener = WindowManagerListener(bus: bus, workspace: workspace, lifecycle: AgentLifecycleState())
 
         let response = try await bus.ask(
             .stopContext(StopContextEvent(contextID: context.id))
@@ -460,7 +469,7 @@ struct WindowManagerListenerTests {
         await workspace.refresh()
 
         let bus = EventBus()
-        let listener = WindowManagerListener(bus: bus, workspace: workspace)
+        let listener = WindowManagerListener(bus: bus, workspace: workspace, lifecycle: AgentLifecycleState())
 
         let response = try await bus.ask(
             .stopContext(StopContextEvent(contextID: inactiveContext.id))
@@ -493,7 +502,8 @@ struct WindowManagerListenerTests {
         let bus = EventBus()
         let listener = WindowManagerListener(
             bus: bus,
-            workspace: workspace
+            workspace: workspace,
+            lifecycle: AgentLifecycleState()
         )
 
         let response = try await bus.ask(
@@ -523,7 +533,8 @@ struct WindowManagerListenerTests {
         let bus = EventBus()
         let listener = WindowManagerListener(
             bus: bus,
-            workspace: workspace
+            workspace: workspace,
+            lifecycle: AgentLifecycleState()
         )
 
         let response = try await bus.ask(
@@ -556,7 +567,8 @@ struct WindowManagerListenerTests {
         let bus = EventBus()
         let listener = WindowManagerListener(
             bus: bus,
-            workspace: workspace
+            workspace: workspace,
+            lifecycle: AgentLifecycleState()
         )
 
         let response = try await bus.ask(
@@ -596,7 +608,8 @@ struct WindowManagerListenerTests {
         let bus = EventBus()
         let listener = WindowManagerListener(
             bus: bus,
-            workspace: workspace
+            workspace: workspace,
+            lifecycle: AgentLifecycleState()
         )
 
         let response = try await bus.ask(
@@ -610,6 +623,127 @@ struct WindowManagerListenerTests {
                 == .contextMutationAcknowledged(
                     .failure(failure: .contextArchived(context.id))
                 )
+        )
+
+        _ = listener
+    }
+
+    @Test("Context mutation is rejected while preparing for update")
+    func mutationIsRejectedWhilePreparing() async throws {
+        let contextManager = FakeContextManager()
+        let workspace = WorkspaceRuntime(
+            contextManager: contextManager
+        )
+
+        let lifecycle = AgentLifecycleState()
+        lifecycle.beginUpdatePreparation()
+
+        let bus = EventBus()
+        let listener = WindowManagerListener(
+            bus: bus,
+            workspace: workspace,
+            lifecycle: lifecycle
+        )
+
+        let response = try await bus.ask(
+            .createContext(
+                CreateContextEvent(
+                    name: "Work",
+                    symbol: "briefcase",
+                    applications: []
+                )
+            )
+        )
+
+        #expect(
+            response
+                == .contextMutationAcknowledged(
+                    .failure(failure: .updateInProgress)
+                )
+        )
+        #expect(contextManager.createPayloads.isEmpty)
+
+        _ = listener
+    }
+
+    @Test("Context reads remain available while preparing for update")
+    func readsRemainAvailableWhilePreparing() async throws {
+        let contextManager = FakeContextManager()
+        let workspace = WorkspaceRuntime(
+            contextManager: contextManager
+        )
+
+        let lifecycle = AgentLifecycleState()
+        lifecycle.beginUpdatePreparation()
+
+        let bus = EventBus()
+        let listener = WindowManagerListener(
+            bus: bus,
+            workspace: workspace,
+            lifecycle: lifecycle
+        )
+
+        let response = try await bus.ask(
+            .getContexts(GetContextsEvent())
+        )
+
+        #expect(
+            response
+                == .contextsFetched(
+                    ContextsFetchedEvent(contexts: [])
+                )
+        )
+
+        _ = listener
+    }
+
+    @Test("Stop context is rejected while preparing for update")
+    func stopContextIsRejectedWhilePreparing() async throws {
+        let context = WorkspaceContext(
+            name: "Work",
+            symbol: "briefcase"
+        )
+
+        let contextManager = FakeContextManager()
+        contextManager.contexts = [context]
+        contextManager.workspaceActivity.activate(
+            contextID: context.id,
+            at: Date(timeIntervalSince1970: 100)
+        )
+
+        let workspace = WorkspaceRuntime(
+            contextManager: contextManager
+        )
+
+        await workspace.refresh()
+
+        let lifecycle = AgentLifecycleState()
+        lifecycle.beginUpdatePreparation()
+
+        let bus = EventBus()
+        let listener = WindowManagerListener(
+            bus: bus,
+            workspace: workspace,
+            lifecycle: lifecycle
+        )
+
+        let response = try await bus.ask(
+            .stopContext(
+                StopContextEvent(contextID: context.id)
+            )
+        )
+
+        #expect(
+            response == .contextMutationAcknowledged(
+                .failure(failure: .updateInProgress)
+            )
+        )
+
+        // The stop operation must not reach WorkspaceRuntime.
+        #expect(workspace.activeContextID == context.id)
+        #expect(
+            contextManager.workspaceActivity.activeContextID
+                == context.id
         )
 
         _ = listener

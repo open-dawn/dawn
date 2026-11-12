@@ -69,7 +69,7 @@ private final class PreviewAppUpdater: AppUpdating {
         )
     }
 
-    func installAndRelaunch() {
+    func installAndRelaunch() async {
         guard case let .readyToInstall(update) = state else {
             return
         }

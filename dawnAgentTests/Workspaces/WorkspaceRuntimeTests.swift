@@ -279,7 +279,8 @@ struct WorkspaceRuntimeTests {
         let bus = EventBus()
         let listener = WindowManagerListener(
             bus: bus,
-            workspace: workspace
+            workspace: workspace,
+            lifecycle: AgentLifecycleState()
         )
 
         let response = try await bus.ask(

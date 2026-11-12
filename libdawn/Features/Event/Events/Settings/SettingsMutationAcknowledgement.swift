@@ -6,6 +6,7 @@ public enum SettingsMutationAcknowledgement: Codable, Sendable, Equatable {
         case emptyApplicationBundleIdentifier
         case duplicateApplication(bundleIdentifier: String)
         case duplicateApplicationIdentifier(id: UUID)
+        case updateInProgress
 
         case persistence
         case unexpected
@@ -26,6 +27,8 @@ extension SettingsMutationAcknowledgement.Failure: LocalizedError {
             "The application \(bundleIdentifier) was added more than once."
         case let .duplicateApplicationIdentifier(id):
             "The application id \(id) was added more than once."
+        case .updateInProgress:
+            "Dawn is preparing to install an update."
         case .persistence:
             "Could not save the changes."
         case .unexpected:

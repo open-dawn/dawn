@@ -235,6 +235,111 @@ struct SettingsEventBusServiceTests {
         #expect(fixture.service.isConnected)
         #expect(fixture.service.bus.isConnected)
     }
+
+    @Test("Connection waiter accepts the current connection")
+    func waiterAcceptsCurrentConnection() async throws {
+        let fixture = ServiceFixture()
+        defer { fixture.cleanUp() }
+
+        fixture.service.start()
+
+        try await fixture.service.waitUntilConnected(
+            after: nil,
+            timeout: .seconds(1)
+        )
+
+        #expect(fixture.service.isConnected)
+    }
+
+    @Test("Connection waiter requires a newer connection generation")
+    func waiterRequiresNewGeneration() async throws {
+        let fixture = ServiceFixture()
+        defer { fixture.cleanUp() }
+
+        fixture.service.start()
+
+        try await fixture.service.waitUntilConnected(
+            after: nil,
+            timeout: .seconds(1)
+        )
+
+        let previousGeneration =
+            fixture.service.connectionGeneration
+
+        fixture.transport.pauseInConnecting = true
+        fixture.link.client.simulateDisconnect()
+
+        guard await fixture.transport.waitUntilReconnectIsPaused() else {
+            Issue.record("Reconnect did not pause")
+            return
+        }
+
+        defer {
+            fixture.transport.resumeReconnect()
+        }
+
+        var waiterFinished = false
+
+        let waiterTask = Task { @MainActor in
+            try await fixture.service.waitUntilConnected(
+                after: previousGeneration,
+                timeout: .seconds(1)
+            )
+
+            waiterFinished = true
+        }
+
+        try await Task.sleep(for: .milliseconds(50))
+
+        #expect(!waiterFinished)
+
+        fixture.transport.resumeReconnect()
+
+        try await waiterTask.value
+
+        #expect(waiterFinished)
+        #expect(fixture.service.isConnected)
+        #expect(
+            fixture.service.connectionGeneration
+                != previousGeneration
+        )
+    }
+
+    @Test("Connection waiter times out while disconnected")
+    func waiterTimesOutWhileDisconnected() async throws {
+        let fixture = ServiceFixture()
+        defer { fixture.cleanUp() }
+
+        fixture.service.start()
+
+        try await fixture.service.waitUntilConnected(
+            after: nil,
+            timeout: .seconds(1)
+        )
+
+        fixture.transport.allowReconnect = false
+        fixture.link.client.simulateDisconnect()
+
+        let disconnectDeadline =
+            ContinuousClock.now + .seconds(1)
+
+        while fixture.service.isConnected,
+              ContinuousClock.now < disconnectDeadline
+        {
+            await Task.yield()
+        }
+
+        try #require(!fixture.service.isConnected)
+
+        await #expect(
+            throws: SettingsEventBusConnectionError.timeout
+        ) {
+            try await fixture.service.waitUntilConnected(
+                after: nil,
+                timeout: .milliseconds(100)
+            )
+        }
+    }
 }
 
 @MainActor

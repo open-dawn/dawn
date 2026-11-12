@@ -8,6 +8,7 @@ struct AgentRuntimeComponents {
 
 typealias AgentRuntimeFactory = @MainActor (EventBus, SettingsStore) async throws -> AgentRuntimeComponents
 typealias MenuBarControllerFactory = @MainActor (WorkspaceRuntime, Bool) -> any MenuBarControlling
+typealias ComponentIdentityLoader = @MainActor () throws -> ComponentIdentity
 
 @MainActor
 final class AppDelegate: NSObject, NSApplicationDelegate {
@@ -23,6 +24,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var startupTask: Task<Void, Never>?
     private var isStartingOrStarted = false
 
+    private let lifecycle = AgentLifecycleState()
+    private let loadComponentIdentity: ComponentIdentityLoader
+    private var applicationUpdateListener: ApplicationUpdateListener?
+
     private var isPreparingToTerminate = false
     private var repository: any SettingsRepository
 
@@ -32,12 +37,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         makeMenuBarController: @escaping MenuBarControllerFactory = { workspace, isVisible in
             MenuBarController(workspace: workspace, initiallyVisible: isVisible)
         },
-        makeAgentRuntime: @escaping AgentRuntimeFactory = AppDelegate.makeAgentRuntime
+        makeAgentRuntime: @escaping AgentRuntimeFactory = AppDelegate.makeAgentRuntime,
+        loadComponentIdentity: @escaping ComponentIdentityLoader = {
+            try AgentComponentIdentity.load()
+        }
     ) {
         self.eventBusService = eventBusService
         self.repository = repository
         self.makeMenuBarController = makeMenuBarController
         self.makeAgentRuntime = makeAgentRuntime
+        self.loadComponentIdentity = loadComponentIdentity
 
         super.init()
     }
@@ -112,6 +121,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         accessibilityTrustListener = nil
         settingsListener = nil
         workspaceRuntime = nil
+        applicationUpdateListener = nil
     }
 
     func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
@@ -149,6 +159,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         do {
             #log("Creating workspace runtime", level: .info, category: .appLifecycle)
 
+            let componentIdentity = try loadComponentIdentity()
+
             let store = try await SettingsStore.make(repository: repository)
             let components = try await makeAgentRuntime(eventBusService.bus, store)
 
@@ -166,7 +178,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 workspaceRuntime: workspaceRuntime,
                 store: store,
                 menuBarController: menuBarController,
-                applicator: applicator
+                applicator: applicator,
+                componentIdentity: componentIdentity
             )
 
             #log("Starting dawnAgent event bus", level: .info, category: .eventBus)
@@ -183,21 +196,35 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         workspaceRuntime: WorkspaceRuntime,
         store: SettingsStore,
         menuBarController: any MenuBarControlling,
-        applicator: any SettingsApplying
+        applicator: any SettingsApplying,
+        componentIdentity: ComponentIdentity
     ) {
         let windowManagerListener = WindowManagerListener(
             bus: eventBusService.bus,
-            workspace: workspaceRuntime
+            workspace: workspaceRuntime,
+            lifecycle: lifecycle
         )
 
         let settingsListener = SettingsListener(
             bus: eventBusService.bus,
             settingsProvider: SettingsCoordinator(store: store),
-            applicator: applicator
+            applicator: applicator,
+            lifecycle: lifecycle
         )
 
         let debugPingListener = DebugPingListener(bus: eventBusService.bus)
         let accessibilityTrustListener = AccessibilityTrustListener(bus: eventBusService.bus)
+
+        let updatePreparer = AgentUpdatePreparer(
+            identity: componentIdentity,
+            workspace: workspaceRuntime,
+            lifecycle: lifecycle
+        )
+
+        let applicationUpdateListener = ApplicationUpdateListener(
+            bus: eventBusService.bus,
+            preparer: updatePreparer
+        )
 
         self.workspaceRuntime = workspaceRuntime
         self.windowManagerListener = windowManagerListener
@@ -205,6 +232,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         self.accessibilityTrustListener = accessibilityTrustListener
         self.settingsListener = settingsListener
         self.menuBarController = menuBarController
+        self.applicationUpdateListener = applicationUpdateListener
     }
 
     private func reconcileRestoredActivity(in workspace: WorkspaceRuntime) async throws {

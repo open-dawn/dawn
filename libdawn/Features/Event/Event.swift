@@ -1,9 +1,12 @@
 public enum Event: Codable, Sendable, Equatable {
+    // MARK: Debug
     case debugPing(DebugPingEvent)
     case debugPong(DebugPongEvent)
 
+    // MARK: Initialize
     case initialized(InitializedEvent)
 
+    // MARK: Context
     case getContexts(GetContextsEvent)
     case contextsFetched(ContextsFetchedEvent)
     case switchContext(SwitchContextEvent)
@@ -17,10 +20,12 @@ public enum Event: Codable, Sendable, Equatable {
     case availableContexts(AvailableContextsEvent)
     case contextMutationAcknowledged(ContextMutationAcknowledgement)
 
+    // MARK: Accessibility
     case getAccessibilityStatus(GetAccessibilityStatusEvent)
     case promptAccessibilityTrust(PromptAccessibilityTrustEvent)
     case accessibilityStatus(AccessibilityStatusEvent)
 
+    // MARK: Settings
     case getSettings(GetSettingsEvent)
     case settingsFetched(SettingsFetchedEvent)
     case availableSettings(AvailableSettingsEvent)
@@ -28,6 +33,12 @@ public enum Event: Codable, Sendable, Equatable {
     case updateSettings(UpdateSettingsEvent)
     case settingsMutationAcknowledgement(SettingsMutationAcknowledgement)
     case applySettings(ApplySettingsEvent)
+
+    // MARK: Update
+    case getComponentIdentity(GetComponentIdentityEvent)
+    case componentIdentity(ComponentIdentityEvent)
+    case prepareForApplicationUpdate(PrepareForApplicationUpdateEvent)
+    case applicationUpdatePreparationAcknowledged(ApplicationUpdatePrepAcknowledgement)
 
     public var kind: EventKind {
         switch self {
@@ -54,6 +65,10 @@ public enum Event: Codable, Sendable, Equatable {
         case .updateSettings: .updateSettings
         case .settingsMutationAcknowledgement: .settingsMutationAcknowledgement
         case .applySettings: .applySettings
+        case .getComponentIdentity: .getComponentIdentity
+        case .componentIdentity: .componentIdentity
+        case .prepareForApplicationUpdate: .prepareForApplicationUpdate
+        case .applicationUpdatePreparationAcknowledged: .applicationUpdatePreparationAcknowledged
         }
     }
 }

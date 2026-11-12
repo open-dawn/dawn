@@ -14,6 +14,6 @@ protocol AppUpdating: AnyObject, Observable {
 
     func checkForUpdates()
     func installAvailableUpdate()
-    func installAndRelaunch()
+    func installAndRelaunch() async
     func cancelUpdate()
 }
