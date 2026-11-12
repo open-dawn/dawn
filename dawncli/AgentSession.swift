@@ -36,11 +36,19 @@ enum AgentSession {
     }
 
     private static func makeBus() -> RemoteEventBus {
+        #if DEBUG
+        RemoteEventBus(
+            transport: DistributedRemoteEventTransportClient(
+                serviceName: EventBusMachService.developmentServiceName
+            )
+        )
+        #else
         RemoteEventBus(
             transport: XPCRemoteEventTransportClient(
                 machServiceName: EventBusMachService.serviceName
             )
         )
+        #endif
     }
 
     private static func connect(_ bus: RemoteEventBus) async throws {
