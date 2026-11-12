@@ -71,10 +71,7 @@ private struct SettingsViewPreviewHost: View {
             }
 
             let client = PreviewSettingsViewStoreClient(settings: baseline)
-            let loaded = SettingsViewModel(
-                client: client,
-                applicationSelector: PreviewApplicationSelector()
-            )
+            let loaded = SettingsViewModel(client: client)
             await loaded.load()
             configure?(loaded)
             viewModel = loaded
@@ -123,13 +120,6 @@ private final class PreviewSettingsViewStoreClient: SettingsViewStoreClient {
     func updateSettings(_ settings: libdawn.Settings) async throws(SettingsViewStoreError) {
         self.settings = settings
         error = nil
-    }
-}
-
-@MainActor
-private final class PreviewApplicationSelector: ApplicationSelecting {
-    func selectApplication() async throws -> WorkspaceApplication? {
-        nil
     }
 }
 

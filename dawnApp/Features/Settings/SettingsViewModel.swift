@@ -20,26 +20,18 @@ final class SettingsViewModel {
 
     private(set) var error: ViewModelError?
     private(set) var errorMessage: String?
-    private(set) var applicationSelectionError: ApplicationSelectionError?
+    private(set) var applicationImportError: ApplicationSelectionError?
     private(set) var isLoading = false
 
     private var baseline = Settings()
     private let client: any SettingsViewStoreClient
-    private let applicationSelector: any ApplicationSelecting
-    private let runningApplicationSelector: any ApplicationSelecting
 
     var hasUnsavedChanges: Bool {
         draft != baseline
     }
 
-    init(
-        client: any SettingsViewStoreClient,
-        applicationSelector: any ApplicationSelecting = SystemApplicationSelector(),
-        runningApplicationSelector: any ApplicationSelecting = SystemRunningApplicationSelector()
-    ) {
+    init(client: any SettingsViewStoreClient) {
         self.client = client
-        self.applicationSelector = applicationSelector
-        self.runningApplicationSelector = runningApplicationSelector
     }
 
     func load() async {
@@ -63,7 +55,6 @@ final class SettingsViewModel {
         baseline = client.settings
         error = nil
         errorMessage = nil
-        applicationSelectionError = nil
     }
 
     func setSettings() async {
@@ -85,50 +76,98 @@ final class SettingsViewModel {
         draft = Settings()
     }
 
-    func addProtectedApp() async {
-        await addProtectedApp(using: applicationSelector)
-    }
-
-    func addProtectedAppFromRunning() async {
-        await addProtectedApp(using: runningApplicationSelector)
+    func dismissApplicationImportError() {
+        applicationImportError = nil
     }
 
     func removeProtectedApp(id: UUID) {
         draft.protectedApps.removeAll { $0.id == id }
     }
 
-    private func addProtectedApp(using selector: any ApplicationSelecting) async {
-        guard !isLoading else {
+    @discardableResult
+    func addProtectedApplications(at urls: [URL]) -> Bool {
+        applicationImportError = nil
+
+        var imported: [ProtectedApplication] = []
+        var sawValidApplication = false
+        var firstError: ApplicationSelectionError?
+
+        for url in urls {
+            do {
+                let application = try WorkspaceApplication.imported(from: url)
+                sawValidApplication = true
+                let bundleIdentifier = normalizedBundleIdentifier(application.bundleIdentifier)
+                let alreadyListed = draft.protectedApps.contains {
+                    normalizedBundleIdentifier($0.bundleIdentifier) == bundleIdentifier
+                } || imported.contains {
+                    normalizedBundleIdentifier($0.bundleIdentifier) == bundleIdentifier
+                }
+                if !alreadyListed {
+                    imported.append(
+                        ProtectedApplication(
+                            bundleIdentifier: application.bundleIdentifier,
+                            displayName: application.displayName
+                        )
+                    )
+                }
+            } catch let error as ApplicationSelectionError {
+                if firstError == nil {
+                    firstError = error
+                }
+            } catch {
+                if firstError == nil {
+                    firstError = .unknown
+                }
+            }
+        }
+
+        applicationImportError = firstError
+
+        if !imported.isEmpty {
+            draft.protectedApps.append(contentsOf: imported)
+        }
+
+        return sawValidApplication
+    }
+
+    func applyProtectedApplicationSelection(_ selected: [ProtectedApplication]) {
+        var merged: [ProtectedApplication] = []
+        var consumedBundleIdentifiers = Set<String>()
+
+        for application in draft.protectedApps {
+            let bundleIdentifier = normalizedBundleIdentifier(application.bundleIdentifier)
+            guard selected.contains(where: {
+                normalizedBundleIdentifier($0.bundleIdentifier) == bundleIdentifier
+            }) else {
+                continue
+            }
+
+            guard consumedBundleIdentifiers.insert(bundleIdentifier).inserted else {
+                continue
+            }
+
+            merged.append(application)
+        }
+
+        for application in selected {
+            let bundleIdentifier = normalizedBundleIdentifier(application.bundleIdentifier)
+            guard consumedBundleIdentifiers.insert(bundleIdentifier).inserted else {
+                continue
+            }
+
+            merged.append(application)
+        }
+
+        guard merged != draft.protectedApps else {
             return
         }
 
-        isLoading = true
-        applicationSelectionError = nil
-        defer { isLoading = false }
+        draft.protectedApps = merged
+    }
 
-        do {
-            guard let application = try await selector.selectApplication() else {
-                return
-            }
-
-            let alreadyProtected = draft.protectedApps.contains {
-                $0.bundleIdentifier.caseInsensitiveCompare(application.bundleIdentifier) == .orderedSame
-            }
-
-            guard !alreadyProtected else {
-                return
-            }
-
-            draft.protectedApps.append(
-                ProtectedApplication(
-                    bundleIdentifier: application.bundleIdentifier,
-                    displayName: application.displayName
-                )
-            )
-        } catch let error as ApplicationSelectionError {
-            applicationSelectionError = error
-        } catch {
-            applicationSelectionError = .unknown
-        }
+    private func normalizedBundleIdentifier(_ bundleIdentifier: String) -> String {
+        bundleIdentifier
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+            .lowercased()
     }
 }
