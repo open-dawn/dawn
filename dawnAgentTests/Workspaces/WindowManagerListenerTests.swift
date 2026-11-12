@@ -27,6 +27,7 @@ struct WindowManagerListenerTests {
             (event: Event.archiveContext(ArchiveContextEvent(contextID: UUID())), afterResult: true),
             (event: Event.unarchiveContext(UnarchiveContextEvent(contextID: UUID())), afterResult: true),
             (event: Event.switchContext(SwitchContextEvent(contextID: UUID())), afterResult: true),
+            (event: Event.stopContext(StopContextEvent(contextID: UUID())), afterResult: true),
         ]
 
         let mockBus = EventBus()
@@ -395,6 +396,82 @@ struct WindowManagerListenerTests {
                     .failure(
                         failure: .contextNotFound(missingID)
                     )
+                )
+        )
+
+        _ = listener
+    }
+
+    @Test("Stop context clears active context and replies with its ID")
+    func stopContextClearsActiveContextAndRepliesWithSuccess() async throws {
+        let context = WorkspaceContext(
+            name: "Work",
+            symbol: "briefcase"
+        )
+
+        let contextManager = FakeContextManager()
+        contextManager.contexts = [context]
+        contextManager.workspaceActivity.activate(
+            contextID: context.id,
+            at: Date(timeIntervalSince1970: 100)
+        )
+
+        let workspace = WorkspaceRuntime(contextManager: contextManager)
+        await workspace.refresh()
+
+        let bus = EventBus()
+        let listener = WindowManagerListener(bus: bus, workspace: workspace)
+
+        let response = try await bus.ask(
+            .stopContext(StopContextEvent(contextID: context.id))
+        )
+
+        #expect(workspace.activeContextID == nil)
+        #expect(contextManager.workspaceActivity.activeContextID == nil)
+        #expect(
+            response
+                == .contextMutationAcknowledged(
+                    .success(contextID: context.id)
+                )
+        )
+
+        _ = listener
+    }
+
+    @Test("Stop context rejects an ID that is not active")
+    func stopContextRejectsInactiveContext() async throws {
+        let activeContext = WorkspaceContext(
+            name: "Work",
+            symbol: "briefcase"
+        )
+        let inactiveContext = WorkspaceContext(
+            name: "Personal",
+            symbol: "person"
+        )
+
+        let contextManager = FakeContextManager()
+        contextManager.contexts = [activeContext, inactiveContext]
+        contextManager.workspaceActivity.activate(
+            contextID: activeContext.id,
+            at: Date(timeIntervalSince1970: 100)
+        )
+
+        let workspace = WorkspaceRuntime(contextManager: contextManager)
+        await workspace.refresh()
+
+        let bus = EventBus()
+        let listener = WindowManagerListener(bus: bus, workspace: workspace)
+
+        let response = try await bus.ask(
+            .stopContext(StopContextEvent(contextID: inactiveContext.id))
+        )
+
+        #expect(workspace.activeContextID == activeContext.id)
+        #expect(contextManager.workspaceActivity.activeContextID == activeContext.id)
+        #expect(
+            response
+                == .contextMutationAcknowledged(
+                    .failure(failure: .contextNotActive(inactiveContext.id))
                 )
         )
 

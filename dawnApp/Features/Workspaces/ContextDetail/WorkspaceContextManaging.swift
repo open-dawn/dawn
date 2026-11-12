@@ -15,6 +15,7 @@ protocol WorkspaceContextManaging: AnyObject {
     func archiveContext(id: UUID) async throws
     func unarchiveContext(id: UUID) async throws
     func updateContext(_ context: WorkspaceContext) async throws
+    func stopContext(id: UUID) async throws
 }
 
 extension SettingsContextStore: WorkspaceContextManaging {}

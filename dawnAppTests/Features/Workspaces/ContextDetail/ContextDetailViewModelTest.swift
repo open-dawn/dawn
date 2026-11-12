@@ -18,6 +18,20 @@ struct ContextDetailViewModelTests {
         #expect(viewModel.contextBeingEdited == nil)
     }
 
+    @Test("Synchronizes activity changes received from the agent")
+    func synchronizesAgentActivity() {
+        let contextID = UUID()
+        let viewModel = ContextDetailViewModel(
+            contextManager: WorkspaceContextManagerSpy()
+        )
+
+        viewModel.synchronizeActiveContext(contextID)
+        #expect(viewModel.activeContextID == contextID)
+
+        viewModel.synchronizeActiveContext(nil)
+        #expect(viewModel.activeContextID == nil)
+    }
+
     @Test("Presents and dismisses the context creator")
     func contextCreatorPresentation() throws {
         let contextManager = WorkspaceContextManagerSpy()
@@ -50,6 +64,51 @@ struct ContextDetailViewModelTests {
         #expect(viewModel.operationInProgress == nil)
         #expect(viewModel.activeContextID == context.id)
         #expect(viewModel.error == nil)
+    }
+
+    @Test("Stop delegates the active context identifier and clears active state")
+    func stopContext() async {
+        let context = WorkspaceContext(
+            name: "Work",
+            symbol: "briefcase"
+        )
+
+        let contextManager = WorkspaceContextManagerSpy()
+        let viewModel = ContextDetailViewModel(contextManager: contextManager)
+
+        await viewModel.runContext(context)
+
+        var observedOperationID: UUID?
+        contextManager.onStop = { observedOperationID = viewModel.operationInProgress }
+
+        await viewModel.stopContext(context)
+
+        #expect(contextManager.stoppedContextIDs == [context.id])
+        #expect(observedOperationID == context.id)
+        #expect(viewModel.activeContextID == nil)
+        #expect(viewModel.operationInProgress == nil)
+        #expect(viewModel.error == nil)
+    }
+
+    @Test("A failed stop preserves active state and exposes the error")
+    func stopContextFailure() async {
+        let context = WorkspaceContext(
+            name: "Work",
+            symbol: "briefcase"
+        )
+
+        let contextManager = WorkspaceContextManagerSpy()
+        let viewModel = ContextDetailViewModel(contextManager: contextManager)
+
+        await viewModel.runContext(context)
+        contextManager.error = SettingsContextStoreError.notConnected
+
+        await viewModel.stopContext(context)
+
+        #expect(contextManager.stoppedContextIDs == [context.id])
+        #expect(viewModel.activeContextID == context.id)
+        #expect(viewModel.operationInProgress == nil)
+        #expect(viewModel.error == .notConnected)
     }
 
     @Test("Delete delegates the selected context identifier")
@@ -953,6 +1012,7 @@ struct ContextDetailViewModelTests {
 @MainActor
 private final class WorkspaceContextManagerSpy: WorkspaceContextManaging {
     private(set) var switchedContextIDs: [UUID] = []
+    private(set) var stoppedContextIDs: [UUID] = []
     private(set) var deletedContextIDs: [UUID] = []
     private(set) var archivedContextIDs: [UUID] = []
     private(set) var unarchivedContextIDs: [UUID] = []
@@ -960,11 +1020,21 @@ private final class WorkspaceContextManagerSpy: WorkspaceContextManaging {
 
     var error: Error?
     var onSwitch: (() -> Void)?
+    var onStop: (() -> Void)?
     var onUnarchive: (() -> Void)?
 
     func switchContext(id: UUID) async throws {
         switchedContextIDs.append(id)
         onSwitch?()
+
+        if let error {
+            throw error
+        }
+    }
+
+    func stopContext(id: UUID) async throws {
+        stoppedContextIDs.append(id)
+        onStop?()
 
         if let error {
             throw error

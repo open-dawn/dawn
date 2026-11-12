@@ -22,10 +22,7 @@ struct SettingsViewModelTests {
             ]
         )
         let client = SettingsViewStoreClientSpy(settings: seeded)
-        let viewModel = SettingsViewModel(
-            client: client,
-            applicationSelector: ApplicationSelectorSpy()
-        )
+        let viewModel = SettingsViewModel(client: client)
 
         await viewModel.load()
 
@@ -41,10 +38,7 @@ struct SettingsViewModelTests {
         let client = SettingsViewStoreClientSpy(
             settings: Settings(launchAtLogin: false)
         )
-        let viewModel = SettingsViewModel(
-            client: client,
-            applicationSelector: ApplicationSelectorSpy()
-        )
+        let viewModel = SettingsViewModel(client: client)
 
         await viewModel.load()
         #expect(!viewModel.hasUnsavedChanges)
@@ -61,10 +55,7 @@ struct SettingsViewModelTests {
     func loadFailure() async {
         let client = SettingsViewStoreClientSpy()
         client.refreshError = .timeout
-        let viewModel = SettingsViewModel(
-            client: client,
-            applicationSelector: ApplicationSelectorSpy()
-        )
+        let viewModel = SettingsViewModel(client: client)
 
         await viewModel.load()
 
@@ -88,10 +79,7 @@ struct SettingsViewModelTests {
             ]
         )
         let client = SettingsViewStoreClientSpy(settings: seeded)
-        let viewModel = SettingsViewModel(
-            client: client,
-            applicationSelector: ApplicationSelectorSpy()
-        )
+        let viewModel = SettingsViewModel(client: client)
 
         await viewModel.load()
         viewModel.draft.launchAtLogin = true
@@ -114,110 +102,6 @@ struct SettingsViewModelTests {
         #expect(viewModel.errorMessage == nil)
     }
 
-    @Test("add protected app uses the system application selector")
-    func addProtectedAppFromSelector() async {
-        let application = WorkspaceApplication(
-            bundleIdentifier: "com.apple.Safari",
-            displayName: "Safari",
-            applicationURL: URL(fileURLWithPath: "/Applications/Safari.app")
-        )
-        let selector = ApplicationSelectorSpy(result: application)
-        let client = SettingsViewStoreClientSpy()
-        let viewModel = SettingsViewModel(
-            client: client,
-            applicationSelector: selector
-        )
-
-        await viewModel.load()
-        await viewModel.addProtectedApp()
-        await viewModel.setSettings()
-
-        #expect(selector.callCount == 1)
-        #expect(client.updatedSettings.count == 1)
-        #expect(client.updatedSettings[0].protectedApps.count == 1)
-        #expect(client.updatedSettings[0].protectedApps[0].displayName == "Safari")
-        #expect(client.updatedSettings[0].protectedApps[0].bundleIdentifier == "com.apple.Safari")
-        #expect(viewModel.applicationSelectionError == nil)
-    }
-
-    @Test("add protected app from running uses the running application selector")
-    func addProtectedAppFromRunningSelector() async {
-        let application = WorkspaceApplication(
-            bundleIdentifier: "com.nordvpn.macos",
-            displayName: "NordVPN",
-            applicationURL: URL(fileURLWithPath: "/Applications/NordVPN.app")
-        )
-        let runningSelector = ApplicationSelectorSpy(result: application)
-        let openPanelSelector = ApplicationSelectorSpy()
-        let viewModel = SettingsViewModel(
-            client: SettingsViewStoreClientSpy(),
-            applicationSelector: openPanelSelector,
-            runningApplicationSelector: runningSelector
-        )
-
-        await viewModel.load()
-        await viewModel.addProtectedAppFromRunning()
-
-        #expect(runningSelector.callCount == 1)
-        #expect(openPanelSelector.callCount == 0)
-        #expect(viewModel.draft.protectedApps.count == 1)
-        #expect(viewModel.draft.protectedApps[0].bundleIdentifier == "com.nordvpn.macos")
-        #expect(viewModel.applicationSelectionError == nil)
-    }
-
-    @Test("add protected app ignores a duplicate bundle identifier")
-    func addProtectedAppIgnoresDuplicate() async {
-        let existing = ProtectedApplication(
-            bundleIdentifier: "com.apple.Safari",
-            displayName: "Safari"
-        )
-        let application = WorkspaceApplication(
-            bundleIdentifier: "COM.APPLE.SAFARI",
-            displayName: "Safari",
-            applicationURL: URL(fileURLWithPath: "/Applications/Safari.app")
-        )
-        let selector = ApplicationSelectorSpy(result: application)
-        let viewModel = SettingsViewModel(
-            client: SettingsViewStoreClientSpy(settings: Settings(protectedApps: [existing])),
-            applicationSelector: selector
-        )
-
-        await viewModel.load()
-        await viewModel.addProtectedApp()
-
-        #expect(viewModel.draft.protectedApps == [existing])
-    }
-
-    @Test("cancelled application selection changes nothing")
-    func cancelApplicationSelection() async {
-        let selector = ApplicationSelectorSpy(result: nil)
-        let viewModel = SettingsViewModel(
-            client: SettingsViewStoreClientSpy(),
-            applicationSelector: selector
-        )
-
-        await viewModel.load()
-        await viewModel.addProtectedApp()
-
-        #expect(viewModel.draft.protectedApps.isEmpty)
-        #expect(viewModel.applicationSelectionError == nil)
-    }
-
-    @Test("application selection failure is exposed")
-    func applicationSelectionFailure() async {
-        let selector = ApplicationSelectorSpy(error: .invalidApplication)
-        let viewModel = SettingsViewModel(
-            client: SettingsViewStoreClientSpy(),
-            applicationSelector: selector
-        )
-
-        await viewModel.load()
-        await viewModel.addProtectedApp()
-
-        #expect(viewModel.draft.protectedApps.isEmpty)
-        #expect(viewModel.applicationSelectionError == .invalidApplication)
-    }
-
     @Test("apply failure maps to persistenceFailed and keeps draft")
     func applyFailure() async {
         let seeded = Settings(
@@ -232,10 +116,7 @@ struct SettingsViewModelTests {
         )
         let client = SettingsViewStoreClientSpy(settings: seeded)
         client.updateError = .timeout
-        let viewModel = SettingsViewModel(
-            client: client,
-            applicationSelector: ApplicationSelectorSpy()
-        )
+        let viewModel = SettingsViewModel(client: client)
 
         await viewModel.load()
         viewModel.draft.launchAtLogin = false
@@ -266,10 +147,7 @@ struct SettingsViewModelTests {
                 ]
             )
         )
-        let viewModel = SettingsViewModel(
-            client: client,
-            applicationSelector: ApplicationSelectorSpy()
-        )
+        let viewModel = SettingsViewModel(client: client)
 
         await viewModel.load()
         viewModel.resetSettingsToDefaults()
@@ -284,14 +162,156 @@ struct SettingsViewModelTests {
             displayName: "Safari"
         )
         let viewModel = SettingsViewModel(
-            client: SettingsViewStoreClientSpy(settings: Settings(protectedApps: [app])),
-            applicationSelector: ApplicationSelectorSpy()
+            client: SettingsViewStoreClientSpy(settings: Settings(protectedApps: [app]))
         )
 
         await viewModel.load()
         viewModel.removeProtectedApp(id: app.id)
 
         #expect(viewModel.draft.protectedApps.isEmpty)
+    }
+
+    @Test("A protected app selection keeps existing rows, appends new ones, and drops the rest")
+    func applyProtectedApplicationSelectionMergesByBundleIdentifier() async {
+        let kept = ProtectedApplication(
+            bundleIdentifier: "com.apple.Safari",
+            displayName: "Safari"
+        )
+        let removed = ProtectedApplication(
+            bundleIdentifier: "com.apple.mail",
+            displayName: "Mail"
+        )
+        let added = ProtectedApplication(
+            bundleIdentifier: "com.apple.Notes",
+            displayName: "Notes"
+        )
+        let viewModel = SettingsViewModel(
+            client: SettingsViewStoreClientSpy(
+                settings: Settings(protectedApps: [kept, removed])
+            )
+        )
+
+        await viewModel.load()
+        viewModel.applyProtectedApplicationSelection([
+            ProtectedApplication(
+                bundleIdentifier: kept.bundleIdentifier,
+                displayName: "Renamed Safari"
+            ),
+            added,
+        ])
+
+        #expect(viewModel.draft.protectedApps == [kept, added])
+        #expect(viewModel.draft.protectedApps.first?.id == kept.id)
+        #expect(viewModel.hasUnsavedChanges)
+    }
+
+    @Test("A case-different bundle identifier keeps the existing protected app")
+    func applyProtectedApplicationSelectionMatchesBundleIdentifierCaseInsensitively() async {
+        let existing = ProtectedApplication(
+            bundleIdentifier: "com.apple.Safari",
+            displayName: "Safari"
+        )
+        let viewModel = SettingsViewModel(
+            client: SettingsViewStoreClientSpy(
+                settings: Settings(protectedApps: [existing])
+            )
+        )
+
+        await viewModel.load()
+        viewModel.applyProtectedApplicationSelection([
+            ProtectedApplication(
+                bundleIdentifier: "  COM.APPLE.SAFARI  ",
+                displayName: "Safari Browser"
+            ),
+        ])
+
+        #expect(viewModel.draft.protectedApps == [existing])
+        #expect(!viewModel.hasUnsavedChanges)
+    }
+
+    @Test("A selection that matches the current protected apps does not dirty the draft")
+    func applyProtectedApplicationSelectionSkipsUnchangedList() async {
+        let safari = ProtectedApplication(
+            bundleIdentifier: "com.apple.Safari",
+            displayName: "Safari"
+        )
+        let mail = ProtectedApplication(
+            bundleIdentifier: "com.apple.mail",
+            displayName: "Mail"
+        )
+        let viewModel = SettingsViewModel(
+            client: SettingsViewStoreClientSpy(
+                settings: Settings(protectedApps: [safari, mail])
+            )
+        )
+
+        await viewModel.load()
+        viewModel.applyProtectedApplicationSelection([
+            ProtectedApplication(
+                bundleIdentifier: mail.bundleIdentifier,
+                displayName: "Mail"
+            ),
+            ProtectedApplication(
+                bundleIdentifier: safari.bundleIdentifier,
+                displayName: "Renamed Safari"
+            ),
+        ])
+
+        #expect(viewModel.draft.protectedApps == [safari, mail])
+        #expect(!viewModel.hasUnsavedChanges)
+    }
+
+    @Test("Dropping application bundles appends them")
+    func dropImportsApplications() async throws {
+        let mail = try makeApplicationBundle(
+            name: "Mail",
+            bundleIdentifier: "com.example.mail",
+            displayName: "Example Mail"
+        )
+        defer {
+            try? FileManager.default.removeItem(at: mail.deletingLastPathComponent())
+        }
+
+        let viewModel = SettingsViewModel(client: SettingsViewStoreClientSpy())
+        await viewModel.load()
+
+        let accepted = viewModel.addProtectedApplications(at: [mail])
+
+        #expect(accepted)
+        #expect(viewModel.draft.protectedApps.map(\.bundleIdentifier) == ["com.example.mail"])
+        #expect(viewModel.draft.protectedApps.map(\.displayName) == ["Example Mail"])
+        #expect(viewModel.applicationImportError == nil)
+        #expect(viewModel.hasUnsavedChanges)
+    }
+
+    @Test("Dropping an application that is already protected does not change the draft")
+    func dropSkipsDuplicateBundleIdentifier() async throws {
+        let existing = ProtectedApplication(
+            bundleIdentifier: "com.example.mail",
+            displayName: "Mail"
+        )
+        let mail = try makeApplicationBundle(
+            name: "Mail",
+            bundleIdentifier: "COM.EXAMPLE.MAIL",
+            displayName: "Other Mail"
+        )
+        defer {
+            try? FileManager.default.removeItem(at: mail.deletingLastPathComponent())
+        }
+
+        let viewModel = SettingsViewModel(
+            client: SettingsViewStoreClientSpy(
+                settings: Settings(protectedApps: [existing])
+            )
+        )
+        await viewModel.load()
+
+        let accepted = viewModel.addProtectedApplications(at: [mail])
+
+        #expect(accepted)
+        #expect(viewModel.draft.protectedApps == [existing])
+        #expect(viewModel.applicationImportError == nil)
+        #expect(!viewModel.hasUnsavedChanges)
     }
 }
 
@@ -329,25 +349,29 @@ private final class SettingsViewStoreClientSpy: SettingsViewStoreClient {
     }
 }
 
-@MainActor
-private final class ApplicationSelectorSpy: ApplicationSelecting {
-    private(set) var callCount = 0
+private func makeApplicationBundle(
+    name: String,
+    bundleIdentifier: String,
+    displayName: String
+) throws -> URL {
+    let root = FileManager.default.temporaryDirectory
+        .appendingPathComponent("dawn-protected-app-\(UUID().uuidString)", isDirectory: true)
+    let contents = root
+        .appendingPathComponent("\(name).app", isDirectory: true)
+        .appendingPathComponent("Contents", isDirectory: true)
+    try FileManager.default.createDirectory(at: contents, withIntermediateDirectories: true)
 
-    private let result: WorkspaceApplication?
-    private let error: ApplicationSelectionError?
-
-    init(result: WorkspaceApplication? = nil, error: ApplicationSelectionError? = nil) {
-        self.result = result
-        self.error = error
-    }
-
-    func selectApplication() async throws -> WorkspaceApplication? {
-        callCount += 1
-
-        if let error {
-            throw error
-        }
-
-        return result
-    }
+    let info = [
+        "CFBundleIdentifier": bundleIdentifier,
+        "CFBundleName": name,
+        "CFBundleDisplayName": displayName,
+        "CFBundlePackageType": "APPL",
+    ]
+    let data = try PropertyListSerialization.data(
+        fromPropertyList: info,
+        format: .xml,
+        options: 0
+    )
+    try data.write(to: contents.appendingPathComponent("Info.plist"))
+    return contents.deletingLastPathComponent()
 }

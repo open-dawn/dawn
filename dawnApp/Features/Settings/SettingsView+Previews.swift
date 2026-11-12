@@ -75,10 +75,7 @@ private struct SettingsViewPreviewHost: View {
             }
 
             let client = PreviewSettingsViewStoreClient(settings: baseline)
-            let loaded = SettingsViewModel(
-                client: client,
-                applicationSelector: PreviewApplicationSelector()
-            )
+            let loaded = SettingsViewModel(client: client)
             await loaded.load()
             configure?(loaded)
             viewModel = loaded
@@ -136,13 +133,6 @@ private struct PreviewCommandLineToolInstaller: CommandLineToolInstalling {
     }
 
     func installLink(from _: URL, to _: URL) async throws(CommandLineToolInstallError) {}
-}
-
-@MainActor
-private final class PreviewApplicationSelector: ApplicationSelecting {
-    func selectApplication() async throws -> WorkspaceApplication? {
-        nil
-    }
 }
 
 @MainActor

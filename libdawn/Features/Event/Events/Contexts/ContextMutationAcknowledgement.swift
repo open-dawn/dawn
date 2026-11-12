@@ -20,6 +20,7 @@ public enum ContextMutationAcknowledgement: Codable, Sendable, Equatable {
         case duplicateApplicationIdentifier(UUID)
         case contextNotFound(UUID)
         case contextArchived(UUID)
+        case contextNotActive(UUID)
 
         case persistence
         case unexpected
@@ -55,6 +56,8 @@ extension ContextMutationAcknowledgement.Failure: LocalizedError {
             "Workspace manager could not save the changes."
         case .unexpected:
             "Workspace manager could not complete the request."
+        case .contextNotActive:
+            "The selected context is no longer active."
         }
     }
 }

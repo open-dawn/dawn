@@ -30,7 +30,9 @@ final class SettingsAppDelegate: NSObject, NSApplicationDelegate {
 
         contextStore.start()
         settingsStore.start()
+        #if !DEBUG
         SettingsLoginItem.registerIfNeeded()
+        #endif
         eventBusService.start()
         updaterService.start()
     }
