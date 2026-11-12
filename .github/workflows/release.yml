@@ -375,6 +375,11 @@ jobs:
             lipo -archs "$AGENT_PATH/Contents/MacOS/dawnAgent"
           )"
 
+          CLI_PATH="$APP_PATH/Contents/MacOS/dawncli"
+          CLI_ARCHITECTURES="$(
+            lipo -archs "$CLI_PATH"
+          )"
+
           if [[ "$APP_ARCHITECTURES" != "arm64" ]]; then
             echo "error: unexpected DAWN architectures: $APP_ARCHITECTURES" >&2
             exit 1
@@ -382,6 +387,11 @@ jobs:
 
           if [[ "$AGENT_ARCHITECTURES" != "arm64" ]]; then
             echo "error: unexpected agent architectures: $AGENT_ARCHITECTURES" >&2
+            exit 1
+          fi
+
+          if [[ "$CLI_ARCHITECTURES" != "arm64" ]]; then
+            echo "error: unexpected dawncli architectures: $CLI_ARCHITECTURES" >&2
             exit 1
           fi
 
@@ -397,12 +407,12 @@ jobs:
           for SIGNED_ITEM in \
             "$APP_PATH" \
             "$AGENT_PATH" \
+            "$CLI_PATH" \
             "$APP_PATH/Contents/Frameworks/Sparkle.framework" \
             "$SPARKLE_PATH/Updater.app" \
             "$SPARKLE_PATH/Autoupdate" \
             "$SPARKLE_PATH/XPCServices/Downloader.xpc" \
             "$SPARKLE_PATH/XPCServices/Installer.xpc"; do
-
             SIGNING_INFORMATION="$(
               codesign \
                 --display \
