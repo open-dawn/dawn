@@ -27,7 +27,7 @@ struct AppUpdaterServiceTests {
     @Test("Start initializes the client once")
     func startIsIdempotent() {
         let client = FakeAppUpdateClient()
-        let service = AppUpdaterService(client: client)
+        let service = AppUpdaterService(client: client, componentCoordinator: FakeUpdateComponentCoordinator())
 
         #expect(!service.canCheckForUpdates)
 
@@ -41,7 +41,7 @@ struct AppUpdaterServiceTests {
     @Test("Repeated checks cannot start concurrently")
     func concurrentChecksArePrevented() {
         let client = FakeAppUpdateClient()
-        let service = AppUpdaterService(client: client)
+        let service = AppUpdaterService(client: client, componentCoordinator: FakeUpdateComponentCoordinator())
 
         service.start()
         service.checkForUpdates()
@@ -55,7 +55,7 @@ struct AppUpdaterServiceTests {
     @Test("Found update is exposed and can begin downloading")
     func availableUpdateCanDownload() {
         let client = FakeAppUpdateClient()
-        let service = AppUpdaterService(client: client)
+        let service = AppUpdaterService(client: client, componentCoordinator: FakeUpdateComponentCoordinator())
 
         service.start()
         service.checkForUpdates()
@@ -89,7 +89,7 @@ struct AppUpdaterServiceTests {
     )
     func noUpdateFound(reason: AppUpdateUnavailabilityReason) {
         let client = FakeAppUpdateClient()
-        let service = AppUpdaterService(client: client)
+        let service = AppUpdaterService(client: client, componentCoordinator: FakeUpdateComponentCoordinator())
 
         service.start()
         service.checkForUpdates()
@@ -106,7 +106,7 @@ struct AppUpdaterServiceTests {
         let client = FakeAppUpdateClient()
         client.startError = TestError.expected
 
-        let service = AppUpdaterService(client: client)
+        let service = AppUpdaterService(client: client, componentCoordinator: FakeUpdateComponentCoordinator())
         service.start()
 
         #expect(
@@ -119,9 +119,9 @@ struct AppUpdaterServiceTests {
     }
 
     @Test("Update progresses through download and installation")
-    func installationProgress() {
+    func installationProgress() async throws {
         let client = FakeAppUpdateClient()
-        let service = AppUpdaterService(client: client)
+        let service = AppUpdaterService(client: client, componentCoordinator: FakeUpdateComponentCoordinator())
 
         service.start()
         service.checkForUpdates()
@@ -150,7 +150,7 @@ struct AppUpdaterServiceTests {
         client.sendReadyToInstall()
         #expect(service.state == .readyToInstall(update))
 
-        service.installAndRelaunch()
+        await service.installAndRelaunch()
 
         #expect(service.state == .installing(update))
         #expect(client.relaunchCallCount == 1)
@@ -159,7 +159,7 @@ struct AppUpdaterServiceTests {
     @Test("Cancellation returns to idle")
     func cancellation() {
         let client = FakeAppUpdateClient()
-        let service = AppUpdaterService(client: client)
+        let service = AppUpdaterService(client: client, componentCoordinator: FakeUpdateComponentCoordinator())
 
         service.start()
         service.checkForUpdates()
@@ -172,7 +172,7 @@ struct AppUpdaterServiceTests {
     @Test("Client availability is propagated")
     func clientAvailability() {
         let client = FakeAppUpdateClient()
-        let service = AppUpdaterService(client: client)
+        let service = AppUpdaterService(client: client, componentCoordinator: FakeUpdateComponentCoordinator())
 
         service.start()
         #expect(service.canCheckForUpdates)
@@ -193,12 +193,12 @@ struct AppUpdaterServiceTests {
             AppUpdateFailureReason.invalidMetadata,
             AppUpdateFailureReason.invalidUpdate,
             AppUpdateFailureReason.installationFailed,
-            AppUpdateFailureReason.unknown
+            AppUpdateFailureReason.unknown,
         ]
     )
     func updaterFailure(reason: AppUpdateFailureReason) {
         let client = FakeAppUpdateClient()
-        let service = AppUpdaterService(client: client)
+        let service = AppUpdaterService(client: client, componentCoordinator: FakeUpdateComponentCoordinator())
 
         service.start()
         service.checkForUpdates()
@@ -211,7 +211,7 @@ struct AppUpdaterServiceTests {
     @Test("Network failure during download permits retrying")
     func networkFailureDuringDownload() async throws {
         let client = FakeAppUpdateClient()
-        let service = AppUpdaterService(client: client)
+        let service = AppUpdaterService(client: client, componentCoordinator: FakeUpdateComponentCoordinator())
 
         service.start()
         service.checkForUpdates()
@@ -229,7 +229,7 @@ struct AppUpdaterServiceTests {
     @Test("Cancellation during download returns to idle")
     func cancellationDuringDownload() {
         let client = FakeAppUpdateClient()
-        let service = AppUpdaterService(client: client)
+        let service = AppUpdaterService(client: client, componentCoordinator: FakeUpdateComponentCoordinator())
 
         service.start()
         service.checkForUpdates()
@@ -243,21 +243,174 @@ struct AppUpdaterServiceTests {
     }
 
     @Test("Cancellation during installation returns to idle")
-    func cancellationDuringInstallation() {
+    func cancellationDuringInstallation() async throws {
         let client = FakeAppUpdateClient()
-        let service = AppUpdaterService(client: client)
+        let service = AppUpdaterService(client: client, componentCoordinator: FakeUpdateComponentCoordinator())
 
         service.start()
         service.checkForUpdates()
         client.sendFound(update)
         service.installAvailableUpdate()
         client.sendReadyToInstall()
-        service.installAndRelaunch()
+        await service.installAndRelaunch()
 
         #expect(service.state == .installing(update))
 
         client.sendCancellation()
 
+        try await waitUntil {
+            service.state == .idle
+        }
+
+        #expect(service.state == .idle)
+        #expect(service.canCheckForUpdates)
+    }
+
+    @Test("Component preparation failure does not start Sparkle")
+    func preparationFailureDoesNotInstall() async {
+        let client = FakeAppUpdateClient()
+        let coordinator = FakeUpdateComponentCoordinator()
+        coordinator.preparationError = TestError.expected
+
+        let service = AppUpdaterService(
+            client: client,
+            componentCoordinator: coordinator
+        )
+
+        service.start()
+        service.checkForUpdates()
+        client.sendFound(update)
+        service.installAvailableUpdate()
+        client.sendReadyToInstall()
+
+        await service.installAndRelaunch()
+
+        #expect(coordinator.preparedUpdates == [update])
+        #expect(client.relaunchCallCount == 0)
+        #expect(
+            service.state
+                == .failed(
+                    reason: .componentPreparationFailed
+                )
+        )
+        #expect(coordinator.recoveryCallCount == 1)
+    }
+
+    @Test("Installation failure recovers prepared components")
+    func installationFailureRecoversComponents() async throws {
+        let client = FakeAppUpdateClient()
+        let coordinator = FakeUpdateComponentCoordinator()
+
+        let service = AppUpdaterService(
+            client: client,
+            componentCoordinator: coordinator
+        )
+
+        service.start()
+        service.checkForUpdates()
+        client.sendFound(update)
+        service.installAvailableUpdate()
+        client.sendReadyToInstall()
+
+        await service.installAndRelaunch()
+
+        client.sendFailure(.installationFailed)
+
+        try await waitUntil {
+            coordinator.recoveryCallCount == 1
+                && service.state
+                    == .failed(reason: .installationFailed)
+        }
+
+        #expect(client.relaunchCallCount == 1)
+    }
+
+    @Test("Installation cancellation recovers prepared components")
+    func installationCancellationRecoversComponents() async throws {
+        let client = FakeAppUpdateClient()
+        let coordinator = FakeUpdateComponentCoordinator()
+
+        let service = AppUpdaterService(
+            client: client,
+            componentCoordinator: coordinator
+        )
+
+        service.start()
+        service.checkForUpdates()
+        client.sendFound(update)
+        service.installAvailableUpdate()
+        client.sendReadyToInstall()
+
+        await service.installAndRelaunch()
+
+        client.sendCancellation()
+
+        try await waitUntil {
+            coordinator.recoveryCallCount == 1
+                && service.state == .idle
+        }
+    }
+
+    @Test("Recovery failure exposes component recovery failure")
+    func recoveryFailureIsExposed() async throws {
+        let client = FakeAppUpdateClient()
+        let coordinator = FakeUpdateComponentCoordinator()
+        coordinator.recoveryError = TestError.expected
+
+        let service = AppUpdaterService(
+            client: client,
+            componentCoordinator: coordinator
+        )
+
+        service.start()
+        service.checkForUpdates()
+        client.sendFound(update)
+        service.installAvailableUpdate()
+        client.sendReadyToInstall()
+
+        await service.installAndRelaunch()
+        client.sendFailure(.installationFailed)
+
+        try await waitUntil {
+            service.state
+                == .failed(
+                    reason: .componentRecoveryFailed
+                )
+        }
+    }
+
+    @Test("Cancellation during preparation recovers without installing")
+    func cancellationDuringPreparation() async throws {
+        let client = FakeAppUpdateClient()
+        let coordinator = FakeUpdateComponentCoordinator()
+        coordinator.suspendsPreparation = true
+
+        let service = AppUpdaterService(
+            client: client,
+            componentCoordinator: coordinator
+        )
+
+        service.start()
+        service.checkForUpdates()
+        client.sendFound(update)
+        service.installAvailableUpdate()
+        client.sendReadyToInstall()
+
+        let installationTask = Task { @MainActor in
+            await service.installAndRelaunch()
+        }
+
+        try await waitUntil {
+            coordinator.isPreparationSuspended
+        }
+
+        client.sendCancellation()
+        coordinator.resumePreparation()
+
+        await installationTask.value
+
+        #expect(client.relaunchCallCount == 0)
+        #expect(coordinator.recoveryCallCount == 1)
         #expect(service.state == .idle)
         #expect(service.canCheckForUpdates)
     }
@@ -344,6 +497,75 @@ private final class FakeAppUpdateClient: AppUpdateClient {
     }
 }
 
+@MainActor
+private final class FakeUpdateComponentCoordinator:
+    UpdateComponentCoordinating
+{
+    var preparationError: Error?
+    var recoveryError: Error?
+    var suspendsPreparation = false
+
+    private(set) var preparedUpdates: [AvailableAppUpdate] = []
+    private(set) var recoveryCallCount = 0
+    private(set) var isPreparationSuspended = false
+
+    private var preparationContinuation: CheckedContinuation<Void, Never>?
+
+    func prepareForUpdate(
+        _ update: AvailableAppUpdate
+    ) async throws {
+        preparedUpdates.append(update)
+
+        if suspendsPreparation {
+            isPreparationSuspended = true
+
+            await withCheckedContinuation { (continuation: CheckedContinuation<Void, Never>) in
+                preparationContinuation = continuation
+            }
+
+            isPreparationSuspended = false
+        }
+
+        if let preparationError {
+            throw preparationError
+        }
+    }
+
+    func resumePreparation() {
+        let continuation = preparationContinuation
+        preparationContinuation = nil
+        continuation?.resume()
+    }
+
+    func recoverAfterUpdateFailure() async throws {
+        recoveryCallCount += 1
+
+        if let recoveryError {
+            throw recoveryError
+        }
+    }
+
+    func reconcileAfterUpdate(expectedBuild: String) async throws {
+    }
+}
+
+@MainActor
+private func waitUntil(
+    _ condition: @MainActor () -> Bool
+) async throws {
+    let clock = ContinuousClock()
+    let deadline = clock.now + .seconds(1)
+
+    while !condition() {
+        guard clock.now < deadline else {
+            throw TestError.timeout
+        }
+
+        await Task.yield()
+    }
+}
+
 private enum TestError: Error {
     case expected
+    case timeout
 }

@@ -5,3 +5,4 @@ disabled_rules:
   - trailing_newline
   - comma
   - opening_brace
+  - type_name

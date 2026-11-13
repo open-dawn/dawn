@@ -163,7 +163,9 @@ extension AboutView {
                 releaseNotesControl(for: update)
             } action: {
                 DButton(style: .primary) {
-                    updater.installAndRelaunch()
+                    Task {
+                        await updater.installAndRelaunch()
+                    }
                 } content: {
                     Text("Install and Relaunch")
                         .frame(minWidth: 200)
@@ -345,6 +347,10 @@ extension AboutView {
             "The downloaded update couldn't be verified."
         case .installationFailed:
             "The update couldn't be installed."
+        case .componentPreparationFailed:
+            "Dawn couldn't prepare its components for the update."
+        case .componentRecoveryFailed:
+            "DAWN couldn't restore its components after the update failed. Relaunch DAWN to retry."
         case .unknown:
             "The update couldn't be checked."
         }

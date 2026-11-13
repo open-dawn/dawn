@@ -31,4 +31,12 @@ public enum EventKind: String, Codable, Sendable, Hashable, CaseIterable {
     case updateSettings
     case settingsMutationAcknowledgement
     case applySettings
+
+    // MARK: Update
+    case getComponentIdentity
+    case componentIdentity
+    case prepareForApplicationUpdate
+    case applicationUpdatePreparationAcknowledged
+    case cancelApplicationUpdatePreparation
+    case applicationUpdatePreparationCancelled
 }
