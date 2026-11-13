@@ -19,6 +19,11 @@ struct AppDelegateTests {
         let service = EventBusServiceSpy()
         let provider = ContextProviderStub()
         let menuBarController = MenuBarControllerSpy()
+        let identity = ComponentIdentity(
+            identifier: EventBusMachService.agentBundleIdentifier,
+            version: "1.2.0",
+            build: "42"
+        )
 
         let delegate = AppDelegate(
             eventBusService: service,
@@ -30,6 +35,9 @@ struct AppDelegateTests {
                 makeAgentRuntimeComponents(
                     provider: provider
                 )
+            },
+            loadComponentIdentity: {
+                identity
             }
         )
 
@@ -41,6 +49,8 @@ struct AppDelegateTests {
         #expect(service.bus.hasListeners(for: .getContexts(GetContextsEvent())))
         #expect(service.bus.hasListeners(for: .debugPing(DebugPingEvent())))
         #expect(service.bus.hasListeners(for: .getSettings(GetSettingsEvent())))
+        #expect(service.bus.hasListeners(for: .getComponentIdentity(GetComponentIdentityEvent())))
+        #expect(service.bus.hasListeners(for: .prepareForApplicationUpdate(PrepareForApplicationUpdateEvent())))
     }
 
     @Test("Retained workspace listener answers context requests")
@@ -414,6 +424,50 @@ struct AppDelegateTests {
         #expect(receivedVisibility == expectedVisibility)
         #expect(menuBarController.isVisible == expectedVisibility)
     }
+
+    @Test("Retained update listener reports component identity")
+    func retainedUpdateListenerReportsIdentity() async throws {
+        let expectedIdentity = ComponentIdentity(
+            identifier: EventBusMachService.agentBundleIdentifier,
+            version: "1.2.0",
+            build: "42"
+        )
+
+        let service = EventBusServiceSpy()
+        let provider = ContextProviderStub()
+        let menuBarController = MenuBarControllerSpy()
+
+        let delegate = AppDelegate(
+            eventBusService: service,
+            repository: MockSettingsRepository(),
+            makeMenuBarController: { _, _ in
+                menuBarController
+            },
+            makeAgentRuntime: { _, _ in
+                makeAgentRuntimeComponents(provider: provider)
+            },
+            loadComponentIdentity: {
+                expectedIdentity
+            }
+        )
+
+        try await delegate.start()
+
+        let response = try await service.bus.ask(
+            .getComponentIdentity(
+                GetComponentIdentityEvent()
+            ),
+            timeout: .seconds(1)
+        )
+
+        #expect(
+            response == .componentIdentity(
+                ComponentIdentityEvent(
+                    identity: expectedIdentity
+                )
+            )
+        )
+    }
 }
 
 @MainActor
@@ -443,15 +497,25 @@ private final class EventBusServiceSpy: EventBusServicing {
             for: .getSettings(GetSettingsEvent())
         )
 
-        let hasApplySettings = bus.hasListeners(
+        let hasApplySettingsListener = bus.hasListeners(
             for: .applySettings(ApplySettingsEvent())
+        )
+
+        let hasComponentIdentityListener = bus.hasListeners(
+            for: .getComponentIdentity(GetComponentIdentityEvent())
+        )
+
+        let hasUpdatePreparationListener = bus.hasListeners(
+            for: .prepareForApplicationUpdate(PrepareForApplicationUpdateEvent())
         )
 
         listenersWereRegisteredWhenStarted =
             hasWorkspaceListener
             && hasDebugListener
             && hasSettingsListener
-            && hasApplySettings
+            && hasApplySettingsListener
+            && hasComponentIdentityListener
+            && hasUpdatePreparationListener
     }
 
     func stop() {

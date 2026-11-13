@@ -3,8 +3,10 @@ import libdawnUI
 import SwiftUI
 
 struct ContextDetailApplicationList: View {
+    var title: String = "Applications"
     let applications: [WorkspaceApplication]
     let interactionsDisabled: Bool
+    var horizontalPadding: CGFloat = 32
     let onAddApplications: () -> Void
     let onRemoveApplication: (WorkspaceApplication) -> Void
     let onDropApplications: ([URL]) -> Bool
@@ -13,7 +15,7 @@ struct ContextDetailApplicationList: View {
 
     var body: some View {
         VStack(alignment: .leading) {
-            Text("Applications")
+            Text(title)
                 .font(DawnTextStyle.sectionLabel)
 
             FlowLayout(spacing: 8) {
@@ -66,7 +68,7 @@ struct ContextDetailApplicationList: View {
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(.horizontal, 32)
+        .padding(.horizontal, horizontalPadding)
         .overlay {
             if isDropTargeted {
                 RoundedRectangle(cornerRadius: 12)

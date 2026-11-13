@@ -20,6 +20,9 @@ public enum ContextMutationAcknowledgement: Codable, Sendable, Equatable {
         case duplicateApplicationIdentifier(UUID)
         case contextNotFound(UUID)
         case contextArchived(UUID)
+        case contextNotActive(UUID)
+
+        case updateInProgress
 
         case persistence
         case unexpected
@@ -51,10 +54,14 @@ extension ContextMutationAcknowledgement.Failure: LocalizedError {
             "The selected context no longer exists."
         case .contextArchived:
             "The selected context is archived."
+        case .updateInProgress:
+            "Dawn is preparing to install an update"
         case .persistence:
             "Workspace manager could not save the changes."
         case .unexpected:
             "Workspace manager could not complete the request."
+        case .contextNotActive:
+            "The selected context is no longer active."
         }
     }
 }

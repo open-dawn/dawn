@@ -14,12 +14,14 @@ struct SettingsView: View {
     private var eventBusService
 
     @State private var viewModel: SettingsViewModel?
+    @State private var commandLineTool = CommandLineToolInstallModel()
 
     var body: some View {
         Group {
             if let viewModel {
                 SettingsContent(
                     viewModel: viewModel,
+                    commandLineTool: commandLineTool,
                     accessibilityPermissionService: accessibilityPermissionService,
                     isAgentConnected: eventBusService.isConnected
                 )
@@ -37,33 +39,76 @@ struct SettingsView: View {
                 await viewModel?.load()
             }
         }
+        .task {
+            await commandLineTool.refresh()
+        }
     }
 }
 
 struct SettingsContent: View {
     @Bindable var viewModel: SettingsViewModel
+    let commandLineTool: CommandLineToolInstallModel
     let accessibilityPermissionService: AccessibilityPermissionService
     let isAgentConnected: Bool
 
-    private let protectedAppsColumns = [
-        GridItem(.flexible(), spacing: 12),
-        GridItem(.flexible(), spacing: 12),
-        GridItem(.flexible(), spacing: 12),
-    ]
+    @State private var isApplicationPickerPresented = false
 
     private var interactionsDisabled: Bool {
         viewModel.isLoading || !isAgentConnected
     }
 
+    private var isShowingImportError: Binding<Bool> {
+        Binding(
+            get: { viewModel.applicationImportError != nil },
+            set: { isPresented in
+                if !isPresented {
+                    viewModel.dismissApplicationImportError()
+                }
+            }
+        )
+    }
+
     var body: some View {
+        VStack(alignment: .leading, spacing: 32) {
+            if commandLineTool.showsBanner {
+                CommandLineToolBanner(model: commandLineTool)
+            }
+
+            settingsForm
+            Spacer(minLength: 0)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+        .alert(
+            "Couldn't Add Application",
+            isPresented: isShowingImportError
+        ) {
+            Button("OK", role: .cancel) {
+                viewModel.dismissApplicationImportError()
+            }
+        } message: {
+            Text(viewModel.applicationImportError?.localizedDescription ?? "")
+        }
+        .sheet(isPresented: $isApplicationPickerPresented) {
+            SettingsProtectedApplicationPicker(
+                protectedApps: viewModel.draft.protectedApps,
+                onConfirm: { selected in
+                    viewModel.applyProtectedApplicationSelection(selected)
+                    isApplicationPickerPresented = false
+                },
+                onCancel: {
+                    isApplicationPickerPresented = false
+                }
+            )
+        }
+    }
+
+    private var settingsForm: some View {
         VStack(alignment: .leading, spacing: 32) {
             generalSettingsSection
             protectedAppsSection
             permissionsSection
             optionsSection
-            Spacer(minLength: 0)
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         .disabled(interactionsDisabled)
         .opacity(isAgentConnected ? 1 : 0.45)
     }
@@ -94,27 +139,33 @@ struct SettingsContent: View {
     }
 
     private var protectedAppsSection: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            sectionTitle("Protected Apps")
-
-            LazyVGrid(columns: protectedAppsColumns, spacing: 12) {
-                ForEach(viewModel.draft.protectedApps) { app in
-                    protectedAppCard(app)
-                }
-
-                addProtectedAppCard
-                #if DEBUG
-                addRunningAppsPickerCard
-                #endif
+        ContextDetailApplicationList(
+            title: "Protected Apps",
+            applications: protectedApplications,
+            interactionsDisabled: interactionsDisabled,
+            horizontalPadding: 0,
+            onAddApplications: {
+                isApplicationPickerPresented = true
+            },
+            onRemoveApplication: { application in
+                viewModel.removeProtectedApp(id: application.id)
+            },
+            onDropApplications: { urls in
+                viewModel.addProtectedApplications(at: urls)
             }
-            .padding(.horizontal, 12)
+        )
+    }
 
-            if let selectionError = viewModel.applicationSelectionError {
-                Text(selectionError.localizedDescription)
-                    .font(DawnTextStyle.caption)
-                    .foregroundStyle(DawnColors.dangerForeground)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-            }
+    private var protectedApplications: [WorkspaceApplication] {
+        viewModel.draft.protectedApps.map { application in
+            WorkspaceApplication(
+                id: application.id,
+                bundleIdentifier: application.bundleIdentifier,
+                displayName: application.displayName,
+                applicationURL: NSWorkspace.shared.urlForApplication(
+                    withBundleIdentifier: application.bundleIdentifier
+                )
+            )
         }
     }
 
@@ -205,87 +256,107 @@ struct SettingsContent: View {
         }
         .accessibilityElement(children: .combine)
     }
+}
 
-    private var addProtectedAppCard: some View {
-        DButton(style: .plain) {
-            Task {
-                await viewModel.addProtectedApp()
-            }
-        } content: {
-            HStack(spacing: 8) {
-                Image(systemName: "plus")
-                    .font(DawnTextStyle.buttonIcon)
-                Text("Add new App")
-                    .font(DawnTextStyle.body)
-            }
-            .foregroundStyle(DawnColors.secondaryForeground)
-            .frame(maxWidth: .infinity)
-            .padding(.horizontal, 12)
-            .padding(.vertical, 10)
+private struct SettingsProtectedApplicationPicker: View {
+    let protectedApps: [ProtectedApplication]
+    let onConfirm: ([ProtectedApplication]) -> Void
+    let onCancel: () -> Void
+
+    var body: some View {
+        ContextApplicationPicker(
+            loadApplications: loadInstalledApplications,
+            initialSelection: protectedApps.map { creationApplication(from: $0) },
+            confirmTitle: "Add",
+            onConfirm: { selected in
+                onConfirm(selected.map { protectedApplication(from: $0) })
+            },
+            onCancel: onCancel
+        )
+        .padding(16)
+        .frame(width: 320, height: 600)
+        .background {
+            DawnColors.primaryBackground
+                .ignoresSafeArea()
         }
-        .disabled(viewModel.isLoading)
-        .accessibilityLabel("Add new App")
+        .presentationBackground(DawnColors.primaryBackground)
     }
 
-    private var addRunningAppsPickerCard: some View {
-        DButton(style: .plain) {
-            Task {
-                await viewModel.addProtectedAppFromRunning()
-            }
-        } content: {
-            HStack(spacing: 8) {
-                Image(systemName: "plus")
-                    .font(DawnTextStyle.buttonIcon)
-                Text("running-apps picker")
-                    .font(DawnTextStyle.body)
-            }
-            .foregroundStyle(DawnColors.secondaryForeground)
-            .frame(maxWidth: .infinity)
-            .padding(.horizontal, 12)
-            .padding(.vertical, 10)
+    private func loadInstalledApplications() async throws -> [ContextCreationApplication] {
+        try await ApplicationsDirectoryProvider().applications().map {
+            creationApplication(from: $0)
         }
-        .disabled(viewModel.isLoading)
-        .accessibilityLabel("running-apps picker")
     }
 
-    private func protectedAppCard(_ app: ProtectedApplication) -> some View {
-        HStack(spacing: 10) {
-            Image(nsImage: icon(for: app))
-                .resizable()
-                .scaledToFit()
-                .frame(width: 28, height: 28)
+    private func creationApplication(
+        from application: WorkspaceApplication
+    ) -> ContextCreationApplication {
+        ContextCreationApplication(
+            id: application.id,
+            bundleIdentifier: application.bundleIdentifier,
+            displayName: application.displayName,
+            applicationURL: application.applicationURL
+        )
+    }
 
-            Text(app.displayName)
-                .font(DawnTextStyle.body)
-                .foregroundStyle(DawnColors.primaryForeground)
-                .lineLimit(1)
+    private func creationApplication(
+        from application: ProtectedApplication
+    ) -> ContextCreationApplication {
+        ContextCreationApplication(
+            bundleIdentifier: application.bundleIdentifier,
+            displayName: application.displayName
+        )
+    }
 
-            Spacer(minLength: 0)
+    private func protectedApplication(
+        from application: ContextCreationApplication
+    ) -> ProtectedApplication {
+        ProtectedApplication(
+            bundleIdentifier: application.bundleIdentifier,
+            displayName: application.displayName
+        )
+    }
+}
 
-            DButton(style: .compactIcon) {
-                viewModel.removeProtectedApp(id: app.id)
+private struct CommandLineToolBanner: View {
+    let model: CommandLineToolInstallModel
+
+    var body: some View {
+        HStack(alignment: .center, spacing: 12) {
+            VStack(alignment: .leading, spacing: 4) {
+                Text("dawncli is available to install.")
+                    .font(DawnTextStyle.body)
+                    .foregroundStyle(DawnColors.primaryForeground)
+
+                Text("Adds the command to Terminal.")
+                    .font(DawnTextStyle.caption)
+                    .foregroundStyle(DawnColors.secondaryForeground)
+
+                if let errorMessage = model.errorMessage {
+                    Text(errorMessage)
+                        .font(DawnTextStyle.caption)
+                        .foregroundStyle(DawnColors.dangerForeground)
+                }
+            }
+
+            Spacer(minLength: 12)
+
+            DButton(style: .primary) {
+                Task {
+                    await model.install()
+                }
             } content: {
-                Image(systemName: "xmark")
-                    .font(.headline.weight(.light))
+                Text("Install")
             }
-            .accessibilityLabel("Remove \(app.displayName)")
+            .disabled(model.isInstalling)
+            .opacity(model.isInstalling ? 0.25 : 1)
+            .accessibilityLabel("Install dawncli")
         }
-        .padding(.horizontal, 12)
-        .padding(.vertical, 10)
+        .padding(16)
+        .frame(maxWidth: .infinity, alignment: .leading)
         .background {
             RoundedRectangle(cornerRadius: 8, style: .continuous)
-                .fill(DawnColors.inputBackground)
-                .opacity(0.25)
+                .fill(DawnColors.secondaryBackground)
         }
-    }
-
-    private func icon(for app: ProtectedApplication) -> NSImage {
-        let applicationURL = NSWorkspace.shared.urlForApplication(
-            withBundleIdentifier: app.bundleIdentifier
-        )
-
-        return applicationURL.map {
-            NSWorkspace.shared.icon(forFile: $0.path(percentEncoded: false))
-        } ?? NSWorkspace.shared.icon(for: .application)
     }
 }

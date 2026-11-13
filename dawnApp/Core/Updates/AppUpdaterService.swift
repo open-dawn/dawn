@@ -20,6 +20,15 @@ final class AppUpdaterService: AppUpdating {
     @ObservationIgnored
     private var activeUpdate: AvailableAppUpdate?
 
+    @ObservationIgnored
+    private let componentCoordinator: any UpdateComponentCoordinating
+
+    @ObservationIgnored
+    private var componentsPreparedForInstallation = false
+
+    @ObservationIgnored
+    private var recoveryTask: Task<Void, Never>?
+
     private var clientCanCheckForUpdates = false
 
     private(set) var state: AppUpdateState = .idle
@@ -37,9 +46,10 @@ final class AppUpdaterService: AppUpdating {
         }
     }
 
-    init(client: any AppUpdateClient) {
+    init(client: any AppUpdateClient, componentCoordinator: any UpdateComponentCoordinating) {
         self.client = client
-        self.clientCanCheckForUpdates = client.canCheckForUpdates
+        self.componentCoordinator = componentCoordinator
+        clientCanCheckForUpdates = client.canCheckForUpdates
         client.delegate = self
     }
 
@@ -81,12 +91,39 @@ final class AppUpdaterService: AppUpdating {
         client.installAvailableUpdate()
     }
 
-    func installAndRelaunch() {
+    func installAndRelaunch() async {
         guard case let .readyToInstall(update) = state else {
             return
         }
 
         state = .installing(update)
+
+        do {
+            try await componentCoordinator.prepareForUpdate(update)
+        } catch {
+            let description = String(describing: error)
+
+            #log(
+                "Failed to prepare update components: \(description, privacy: .private)",
+                level: .error,
+                category: .appLifecycle
+            )
+
+            let finalState: AppUpdateState = state == .installing(update) ? .failed(
+                reason: .componentPreparationFailed
+            ) : state
+
+            await recoverComponents(finalState: finalState)
+            return
+        }
+
+        guard state == .installing(update) else {
+            let interruptedState = state
+            await recoverComponents(finalState: interruptedState)
+            return
+        }
+
+        componentsPreparedForInstallation = true
         client.installAndRelaunch()
     }
 
@@ -99,6 +136,43 @@ final class AppUpdaterService: AppUpdating {
 
         case .idle, .updateUnavailable, .installing, .failed:
             return
+        }
+    }
+
+    private func recoverComponents(finalState: AppUpdateState) async {
+        do {
+            try await componentCoordinator.recoverAfterUpdateFailure()
+
+            state = finalState
+        } catch {
+            let description = String(describing: error)
+
+            #log(
+                "#Failed to recover update components: \(description, privacy: .private)",
+                level: .error,
+                category: .appLifecycle
+            )
+
+            state = .failed(reason: .componentRecoveryFailed)
+        }
+
+        activeUpdate = nil
+        componentsPreparedForInstallation = false
+    }
+
+    private func scheduleComponentRecovery(finalState: AppUpdateState) {
+        guard recoveryTask == nil else {
+            return
+        }
+
+        recoveryTask = Task { @MainActor [weak self] in
+            guard let self else {
+                return
+            }
+
+            await recoverComponents(finalState: finalState)
+
+            recoveryTask = nil
         }
     }
 }
@@ -164,12 +238,22 @@ extension AppUpdaterService: AppUpdateClientDelegate {
     }
 
     func appUpdateClientDidCancel(_ client: any AppUpdateClient) {
-        activeUpdate = nil
-        state = .idle
+        guard componentsPreparedForInstallation else {
+            activeUpdate = nil
+            state = .idle
+            return
+        }
+
+        scheduleComponentRecovery(finalState: .idle)
     }
 
     func appUpdateClient(_ client: any AppUpdateClient, didFailWith reason: AppUpdateFailureReason) {
-        activeUpdate = nil
-        state = .failed(reason: reason)
+        guard componentsPreparedForInstallation else {
+            activeUpdate = nil
+            state = .failed(reason: reason)
+            return
+        }
+
+        scheduleComponentRecovery(finalState: .failed(reason: reason))
     }
 }

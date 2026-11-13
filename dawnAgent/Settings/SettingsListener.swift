@@ -28,15 +28,19 @@ final class SettingsListener: Listener {
     private let bus: EventBus
     private let settingsProvider: any SettingsProviding
     private let applicator: any SettingsApplying
+    private let lifecycle: AgentLifecycleState
 
     init(
         bus: EventBus,
         settingsProvider: any SettingsProviding,
-        applicator: any SettingsApplying
+        applicator: any SettingsApplying,
+        lifecycle: AgentLifecycleState
     ) {
         self.bus = bus
         self.settingsProvider = settingsProvider
         self.applicator = applicator
+        self.lifecycle = lifecycle
+
         bus.addListener(self, kinds: [
             .getSettings,
             .updateSettings,
@@ -45,6 +49,10 @@ final class SettingsListener: Listener {
     }
 
     func handle(_ event: Event, reply: (@Sendable (Event) -> Void)?) {
+        guard accepts(event, reply: reply) else {
+            return
+        }
+
         switch event {
         case .getSettings:
             Task { @MainActor in
@@ -102,5 +110,37 @@ final class SettingsListener: Listener {
         }
 
         return .unexpected
+    }
+
+    private func accepts(_ event: Event, reply: (@Sendable (Event) -> Void)?) -> Bool {
+        guard event.isSettingsMutation else {
+            return true
+        }
+
+        guard lifecycle.acceptsMutations else {
+            if case .updateSettings = event {
+                reply?(
+                    .settingsMutationAcknowledgement(
+                        .failure(failure: .updateInProgress)
+                    )
+                )
+            }
+
+            return false
+        }
+
+        return true
+    }
+}
+
+private extension Event {
+    var isSettingsMutation: Bool {
+        switch self {
+        case .updateSettings, .applySettings:
+            true
+
+        default:
+            false
+        }
     }
 }

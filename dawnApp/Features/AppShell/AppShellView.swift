@@ -85,7 +85,7 @@ struct AppShellView: View {
                     content: SidebarContent(
                         contexts: activeContexts,
                         archivedContexts: archivedContexts,
-                        activeContextID: viewModel.activeContextID,
+                        activeContextID: store.activity.activeContextID,
                         busyContextID: viewModel.operationInProgress,
                         isLoading: store.isLoading,
                         isAgentRunning: eventBusService.isConnected,
@@ -118,10 +118,12 @@ struct AppShellView: View {
             .background {
                 WindowTranslucency()
             }
-            .preferredColorScheme(.dark)
             .onChange(of: store.contexts) { _, contexts in
                 navigation.contextsDidChange(contexts)
                 viewModel.reconcileActiveContext(with: contexts.filter { !$0.isArchived })
+            }
+            .onChange(of: store.activity.activeContextID, initial: true) { _, activeContextID in
+                viewModel.synchronizeActiveContext(activeContextID)
             }
             .onChange(of: viewModel.error) { previous, error in
                 presentSidebarError(previous, error)

@@ -3,9 +3,13 @@ import Observation
 import libdawn
 import dawnLogging
 
+enum SettingsEventBusConnectionError: Error, Equatable {
+    case timeout
+}
+
 @Observable
 @MainActor
-final class SettingsEventBusService {
+final class SettingsEventBusService: AgentUpdateConnectionWaiting {
     private let transport: any RemoteEventTransportClient
     private let readyObserver: SettingsEventBusReadyObserver
     private var isRunning = false
@@ -16,18 +20,34 @@ final class SettingsEventBusService {
     private(set) var bus: RemoteEventBus
     private(set) var isConnected = false
     private(set) var connectionState: RemoteConnectionState = .disconnected
+    private(set) var connectionGeneration: UInt
 
     init(
-        transport: any RemoteEventTransportClient = XPCRemoteEventTransportClient(
-            machServiceName: SettingsEventBusRendezvous.machServiceName
-        ),
+        transport: (any RemoteEventTransportClient)? = nil,
         readyObserver: SettingsEventBusReadyObserver = SettingsEventBusReadyObserver()
     ) {
+        let transport = transport ?? Self.makeTransport()
         self.transport = transport
         self.readyObserver = readyObserver
         self.bus = RemoteEventBus(transport: transport)
-        self.connectionState = transport.connectionState
-        self.isConnected = transport.connectionState == .connected
+
+        let initialState = transport.connectionState
+
+        connectionState = initialState
+        isConnected = initialState == .connected
+        connectionGeneration = initialState == .connected ? 1 : 0
+    }
+
+    private static func makeTransport() -> any RemoteEventTransportClient {
+        #if DEBUG
+        DistributedRemoteEventTransportClient(
+            serviceName: EventBusMachService.developmentServiceName
+        )
+        #else
+        XPCRemoteEventTransportClient(
+            machServiceName: SettingsEventBusRendezvous.machServiceName
+        )
+        #endif
     }
 
     func start() {
@@ -86,6 +106,8 @@ final class SettingsEventBusService {
     private func handleConnectionStateChange(_ state: RemoteConnectionState) {
         guard isRunning else { return }
 
+        let wasConnected = connectionState == .connected
+
         let droppedWhileConnected = connectionState == .connected && state == .disconnected
 
         let initialHandshakeFailed =
@@ -97,12 +119,36 @@ final class SettingsEventBusService {
         isConnected = state == .connected
 
         if state == .connected {
+            if !wasConnected {
+                connectionGeneration &+= 1
+            }
+
             retryAfterInitialHandshake = false
         }
 
         if droppedWhileConnected || initialHandshakeFailed {
             retryAfterInitialHandshake = false
             reconnectIfNeeded()
+        }
+    }
+
+    func waitUntilConnected(after generation: UInt?, timeout: Duration) async throws {
+        let deadline = ContinuousClock.now + timeout
+
+        while true {
+            try Task.checkCancellation()
+
+            let reachedRequiredGeneration = generation.map { connectionGeneration != $0 } ?? true
+
+            if isConnected && reachedRequiredGeneration {
+                return
+            }
+
+            guard ContinuousClock.now < deadline else {
+                throw SettingsEventBusConnectionError.timeout
+            }
+
+            try await Task.sleep(for: .milliseconds(25))
         }
     }
 

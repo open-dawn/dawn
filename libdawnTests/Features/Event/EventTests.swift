@@ -1,6 +1,7 @@
 import Foundation
-@testable import libdawn
 import Testing
+
+@testable import libdawn
 
 @Suite("Event")
 struct EventTests {
@@ -39,6 +40,10 @@ struct EventTests {
             (
                 event: Event.switchContext(SwitchContextEvent(contextID: UUID())),
                 kind: EventKind.switchContext
+            ),
+            (
+                event: Event.stopContext(StopContextEvent(contextID: UUID())),
+                kind: EventKind.stopContext
             ),
             (
                 event: Event.contextMutationAcknowledged(.success(contextID: UUID())),
@@ -80,6 +85,52 @@ struct EventTests {
                 event: Event.applySettings(ApplySettingsEvent()),
                 kind: EventKind.applySettings
             ),
+            (
+                event: Event.getComponentIdentity(GetComponentIdentityEvent()),
+                kind: EventKind.getComponentIdentity
+            ),
+            (
+                event:
+                    Event
+                    .componentIdentity(
+                        ComponentIdentityEvent(identity: ComponentIdentity(identifier: "", version: "", build: ""))
+                    ),
+                kind: EventKind.componentIdentity
+            ),
+            (
+                event: Event.prepareForApplicationUpdate(PrepareForApplicationUpdateEvent()),
+                kind: EventKind.prepareForApplicationUpdate
+            ),
+            (
+                event:
+                    Event
+                    .applicationUpdatePreparationAcknowledged(
+                        ApplicationUpdatePrepAcknowledgement.ready(
+                            identity: ComponentIdentity(identifier: "", version: "", build: "")
+                        )
+                    ),
+                kind: EventKind.applicationUpdatePreparationAcknowledged
+            ),
+            (
+                event:
+                    Event.cancelApplicationUpdatePreparation(
+                        CancelApplicationUpdatePreparationEvent()
+                    ),
+                kind: EventKind.cancelApplicationUpdatePreparation
+            ),
+            (
+                event:
+                    Event.applicationUpdatePreparationCancelled(
+                        ApplicationUpdatePrepCancelledEvent(
+                            identity: ComponentIdentity(
+                                identifier: "",
+                                version: "",
+                                build: ""
+                            )
+                        )
+                    ),
+                kind: EventKind.applicationUpdatePreparationCancelled
+            ),
         ]
     )
     func exposesKind(_ eventWithKind: (event: Event, kind: EventKind)) {
@@ -100,15 +151,26 @@ struct EventTests {
             .archiveContext(ArchiveContextEvent(contextID: UUID())),
             .unarchiveContext(UnarchiveContextEvent(contextID: UUID())),
             .switchContext(SwitchContextEvent(contextID: UUID())),
+            .stopContext(StopContextEvent(contextID: UUID())),
             .contextMutationAcknowledged(ContextMutationAcknowledgement.success(contextID: UUID())),
             .contextMutationAcknowledged(ContextMutationAcknowledgement.failure(failure: .emptyContextName)),
             .contextMutationAcknowledged(ContextMutationAcknowledgement.failure(failure: .contextNotFound(UUID()))),
+            .contextMutationAcknowledged(ContextMutationAcknowledgement.failure(failure: .contextNotActive(UUID()))),
             .availableContexts(
-                AvailableContextsEvent(contexts: [
-                    WorkspaceContext(name: "Placeholder", symbol: "book"),
-                    WorkspaceContext(name: "Old", symbol: "archivebox", isArchived: true)
-                ])
+                AvailableContextsEvent(
+                    contexts: [
+                        WorkspaceContext(name: "Placeholder", symbol: "book"),
+                        WorkspaceContext(name: "Old", symbol: "archivebox", isArchived: true),
+                    ],
+                    activity: WorkspaceActivityState(
+                        activeSession: .init(
+                            contextID: UUID(),
+                            startedAt: Date(timeIntervalSince1970: 100)
+                        )
+                    )
+                )
             ),
+            .contextMutationAcknowledged(ContextMutationAcknowledgement.failure(failure: .updateInProgress)),
             .getAccessibilityStatus(GetAccessibilityStatusEvent()),
             .promptAccessibilityTrust(PromptAccessibilityTrustEvent()),
             .accessibilityStatus(AccessibilityStatusEvent(isTrusted: false)),
@@ -116,8 +178,36 @@ struct EventTests {
             .settingsFetched(SettingsFetchedEvent(settings: Settings())),
             .availableSettings(AvailableSettingsEvent(settings: Settings())),
             .settingsMutationAcknowledgement(SettingsMutationAcknowledgement.success),
+            .settingsMutationAcknowledgement(.failure(failure: .updateInProgress)),
             .updateSettings(UpdateSettingsEvent(settings: Settings())),
             .applySettings(ApplySettingsEvent()),
+            .getComponentIdentity(GetComponentIdentityEvent()),
+            .componentIdentity(
+                ComponentIdentityEvent(identity: ComponentIdentity(identifier: "", version: "", build: ""))
+            ),
+            .prepareForApplicationUpdate(PrepareForApplicationUpdateEvent()),
+            .applicationUpdatePreparationAcknowledged(
+                ApplicationUpdatePrepAcknowledgement.failure(failure: .unexpected)
+            ),
+            .applicationUpdatePreparationAcknowledged(
+                ApplicationUpdatePrepAcknowledgement.failure(failure: .workspaceShutdownFailed)
+            ),
+            .applicationUpdatePreparationAcknowledged(
+                ApplicationUpdatePrepAcknowledgement
+                    .ready(identity: ComponentIdentity(identifier: "", version: "", build: ""))
+            ),
+            .cancelApplicationUpdatePreparation(
+                CancelApplicationUpdatePreparationEvent()
+            ),
+            .applicationUpdatePreparationCancelled(
+                ApplicationUpdatePrepCancelledEvent(
+                    identity: ComponentIdentity(
+                        identifier: "",
+                        version: "",
+                        build: ""
+                    )
+                )
+            ),
         ]
     )
     func roundTripsThroughJSON(_ event: Event) throws {
@@ -127,5 +217,17 @@ struct EventTests {
         let data = try encoder.encode(event)
         let decoded = try decoder.decode(Event.self, from: data)
         #expect(decoded == event)
+    }
+
+    @Test("Context snapshots decode activity from older payloads as empty")
+    func contextSnapshotsDecodeOlderPayloads() throws {
+        let data = Data(#"{"contexts":[]}"#.utf8)
+        let decoder = JSONDecoder()
+
+        let available = try decoder.decode(AvailableContextsEvent.self, from: data)
+        let fetched = try decoder.decode(ContextsFetchedEvent.self, from: data)
+
+        #expect(available.activity == .empty)
+        #expect(fetched.activity == .empty)
     }
 }

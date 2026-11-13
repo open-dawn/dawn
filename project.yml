@@ -2,7 +2,7 @@ name: dawn
 options:
   bundleIdPrefix: app.opendawn
   deploymentTarget:
-    macOS: &deployversion "26.0"
+    macOS: &deployversion "15.0"
   preGenCommand: bash Scripts/generate_build_ticket.sh
   fileTypes:
     icon:
@@ -12,8 +12,8 @@ options:
 settings:
   base:
     SWIFT_VERSION: &swiftversion "6"
-    MARKETING_VERSION: &mktversion "1.0.0"
-    CURRENT_PROJECT_VERSION: &buildversion "4"
+    MARKETING_VERSION: &mktversion "1.1.0"
+    CURRENT_PROJECT_VERSION: &buildversion "5"
 
 configFiles:
   Release: Config/Release.xcconfig
@@ -24,6 +24,9 @@ packages:
   Sparkle:
     url: https://github.com/sparkle-project/Sparkle
     exactVersion: 2.10.0
+  ArgumentParser:
+    url: https://github.com/apple/swift-argument-parser
+    exactVersion: 1.8.2
 
 targets:
 
@@ -81,6 +84,12 @@ targets:
         copy:
           destination: wrapper
           subpath: Contents/Library/LoginItems
+      - target: dawncli
+        link: false
+        embed: true
+        codeSign: true
+        copy:
+          destination: executables
       - package: dawnLogging
       - package: Sparkle
     postCompileScripts:
@@ -144,7 +153,7 @@ targets:
   libdawn:
     type: framework
     platform: macOS
-    deploymentTarget: "15.0"
+    deploymentTarget: *deployversion
     sources:
       - path: libdawn
         excludes:
@@ -200,6 +209,36 @@ targets:
     scheme:
       testTargets:
         - libdawnUITests
+      gatherCoverageData: true
+
+  dawncli:
+    type: tool
+    platform: macOS
+    deploymentTarget: *deployversion
+    sources:
+      - dawncli
+    settings:
+      base:
+        PRODUCT_NAME: dawncli
+        PRODUCT_MODULE_NAME: dawncli
+        MARKETING_VERSION: *mktversion
+        CURRENT_PROJECT_VERSION: *buildversion
+        SWIFT_VERSION: *swiftversion
+        GENERATE_INFOPLIST_FILE: YES
+        SKIP_INSTALL: YES
+        LD_RUNPATH_SEARCH_PATHS: $(inherited) @executable_path @executable_path/../Frameworks
+      configs:
+        Debug:
+          ENABLE_TESTABILITY: YES
+    dependencies:
+      - target: libdawn
+      - package: ArgumentParser
+        product: ArgumentParser
+    postCompileScripts:
+      - *swiftlint
+    scheme:
+      testTargets:
+        - dawncliTests
       gatherCoverageData: true
 
   libdawnTests:
@@ -265,6 +304,25 @@ targets:
     postCompileScripts:
       - *swiftlint
 
+  dawncliTests:
+    type: bundle.unit-test
+    platform: macOS
+    deploymentTarget: *deployversion
+    sources:
+      - dawncliTests
+      - path: dawncli
+        excludes:
+          - Main.swift
+    settings:
+      GENERATE_INFOPLIST_FILE: YES
+      SWIFT_VERSION: *swiftversion
+    dependencies:
+      - target: libdawn
+      - package: ArgumentParser
+        product: ArgumentParser
+    postCompileScripts:
+      - *swiftlint
+
 schemes:
   dawn:
     build:
@@ -273,10 +331,12 @@ schemes:
         dawnAgent: all
         dawnApp: all
         libdawnUI: all
+        dawncli: all
         libdawnTests: [test]
         dawnAgentTests: [test]
         dawnAppTests: [test]
         libdawnUITests: [test]
+        dawncliTests: [test]
     test:
       gatherCoverageData: true
       targets:
@@ -284,4 +344,5 @@ schemes:
         - dawnAgentTests
         - dawnAppTests
         - libdawnUITests
+        - dawncliTests
         - package: dawnLogging/dawnLoggingTests

@@ -8,10 +8,6 @@ final class ContextDetailViewModel {
     private let saveDebounce: Duration
 
     private(set) var operationInProgress: UUID?
-    // PIN-145: Active context stays in this view model. dawnAgent records it on
-    // WorkspaceRuntime.lastRequestedContextID for the in-process menu bar and
-    // does not publish it, so this id is only the activation this window started.
-    // That local id is what flips the header button to Stop, and Stop has no action.
     private(set) var activeContextID: UUID?
     private(set) var error: SettingsContextStoreError?
     var applicationImportError: ApplicationSelectionError?
@@ -56,15 +52,13 @@ final class ContextDetailViewModel {
     }
 
     func reconcileActiveContext(with contexts: [WorkspaceContext]) {
-        guard let activeContextID else {
-            return
-        }
-
-        let stillExists = contexts.contains { $0.id == activeContextID }
-        if !stillExists {
+        if let activeContextID,
+           !contexts.contains(where: { $0.id == activeContextID }) {
             self.activeContextID = nil
         }
     }
+
+    func synchronizeActiveContext(_ contextID: UUID?) { activeContextID = contextID }
 
     func runContext(_ context: WorkspaceContext) async {
         guard operationInProgress == nil, !isChangingArchival else { return }
@@ -119,6 +113,28 @@ final class ContextDetailViewModel {
     @discardableResult
     func unarchiveContext(_ context: WorkspaceContext) async -> Bool {
         await changeArchival(of: context, archived: false)
+    }
+
+    func stopContext(_ context: WorkspaceContext) async {
+        guard operationInProgress == nil, !isChangingArchival else { return }
+
+        operationInProgress = context.id
+        defer { operationInProgress = nil }
+
+        await flushEdits(for: context.id)
+        guard draft?.id != context.id || payloadToSave() == nil else {
+            return
+        }
+
+        do {
+            try await contextManager.stopContext(id: context.id)
+            activeContextID = nil
+            error = nil
+        } catch let error as SettingsContextStoreError {
+            self.error = error
+        } catch {
+            self.error = .unknown
+        }
     }
 
     private func changeArchival(of context: WorkspaceContext, archived: Bool) async -> Bool {
@@ -314,12 +330,14 @@ extension ContextDetailViewModel {
         case let .success(saved):
             committed = saved
             error = nil
-            if draftDiffers(from: saved) {
+            if draft?.editableContentDiffers(from: saved) == true {
                 saveAgain = true
             }
+
         case let .failure(error):
             self.error = resolvedSaveError(error)
-            if let saving, draftDiffers(from: saving) {
+            if let saving,
+               draft?.editableContentDiffers(from: saving) == true {
                 saveAgain = true
             }
         }
@@ -354,26 +372,11 @@ extension ContextDetailViewModel {
             return saving
         }
 
-        guard saving.name != committed.name
-            || saving.symbol != committed.symbol
-            || saving.transition.activationPolicy != committed.transition.activationPolicy
-            || saving.applications != committed.applications
-        else {
+        guard saving.editableContentDiffers(from: committed) else {
             return nil
         }
 
         return saving
-    }
-
-    private func draftDiffers(from saving: WorkspaceContext) -> Bool {
-        guard let draft, draft.id == saving.id else {
-            return false
-        }
-
-        return draft.name != saving.name
-            || draft.symbol != saving.symbol
-            || draft.transition.activationPolicy != saving.transition.activationPolicy
-            || draft.applications != saving.applications
     }
 
     private func flushEdits(for contextID: UUID) async {

@@ -262,7 +262,7 @@ extension SparkleUpdateClient: SPUUserDriver {
 
         let nsError = error as NSError
         let stage = diagnosticStage.rawValue
-        let reason = Self.failureReason(from: error)
+        _ = Self.failureReason(from: error)
 
         #log(
             """

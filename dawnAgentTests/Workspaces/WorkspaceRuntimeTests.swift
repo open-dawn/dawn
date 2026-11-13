@@ -279,7 +279,8 @@ struct WorkspaceRuntimeTests {
         let bus = EventBus()
         let listener = WindowManagerListener(
             bus: bus,
-            workspace: workspace
+            workspace: workspace,
+            lifecycle: AgentLifecycleState()
         )
 
         let response = try await bus.ask(
@@ -368,13 +369,16 @@ struct WorkspaceRuntimeTests {
 
         let contextManager = FakeContextManager()
         contextManager.contexts = [context]
+        let publisher = RuntimeSnapshotPublisherSpy()
 
         let runtime = WorkspaceRuntime(
             contextManager: contextManager,
             contextSwitching: ContextSwitchingSpy(),
-            clock: clock
+            clock: clock,
+            snapshotPublisher: publisher
         )
 
+        await runtime.refresh()
         try await runtime.activateContext(id: context.id)
 
         let stoppedAt = Date(timeIntervalSince1970: 200)
@@ -385,6 +389,25 @@ struct WorkspaceRuntimeTests {
         #expect(runtime.activeContextID == nil)
         #expect(runtime.activeSince == nil)
         #expect(runtime.lastActiveAt(for: context.id) == stoppedAt)
+        #expect(publisher.contextSnapshots == [[context], [context]])
+        #expect(
+            publisher.activitySnapshots.map(\.activeContextID)
+                == [context.id, nil]
+        )
+    }
+}
+
+@MainActor
+private final class RuntimeSnapshotPublisherSpy: ContextSnapshotPublishing {
+    private(set) var contextSnapshots: [[WorkspaceContext]] = []
+    private(set) var activitySnapshots: [WorkspaceActivityState] = []
+
+    func publishAvailableContexts(
+        _ contexts: [WorkspaceContext],
+        activity: WorkspaceActivityState
+    ) {
+        contextSnapshots.append(contexts)
+        activitySnapshots.append(activity)
     }
 }
 

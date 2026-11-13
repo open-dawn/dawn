@@ -15,7 +15,7 @@ GitHub Releases is the canonical source for the release artifacts. The website m
 
 The first alpha supports:
 
-- macOS 26.0 or later.
+- macOS 15.0 or later.
 - Apple Silicon Macs.
 - Distribution through a signed and notarized macOS disk image.
 - Installation by dragging DAWN into `/Applications`.

@@ -38,6 +38,9 @@ private struct SettingsViewPreviewHost: View {
     private let configure: ((SettingsViewModel) -> Void)?
 
     @State private var viewModel: SettingsViewModel?
+    @State private var commandLineTool = CommandLineToolInstallModel(
+        installer: PreviewCommandLineToolInstaller()
+    )
 
     init(
         baseline: libdawn.Settings,
@@ -52,6 +55,7 @@ private struct SettingsViewPreviewHost: View {
             if let viewModel {
                 SettingsContent(
                     viewModel: viewModel,
+                    commandLineTool: commandLineTool,
                     accessibilityPermissionService: AccessibilityPermissionService(
                         bus: PreviewSettingsEventBus()
                     ),
@@ -71,10 +75,7 @@ private struct SettingsViewPreviewHost: View {
             }
 
             let client = PreviewSettingsViewStoreClient(settings: baseline)
-            let loaded = SettingsViewModel(
-                client: client,
-                applicationSelector: PreviewApplicationSelector()
-            )
+            let loaded = SettingsViewModel(client: client)
             await loaded.load()
             configure?(loaded)
             viewModel = loaded
@@ -126,11 +127,12 @@ private final class PreviewSettingsViewStoreClient: SettingsViewStoreClient {
     }
 }
 
-@MainActor
-private final class PreviewApplicationSelector: ApplicationSelecting {
-    func selectApplication() async throws -> WorkspaceApplication? {
-        nil
+private struct PreviewCommandLineToolInstaller: CommandLineToolInstalling {
+    func lookup() async throws -> CommandLineToolLookup {
+        .missing
     }
+
+    func installLink(from _: URL, to _: URL) async throws(CommandLineToolInstallError) {}
 }
 
 @MainActor

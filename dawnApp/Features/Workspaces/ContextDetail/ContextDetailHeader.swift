@@ -11,6 +11,7 @@ struct ContextDetailHeader: View {
     let onArchive: () -> Void
     let onUnarchive: () -> Void
     let onDelete: () -> Void
+    let onStop: () -> Void
 
     @State private var isDeleteConfirmationPresented = false
 
@@ -25,8 +26,8 @@ struct ContextDetailHeader: View {
 
             if !isArchived {
                 if isActive {
-                    // PIN-145: Stop has no action yet. This app cannot ask the agent to stop.
                     DButton(style: .danger) {
+                        onStop()
                     } content: {
                         Text("Stop")
                     } leading: {
