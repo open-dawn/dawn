@@ -357,13 +357,15 @@ struct DawnAgentUpdateComponentTests {
         #expect(component.registrationState == .requiresApproval)
     }
 
-    @Test("Recovery restores the recorded registration state")
-    func recoveryRestoresRegistrationState() async throws {
+    @Test("Recovery does not contact an agent that was not enabled")
+    func recoveryDoesNotContactInactiveAgent() async throws {
+        let requester = AgentUpdateEventRequesterSpy()
+        let waiter = AgentUpdateConnectionWaiterSpy()
         let service = DawnAgentServiceManagerSpy()
 
         let component = DawnAgentUpdateComponent(
-            eventRequester: AgentUpdateEventRequesterSpy(),
-            connectionWaiter: AgentUpdateConnectionWaiterSpy(),
+            eventRequester: requester,
+            connectionWaiter: waiter,
             service: service
         )
 
@@ -376,6 +378,8 @@ struct DawnAgentUpdateComponentTests {
                 .requiresApproval
             ]
         )
+        #expect(waiter.waitedAfterGenerations.isEmpty)
+        #expect(requester.events.isEmpty)
     }
 
     @Test("Registration restoration failure is propagated")
@@ -413,6 +417,163 @@ struct DawnAgentUpdateComponentTests {
                 )
             )
         )
+    }
+
+    @Test("Recovery resumes a previously enabled agent")
+    func recoveryResumesEnabledAgent() async throws {
+        let requester = AgentUpdateEventRequesterSpy()
+        requester.response =
+            .applicationUpdatePreparationCancelled(
+                ApplicationUpdatePrepCancelledEvent(
+                    identity: identity
+                )
+            )
+
+        let waiter = AgentUpdateConnectionWaiterSpy()
+        let service = DawnAgentServiceManagerSpy()
+
+        let component = DawnAgentUpdateComponent(
+            eventRequester: requester,
+            connectionWaiter: waiter,
+            service: service
+        )
+
+        try await component.recoverAfterUpdateFailure(
+            previousRegistrationState: .enabled
+        )
+
+        #expect(
+            service.restoredRegistrationStates == [.enabled]
+        )
+        #expect(waiter.waitedAfterGenerations == [nil])
+        #expect(waiter.timeouts == [.seconds(5)])
+        #expect(
+            requester.events == [
+                .cancelApplicationUpdatePreparation(
+                    CancelApplicationUpdatePreparationEvent()
+                )
+            ]
+        )
+        #expect(requester.timeouts == [.seconds(5)])
+    }
+
+    @Test("Unexpected recovery response is propagated")
+    func unexpectedRecoveryResponseIsPropagated() async {
+        let requester = AgentUpdateEventRequesterSpy()
+        requester.response = .debugPong(
+            DebugPongEvent(message: "unexpected")
+        )
+
+        let component = DawnAgentUpdateComponent(
+            eventRequester: requester,
+            connectionWaiter: AgentUpdateConnectionWaiterSpy(),
+            service: DawnAgentServiceManagerSpy()
+        )
+
+        await #expect(
+            throws:
+                DawnAgentUpdateComponentError
+                .unexpectedResponse(.debugPong)
+        ) {
+            try await component.recoverAfterUpdateFailure(
+                previousRegistrationState: .enabled
+            )
+        }
+    }
+
+    @Test("Recovery rejects an unexpected agent identity")
+    func recoveryRejectsUnexpectedIdentity() async {
+        let requester = AgentUpdateEventRequesterSpy()
+        requester.response =
+            .applicationUpdatePreparationCancelled(
+                ApplicationUpdatePrepCancelledEvent(
+                    identity: ComponentIdentity(
+                        identifier: "example.unexpected.agent",
+                        version: "1.2.0",
+                        build: "42"
+                    )
+                )
+            )
+
+        let component = DawnAgentUpdateComponent(
+            eventRequester: requester,
+            connectionWaiter: AgentUpdateConnectionWaiterSpy(),
+            service: DawnAgentServiceManagerSpy()
+        )
+
+        await #expect(
+            throws:
+                DawnAgentUpdateComponentError
+                .unexpectedAgentIdentifier(
+                    expected:
+                        EventBusMachService.agentBundleIdentifier,
+                    actual: "example.unexpected.agent"
+                )
+        ) {
+            try await component.recoverAfterUpdateFailure(
+                previousRegistrationState: .enabled
+            )
+        }
+    }
+
+    @Test("Preparation timeout prevents service deactivation")
+    func preparationTimeoutPreventsDeactivation() async {
+        let requester = AgentUpdateEventRequesterSpy()
+        requester.error = EventAskError.timeout
+
+        let service = DawnAgentServiceManagerSpy()
+
+        let component = DawnAgentUpdateComponent(
+            eventRequester: requester,
+            connectionWaiter: AgentUpdateConnectionWaiterSpy(),
+            service: service
+        )
+
+        await #expect(throws: EventAskError.timeout) {
+            try await component.prepareForUpdate(
+                targetBuild: "12"
+            )
+        }
+
+        #expect(
+            requester.events == [
+                .prepareForApplicationUpdate(
+                    PrepareForApplicationUpdateEvent()
+                )
+            ]
+        )
+        #expect(requester.timeouts == [.seconds(5)])
+        #expect(service.deactivationCallCount == 0)
+    }
+
+    @Test("Invalid preparation payload prevents service deactivation")
+    func invalidPayloadPreventsDeactivation() async {
+        let requester = AgentUpdateEventRequesterSpy()
+        requester.error = EventRemoteError.invalidPayload
+
+        let service = DawnAgentServiceManagerSpy()
+
+        let component = DawnAgentUpdateComponent(
+            eventRequester: requester,
+            connectionWaiter: AgentUpdateConnectionWaiterSpy(),
+            service: service
+        )
+
+        await #expect(throws: EventRemoteError.invalidPayload) {
+            try await component.prepareForUpdate(
+                targetBuild: "12"
+            )
+        }
+
+        #expect(
+            requester.events == [
+                .prepareForApplicationUpdate(
+                    PrepareForApplicationUpdateEvent()
+                )
+            ]
+        )
+        #expect(requester.timeouts == [.seconds(5)])
+        #expect(service.deactivationCallCount == 0)
     }
 }
 

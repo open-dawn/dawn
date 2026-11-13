@@ -99,6 +99,37 @@ struct ApplicationUpdateListenerTests {
 
         _ = listener
     }
+
+    @Test("Cancellation request resets update preparation")
+    func cancellationRequestIsHandled() async throws {
+        let bus = EventBus()
+        let preparer = AgentUpdatePreparerSpy(identity: identity)
+
+        let listener = ApplicationUpdateListener(
+            bus: bus,
+            preparer: preparer
+        )
+
+        let reply = try await bus.ask(
+            .cancelApplicationUpdatePreparation(
+                CancelApplicationUpdatePreparationEvent()
+            ),
+            timeout: .seconds(1)
+        )
+
+        #expect(preparer.cancellationCallCount == 1)
+        #expect(preparer.prepareCallCount == 0)
+        #expect(
+            reply
+                == .applicationUpdatePreparationCancelled(
+                    ApplicationUpdatePrepCancelledEvent(
+                        identity: identity
+                    )
+                )
+        )
+
+        _ = listener
+    }
 }
 
 @MainActor
@@ -107,6 +138,7 @@ private final class AgentUpdatePreparerSpy: AgentUpdatePreparing {
 
     var error: Error?
     private(set) var prepareCallCount = 0
+    private(set) var cancellationCallCount = 0
 
     init(identity: ComponentIdentity) {
         self.identity = identity
@@ -118,6 +150,10 @@ private final class AgentUpdatePreparerSpy: AgentUpdatePreparing {
         if let error {
             throw error
         }
+    }
+
+    func cancelApplicationUpdatePreparation() {
+        cancellationCallCount += 1
     }
 }
 

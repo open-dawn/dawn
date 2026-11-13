@@ -379,6 +379,41 @@ struct AppUpdaterServiceTests {
         }
     }
 
+    @Test("Cancellation during preparation recovers without installing")
+    func cancellationDuringPreparation() async throws {
+        let client = FakeAppUpdateClient()
+        let coordinator = FakeUpdateComponentCoordinator()
+        coordinator.suspendsPreparation = true
+
+        let service = AppUpdaterService(
+            client: client,
+            componentCoordinator: coordinator
+        )
+
+        service.start()
+        service.checkForUpdates()
+        client.sendFound(update)
+        service.installAvailableUpdate()
+        client.sendReadyToInstall()
+
+        let installationTask = Task { @MainActor in
+            await service.installAndRelaunch()
+        }
+
+        try await waitUntil {
+            coordinator.isPreparationSuspended
+        }
+
+        client.sendCancellation()
+        coordinator.resumePreparation()
+
+        await installationTask.value
+
+        #expect(client.relaunchCallCount == 0)
+        #expect(coordinator.recoveryCallCount == 1)
+        #expect(service.state == .idle)
+        #expect(service.canCheckForUpdates)
+    }
 }
 
 @MainActor
@@ -468,18 +503,38 @@ private final class FakeUpdateComponentCoordinator:
 {
     var preparationError: Error?
     var recoveryError: Error?
+    var suspendsPreparation = false
 
     private(set) var preparedUpdates: [AvailableAppUpdate] = []
     private(set) var recoveryCallCount = 0
+    private(set) var isPreparationSuspended = false
+
+    private var preparationContinuation: CheckedContinuation<Void, Never>?
 
     func prepareForUpdate(
         _ update: AvailableAppUpdate
     ) async throws {
         preparedUpdates.append(update)
 
+        if suspendsPreparation {
+            isPreparationSuspended = true
+
+            await withCheckedContinuation { (continuation: CheckedContinuation<Void, Never>) in
+                preparationContinuation = continuation
+            }
+
+            isPreparationSuspended = false
+        }
+
         if let preparationError {
             throw preparationError
         }
+    }
+
+    func resumePreparation() {
+        let continuation = preparationContinuation
+        preparationContinuation = nil
+        continuation?.resume()
     }
 
     func recoverAfterUpdateFailure() async throws {

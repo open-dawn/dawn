@@ -17,6 +17,7 @@ final class ApplicationUpdateListener: Listener {
         bus.addListener(self, kinds: [
             .getComponentIdentity,
             .prepareForApplicationUpdate,
+            .cancelApplicationUpdatePreparation,
         ])
     }
 
@@ -31,6 +32,17 @@ final class ApplicationUpdateListener: Listener {
 
         case .prepareForApplicationUpdate:
             handlePreparation(reply: reply)
+
+        case .cancelApplicationUpdatePreparation:
+            preparer.cancelApplicationUpdatePreparation()
+
+            reply?(
+                .applicationUpdatePreparationCancelled(
+                    ApplicationUpdatePrepCancelledEvent(
+                        identity: preparer.identity
+                    )
+                )
+            )
 
         default:
             return

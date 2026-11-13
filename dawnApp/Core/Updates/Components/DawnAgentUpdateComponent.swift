@@ -91,11 +91,7 @@ final class DawnAgentUpdateComponent: UpdateComponent {
 
         switch acknowledgement {
         case let .ready(identity):
-            guard identity.identifier == identifier else {
-                throw
-                    DawnAgentUpdateComponentError
-                    .unexpectedAgentIdentifier(expected: identifier, actual: identity.identifier)
-            }
+            try validateAgentIdentity(identity)
 
         case let .failure(failure):
             throw DawnAgentUpdateComponentError.preparationFailed(failure)
@@ -112,10 +108,7 @@ final class DawnAgentUpdateComponent: UpdateComponent {
             throw DawnAgentUpdateComponentError.unexpectedResponse(response.kind)
         }
 
-        guard payload.identity.identifier == identifier else {
-            throw DawnAgentUpdateComponentError
-                .unexpectedAgentIdentifier(expected: identifier, actual: payload.identity.identifier)
-        }
+        try validateAgentIdentity(payload.identity)
 
         guard payload.identity.build == expectedBuild else {
             throw DawnAgentUpdateComponentError
@@ -124,12 +117,12 @@ final class DawnAgentUpdateComponent: UpdateComponent {
     }
 
     private func canContinueWithoutAcknowledgement(_ error: Error) -> Bool {
-        if error is EventRemoteError {
-            return true
+        if let askError = error as? EventAskError {
+            return askError == .noHandler
         }
 
-        if error is EventAskError {
-            return true
+        if let remoteError = error as? EventRemoteError {
+            return remoteError == .notConnected
         }
 
         return false
@@ -137,6 +130,37 @@ final class DawnAgentUpdateComponent: UpdateComponent {
 
     func recoverAfterUpdateFailure(previousRegistrationState: UpdateComponentRegistrationState) async throws {
         try await service.restoreRegistration(previousRegistrationState)
+
+        guard previousRegistrationState == .enabled else {
+            return
+        }
+
+        try await connectionWaiter.waitUntilConnected(
+            after: nil,
+            timeout: preparationTimeout
+        )
+
+        let response = try await eventRequester.ask(
+            .cancelApplicationUpdatePreparation(CancelApplicationUpdatePreparationEvent()),
+            timeout: preparationTimeout
+        )
+
+        try validatePreparationCancellation(response)
+    }
+
+    private func validatePreparationCancellation(_ response: Event) throws {
+        guard case let .applicationUpdatePreparationCancelled(acknowledgement) = response else {
+            throw DawnAgentUpdateComponentError.unexpectedResponse(response.kind)
+        }
+
+        try validateAgentIdentity(acknowledgement.identity)
+    }
+
+    private func validateAgentIdentity(_ identity: ComponentIdentity) throws {
+        guard identity.identifier == identifier else {
+            throw DawnAgentUpdateComponentError
+                .unexpectedAgentIdentifier(expected: identifier, actual: identity.identifier)
+        }
     }
 
     func reconcileAfterUpdate(expectedBuild: String) async throws {

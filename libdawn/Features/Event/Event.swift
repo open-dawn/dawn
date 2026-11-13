@@ -39,6 +39,8 @@ public enum Event: Codable, Sendable, Equatable {
     case componentIdentity(ComponentIdentityEvent)
     case prepareForApplicationUpdate(PrepareForApplicationUpdateEvent)
     case applicationUpdatePreparationAcknowledged(ApplicationUpdatePrepAcknowledgement)
+    case cancelApplicationUpdatePreparation(CancelApplicationUpdatePreparationEvent)
+    case applicationUpdatePreparationCancelled(ApplicationUpdatePrepCancelledEvent)
 
     public var kind: EventKind {
         switch self {
@@ -69,6 +71,8 @@ public enum Event: Codable, Sendable, Equatable {
         case .componentIdentity: .componentIdentity
         case .prepareForApplicationUpdate: .prepareForApplicationUpdate
         case .applicationUpdatePreparationAcknowledged: .applicationUpdatePreparationAcknowledged
+        case .cancelApplicationUpdatePreparation: .cancelApplicationUpdatePreparation
+        case .applicationUpdatePreparationCancelled: .applicationUpdatePreparationCancelled
         }
     }
 }

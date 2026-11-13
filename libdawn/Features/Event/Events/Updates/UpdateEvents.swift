@@ -30,3 +30,15 @@ public enum ApplicationUpdatePrepAcknowledgement: Codable, Sendable, Equatable {
     case ready(identity: ComponentIdentity)
     case failure(failure: Failure)
 }
+
+public struct CancelApplicationUpdatePreparationEvent: Codable, Sendable, Equatable {
+    public init() {}
+}
+
+public struct ApplicationUpdatePrepCancelledEvent: Codable, Sendable, Equatable {
+    public let identity: ComponentIdentity
+
+    public init(identity: ComponentIdentity) {
+        self.identity = identity
+    }
+}

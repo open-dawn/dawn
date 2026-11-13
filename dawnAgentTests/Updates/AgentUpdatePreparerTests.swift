@@ -123,6 +123,38 @@ struct AgentUpdatePreparerTests {
         #expect(workspace.stopCallCount == 2)
         #expect(lifecycle.phase == .preparingForUpdate)
     }
+
+    @Test("Cancellation restores running state and permits another preparation")
+    func cancellationRestoresRunningState() async throws {
+        let workspace = WorkspaceUpdatePreparingSpy(
+            activeContextID: UUID()
+        )
+        let lifecycle = AgentLifecycleState()
+
+        let preparer = AgentUpdatePreparer(
+            identity: identity,
+            workspace: workspace,
+            lifecycle: lifecycle
+        )
+
+        try await preparer.prepareForApplicationUpdate()
+
+        #expect(lifecycle.phase == .preparingForUpdate)
+        #expect(!lifecycle.acceptsMutations)
+        #expect(workspace.stopCallCount == 1)
+
+        preparer.cancelApplicationUpdatePreparation()
+
+        #expect(lifecycle.phase == .running)
+        #expect(lifecycle.acceptsMutations)
+
+        workspace.activeContextID = UUID()
+
+        try await preparer.prepareForApplicationUpdate()
+
+        #expect(workspace.stopCallCount == 2)
+        #expect(lifecycle.phase == .preparingForUpdate)
+    }
 }
 
 @MainActor

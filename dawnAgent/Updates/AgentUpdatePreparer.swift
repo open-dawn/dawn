@@ -13,6 +13,7 @@ protocol AgentUpdatePreparing {
     var identity: ComponentIdentity { get }
 
     func prepareForApplicationUpdate() async throws
+    func cancelApplicationUpdatePreparation()
 }
 
 @MainActor
@@ -92,4 +93,9 @@ final class AgentUpdatePreparer: AgentUpdatePreparing {
         }
     }
 
+    func cancelApplicationUpdatePreparation() {
+        preparationTask?.cancel()
+        preparationTask = nil
+        lifecycle.cancelUpdatePreparation()
+    }
 }

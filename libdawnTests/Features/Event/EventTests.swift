@@ -111,6 +111,26 @@ struct EventTests {
                     ),
                 kind: EventKind.applicationUpdatePreparationAcknowledged
             ),
+            (
+                event:
+                    Event.cancelApplicationUpdatePreparation(
+                        CancelApplicationUpdatePreparationEvent()
+                    ),
+                kind: EventKind.cancelApplicationUpdatePreparation
+            ),
+            (
+                event:
+                    Event.applicationUpdatePreparationCancelled(
+                        ApplicationUpdatePrepCancelledEvent(
+                            identity: ComponentIdentity(
+                                identifier: "",
+                                version: "",
+                                build: ""
+                            )
+                        )
+                    ),
+                kind: EventKind.applicationUpdatePreparationCancelled
+            ),
         ]
     )
     func exposesKind(_ eventWithKind: (event: Event, kind: EventKind)) {
@@ -175,6 +195,18 @@ struct EventTests {
             .applicationUpdatePreparationAcknowledged(
                 ApplicationUpdatePrepAcknowledgement
                     .ready(identity: ComponentIdentity(identifier: "", version: "", build: ""))
+            ),
+            .cancelApplicationUpdatePreparation(
+                CancelApplicationUpdatePreparationEvent()
+            ),
+            .applicationUpdatePreparationCancelled(
+                ApplicationUpdatePrepCancelledEvent(
+                    identity: ComponentIdentity(
+                        identifier: "",
+                        version: "",
+                        build: ""
+                    )
+                )
             ),
         ]
     )

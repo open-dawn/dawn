@@ -100,8 +100,6 @@ final class AppUpdaterService: AppUpdating {
 
         do {
             try await componentCoordinator.prepareForUpdate(update)
-
-            componentsPreparedForInstallation = true
         } catch {
             let description = String(describing: error)
 
@@ -111,11 +109,21 @@ final class AppUpdaterService: AppUpdating {
                 category: .appLifecycle
             )
 
-            await recoverComponents(finalState: .failed(reason: .componentPreparationFailed))
+            let finalState: AppUpdateState = state == .installing(update) ? .failed(
+                reason: .componentPreparationFailed
+            ) : state
 
+            await recoverComponents(finalState: finalState)
             return
         }
 
+        guard state == .installing(update) else {
+            let interruptedState = state
+            await recoverComponents(finalState: interruptedState)
+            return
+        }
+
+        componentsPreparedForInstallation = true
         client.installAndRelaunch()
     }
 
