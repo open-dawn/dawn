@@ -120,23 +120,42 @@ struct DawnAgentServiceControllerTests {
         #expect(completion.didFinish)
     }
 
-    @Test("Failed update re-registers an agent deactivated by the controller")
-    func failedUpdateReactivatesAgent() async throws {
+    @Test("Recovery restores a previously enabled agent")
+    func recoveryRestoresEnabledAgent() async throws {
         let service = LoginItemServiceSpy(status: .enabled)
         let controller = DawnAgentServiceController(
             service: service
         )
 
         try await controller.deactivateForUpdate()
-        try controller.reactivateAfterFailedUpdate()
+        try await controller.restoreRegistration(.enabled)
 
         #expect(service.unregisterCallCount == 1)
         #expect(service.registerCallCount == 1)
         #expect(service.status == .enabled)
     }
 
-    @Test("Recovery does not register an agent that was already unregistered")
-    func recoveryDoesNotEnablePreviouslyUnregisteredAgent() async throws {
+    @Test("Recovery restores a service awaiting approval")
+    func recoveryRestoresApprovalState() async throws {
+        let service = LoginItemServiceSpy(
+            status: .requiresApproval
+        )
+
+        let controller = DawnAgentServiceController(
+            service: service
+        )
+
+        try await controller.deactivateForUpdate()
+        try await controller.restoreRegistration(
+            .requiresApproval
+        )
+
+        #expect(service.unregisterCallCount == 1)
+        #expect(service.registerCallCount == 1)
+    }
+
+    @Test("Recovery preserves an unregistered service")
+    func recoveryPreservesUnregisteredState() async throws {
         let service = LoginItemServiceSpy(
             status: .notRegistered
         )
@@ -145,30 +164,70 @@ struct DawnAgentServiceControllerTests {
             service: service
         )
 
-        try await controller.deactivateForUpdate()
-        try controller.reactivateAfterFailedUpdate()
+        try await controller.restoreRegistration(
+            .notRegistered
+        )
 
         #expect(service.unregisterCallCount == 0)
         #expect(service.registerCallCount == 0)
     }
 
-    @Test("Registration failure can be retried")
-    func registrationFailureCanBeRetried() async throws {
+    @Test("Recovery disables a service that was previously unregistered")
+    func recoveryDisablesUnexpectedlyEnabledService() async throws {
         let service = LoginItemServiceSpy(status: .enabled)
         let controller = DawnAgentServiceController(
             service: service
         )
 
-        try await controller.deactivateForUpdate()
+        try await controller.restoreRegistration(
+            .notRegistered
+        )
 
+        #expect(service.unregisterCallCount == 1)
+        #expect(service.registerCallCount == 0)
+        #expect(service.status == .notRegistered)
+    }
+
+    @Test("Unknown registration state cannot be restored")
+    func unknownRegistrationStateFails() async {
+        let service = LoginItemServiceSpy(
+            status: .notRegistered
+        )
+
+        let controller = DawnAgentServiceController(
+            service: service
+        )
+
+        await #expect(
+            throws:
+                DawnAgentServiceControllerError
+                .unknownRegistrationState
+        ) {
+            try await controller.restoreRegistration(.unknown)
+        }
+
+        #expect(service.registerCallCount == 0)
+        #expect(service.unregisterCallCount == 0)
+    }
+
+    @Test("Registration restoration can be retried")
+    func registrationRestorationCanBeRetried() async throws {
+        let service = LoginItemServiceSpy(
+            status: .notRegistered
+        )
         service.registerError = ServiceTestError.expected
 
-        #expect(throws: ServiceTestError.expected) {
-            try controller.reactivateAfterFailedUpdate()
+        let controller = DawnAgentServiceController(
+            service: service
+        )
+
+        await #expect(throws: ServiceTestError.expected) {
+            try await controller.restoreRegistration(.enabled)
         }
 
         service.registerError = nil
-        try controller.reactivateAfterFailedUpdate()
+
+        try await controller.restoreRegistration(.enabled)
 
         #expect(service.registerCallCount == 2)
         #expect(service.status == .enabled)
@@ -238,6 +297,30 @@ struct DawnAgentServiceControllerTests {
         }
 
         #expect(service.status == .notRegistered)
+    }
+
+    @Test("Reports every known service registration state")
+    func reportsRegistrationState() {
+        let enabled = DawnAgentServiceController(
+            service: LoginItemServiceSpy(status: .enabled)
+        )
+
+        let approval = DawnAgentServiceController(
+            service: LoginItemServiceSpy(status: .requiresApproval)
+        )
+
+        let unregistered = DawnAgentServiceController(
+            service: LoginItemServiceSpy(status: .notRegistered)
+        )
+
+        let missing = DawnAgentServiceController(
+            service: LoginItemServiceSpy(status: .notFound)
+        )
+
+        #expect(enabled.registrationState == .enabled)
+        #expect(approval.registrationState == .requiresApproval)
+        #expect(unregistered.registrationState == .notRegistered)
+        #expect(missing.registrationState == .notFound)
     }
 }
 

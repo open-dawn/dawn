@@ -343,6 +343,63 @@ struct DawnAgentUpdateComponentTests {
         #expect(requester.events.count == 1)
     }
 
+    @Test("Reports the service registration state")
+    func reportsServiceRegistrationState() {
+        let service = DawnAgentServiceManagerSpy()
+        service.registrationState = .requiresApproval
+
+        let component = DawnAgentUpdateComponent(
+            eventRequester: AgentUpdateEventRequesterSpy(),
+            connectionWaiter: AgentUpdateConnectionWaiterSpy(),
+            service: service
+        )
+
+        #expect(component.registrationState == .requiresApproval)
+    }
+
+    @Test("Recovery restores the recorded registration state")
+    func recoveryRestoresRegistrationState() async throws {
+        let service = DawnAgentServiceManagerSpy()
+
+        let component = DawnAgentUpdateComponent(
+            eventRequester: AgentUpdateEventRequesterSpy(),
+            connectionWaiter: AgentUpdateConnectionWaiterSpy(),
+            service: service
+        )
+
+        try await component.recoverAfterUpdateFailure(
+            previousRegistrationState: .requiresApproval
+        )
+
+        #expect(
+            service.restoredRegistrationStates == [
+                .requiresApproval
+            ]
+        )
+    }
+
+    @Test("Registration restoration failure is propagated")
+    func recoveryFailureIsPropagated() async {
+        let service = DawnAgentServiceManagerSpy()
+        service.error = ComponentTestError.expected
+
+        let component = DawnAgentUpdateComponent(
+            eventRequester: AgentUpdateEventRequesterSpy(),
+            connectionWaiter: AgentUpdateConnectionWaiterSpy(),
+            service: service
+        )
+
+        await #expect(throws: ComponentTestError.expected) {
+            try await component.recoverAfterUpdateFailure(
+                previousRegistrationState: .enabled
+            )
+        }
+
+        #expect(
+            service.restoredRegistrationStates == [.enabled]
+        )
+    }
+
     private func identityResponse(
         build: String,
         identifier: String = EventBusMachService.agentBundleIdentifier
@@ -393,11 +450,13 @@ private final class AgentUpdateEventRequesterSpy:
 private final class DawnAgentServiceManagerSpy:
     DawnAgentServiceManaging
 {
+    var registrationState: UpdateComponentRegistrationState = .notRegistered
 
     var error: Error?
     private(set) var deactivationCallCount = 0
     private(set) var activationCallCount = 0
     private(set) var restartCallCount = 0
+    private(set) var restoredRegistrationStates: [UpdateComponentRegistrationState] = []
 
     func deactivateForUpdate() async throws {
         deactivationCallCount += 1
@@ -407,7 +466,12 @@ private final class DawnAgentServiceManagerSpy:
         }
     }
 
-    func reactivateAfterFailedUpdate() throws {
+    func restoreRegistration(_ state: UpdateComponentRegistrationState) async throws {
+        restoredRegistrationStates.append(state)
+
+        if let error {
+            throw error
+        }
     }
 
     func activateIfNeeded() throws {

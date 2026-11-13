@@ -19,11 +19,32 @@ protocol DawnAgentLoginItemServicing: AnyObject {
 
 extension SMAppService: DawnAgentLoginItemServicing {}
 
+enum DawnAgentServiceControllerError: Error, Equatable {
+    case unknownRegistrationState
+}
+
 @MainActor
 final class DawnAgentServiceController: DawnAgentServiceManaging {
     private let service: any DawnAgentLoginItemServicing
 
-    private var needsReactivation = false
+    var registrationState: UpdateComponentRegistrationState {
+        switch service.status {
+        case .notRegistered:
+            .notRegistered
+
+        case .enabled:
+            .enabled
+
+        case .requiresApproval:
+            .requiresApproval
+
+        case .notFound:
+            .notFound
+
+        @unknown default:
+            .unknown
+        }
+    }
 
     convenience init() {
         self.init(
@@ -72,22 +93,23 @@ final class DawnAgentServiceController: DawnAgentServiceManaging {
             }
         }
 
-        needsReactivation = true
     }
 
-    func reactivateAfterFailedUpdate() throws {
-        guard needsReactivation else {
-            return
-        }
+    func restoreRegistration(_ state: UpdateComponentRegistrationState) async throws {
+        switch state {
+        case .enabled, .requiresApproval:
+            try activateIfNeeded()
 
-        try activateIfNeeded()
-        needsReactivation = false
+        case .notRegistered, .notFound:
+            try await deactivateForUpdate()
+
+        case .unknown:
+            throw DawnAgentServiceControllerError.unknownRegistrationState
+        }
     }
 
     func restartForReconciliation() async throws {
         try await deactivateForUpdate()
         try activateIfNeeded()
-
-        needsReactivation = false
     }
 }

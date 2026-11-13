@@ -26,18 +26,30 @@ Managed components conform to:
 @MainActor
 protocol UpdateComponent {
     var identifier: String { get }
+    var registrationState: UpdateComponentRegistrationState { get }
+    var requirement: UpdateComponentRequirement { get }
 
     func prepareForUpdate(
         targetBuild: String
     ) async throws
 
-    func recoverAfterUpdateFailure() async throws
+    func recoverAfterUpdateFailure(
+        previousRegistrationState:
+            UpdateComponentRegistrationState
+    ) async throws
 
     func reconcileAfterUpdate(
         expectedBuild: String
     ) async throws
 }
 ```
+
+The properties are as following:
+
+- identifier: stable and unique, preferably a bundle identifier.
+- registrationState: current installed or registered state.
+- requirement: .required components are installed/reconciled after a successful update; .optional components preserve the user’s previous state.
+- .unknown prevents update preparation because DAWN cannot safely restore it.
 
 The methods have the following responsibilities:
 
@@ -49,20 +61,28 @@ The methods have the following responsibilities:
 
 The component identifier must be stable and unique. Prefer the component's bundle identifier when one exists.
 
-## Ordering and failure behavior
+## Ordering, presistence and failure behavior
 
 `UpdateComponentCoordinator` processes components in registration order.
 
-Preparation:
+Before changing a component, the coordinator creates an atomic recovery journal containing the source build, target build, and previous registration state of every component.
 
-1. The coordinator records the component as prepared.
-2. It calls `prepareForUpdate`.
-3. If the method throws, installation is cancelled.
-4. Prepared components are recovered in reverse order.
+For each component:
 
-Because a component is recorded before its preparation method is called, `recoverAfterUpdateFailure` may run after a partially completed preparation. Recovery must therefore be safe and idempotent.
+1. Its phase is persisted as `preparing`.
+2. `prepareForUpdate` is called.
+3. Its phase is persisted as `prepared`.
 
-Reconciliation runs in registration order. If a component throws, the coordinator stops and propagates the error.
+If preparation or installation fails, affected components are restored in reverse order. Each successful restoration is persisted as `notStarted`, allowing recovery to resume safely after another interruption.
+
+Recovery methods must be safe and idempotent because a process may terminate after changing a component but before persisting the completed phase.
+
+On launch:
+
+- If the running build matches the journal’s source build, DAWN restores the previous registration states and validates previously active components.
+- If it matches the target build, DAWN reconciles required components and previously active optional components.
+- If it matches neither build, reconciliation fails and the journal is retained.
+- The journal is cleared only after restoration or reconciliation completes successfully.
 
 ## Implementing a component
 
@@ -78,6 +98,11 @@ A basic component looks like:
 @MainActor
 final class ExampleUpdateComponent: UpdateComponent {
     let identifier = "app.opendawn.example"
+    let requirement = UpdateComponentRequirement.required
+
+    var registrationState: UpdateComponentRegistrationState {
+        installer.registrationState
+    }
 
     private let installer: any ExampleInstalling
 
@@ -93,8 +118,12 @@ final class ExampleUpdateComponent: UpdateComponent {
         )
     }
 
-    func recoverAfterUpdateFailure() async throws {
-        try await installer.restoreAfterFailedUpdate()
+    func recoverAfterUpdateFailure(
+      previousRegistrationState: UpdateComponentRegistrationState
+    ) async throws {
+        try await installer.restoreAfterFailedUpdate(
+            previousRegistrationState: previousRegistrationState
+      )
     }
 
     func reconcileAfterUpdate(
@@ -128,42 +157,24 @@ A running component should generally:
 
 Do not use shell-based process killing or reset the Background Task Management database.
 
-## Passive and command-line components
+## Passive bundled components
 
-A component that does not run continuously may not need preparation or recovery behavior:
+A target does not need an `UpdateComponent` merely because it is embedded in `DAWN.app`.
 
-```swift
-@MainActor
-final class ExampleCLIUpdateComponent: UpdateComponent {
-    let identifier = "example-cli"
+Passive components are updated automatically when Sparkle replaces the application bundle. They do not require lifecycle management when they:
 
-    private let installer: any CLIInstalling
+- Do not continue running independently after DAWN terminates.
+- Do not maintain external mutable state that must be restored.
+- Are not copied to a separate installation location.
+- Do not require registration with a system service.
 
-    init(installer: any CLIInstalling) {
-        self.installer = installer
-    }
+`dawncli` is a passive bundled component. Its executable is installed at:
 
-    func prepareForUpdate(
-        targetBuild _: String
-    ) async throws {
-        // The CLI has no running process to stop.
-    }
-
-    func recoverAfterUpdateFailure() async throws {
-        // Preparation did not change external state.
-    }
-
-    func reconcileAfterUpdate(
-        expectedBuild: String
-    ) async throws {
-        try installer.installOrRepair(
-            expectedBuild: expectedBuild
-        )
-    }
-}
+```text
+DAWN.app/Contents/MacOS/dawncli
 ```
 
-For a bundled CLI, reconciliation can verify the executable inside the updated application and create or repair its external symlink.
+Sparkle replaces the bundled executable and the external symlink continues pointing into the updated bundle.
 
 ## Registering the component
 
@@ -186,6 +197,14 @@ updateComponents = [
     ),
 ]
 #endif
+
+let componentCoordinator = UpdateComponentCoordinator(
+    components: updateComponents,
+    journalStore: FileUpdateRecoveryJournalStore(),
+    sourceBuildProvider: {
+        try ApplicationBuild.load()
+    }
+)
 ```
 
 Debug builds currently use a manually launched `dawnAgent` and do not manage installed application components.
@@ -239,17 +258,17 @@ xcodebuild \
 
 A signed end-to-end Sparkle update should verify the component’s behavior across two application builds.
 
-## Current limitations
+## Recovery journal
 
-The current coordinator tracks prepared components in memory.
+The recovery journal is stored atomically in the DAWN Application Support directory. It contains:
 
-PIN-199 still requires a persistent recovery journal containing the source build, target build, preparation phase, and previous component registration state.
+- The source application build.
+- The target application build.
+- Each component’s previous registration state.
+- Each component’s preparation phase.
 
-Until that journal is implemented:
+The journal survives application termination, crashes, and interrupted Sparkle installation. It must not be manually cleared while recovery or reconciliation is pending.
 
-- Do not use this system for an optional component whose previous enabled state must be preserved.
-- Do not clear or overwrite user-selected registration state.
-- Required components may be registered during reconciliation.
-- Components must recover failures occurring in the current application process.
+Required, optional, newly introduced, and removed components are handled through the component registry and their stable identifiers.
 
-Newly added, removed, and optional component descriptors will require additional reconciliation behavior as PIN-199 progresses.
+A signed end-to-end Sparkle update remains necessary to verify process termination, relaunch, PID replacement, and build identity across real application builds.

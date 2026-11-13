@@ -30,7 +30,13 @@ final class SettingsAppDelegate: NSObject, NSApplicationDelegate {
         ]
         #endif
 
-        let componentCoordinator = UpdateComponentCoordinator(components: updateComponents)
+        let componentCoordinator = UpdateComponentCoordinator(
+            components: updateComponents,
+            journalStore: FileUpdateRecoveryJournalStore(),
+            sourceBuildProvider: {
+                try ApplicationBuild.load()
+            }
+        )
 
         self.eventBusService = eventBusService
         self.componentCoordinator = componentCoordinator

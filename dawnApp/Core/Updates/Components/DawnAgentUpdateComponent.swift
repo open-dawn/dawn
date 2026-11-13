@@ -24,9 +24,11 @@ protocol AgentUpdateConnectionWaiting {
 
 @MainActor
 protocol DawnAgentServiceManaging {
+    var registrationState: UpdateComponentRegistrationState { get }
+
     func activateIfNeeded() throws
     func deactivateForUpdate() async throws
-    func reactivateAfterFailedUpdate() throws
+    func restoreRegistration(_ state: UpdateComponentRegistrationState) async throws
     func restartForReconciliation() async throws
 }
 
@@ -43,6 +45,10 @@ enum DawnAgentUpdateComponentError: Error, Equatable {
 @MainActor
 final class DawnAgentUpdateComponent: UpdateComponent {
     let identifier = EventBusMachService.agentBundleIdentifier
+    var registrationState: UpdateComponentRegistrationState {
+        service.registrationState
+    }
+    let requirement = UpdateComponentRequirement.required
 
     private let eventRequester: any AgentUpdateEventAsking
     private let connectionWaiter: any AgentUpdateConnectionWaiting
@@ -129,8 +135,8 @@ final class DawnAgentUpdateComponent: UpdateComponent {
         return false
     }
 
-    func recoverAfterUpdateFailure() async throws {
-        try service.reactivateAfterFailedUpdate()
+    func recoverAfterUpdateFailure(previousRegistrationState: UpdateComponentRegistrationState) async throws {
+        try await service.restoreRegistration(previousRegistrationState)
     }
 
     func reconcileAfterUpdate(expectedBuild: String) async throws {
