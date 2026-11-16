@@ -1,6 +1,6 @@
 <div align="center">
   <a href="https://github.com/open-dawn/dawn">
-    <img src="docs/media/icon.png" alt="DAWN" width="128" height="128">
+    <img src=".github/media/icon.png" alt="DAWN" width="128" height="128">
     <h1>DAWN</h1>
   </a>
 
@@ -43,10 +43,10 @@ The first release supports macOS 15 or later on Apple Silicon.
 
 A demo video or GIF will be added here.
 
-Place the file at `docs/media/demo.gif`, then replace this note with:
+Place the file at `.github/media/demo.gif`, then replace this note with:
 
 ```markdown
-![DAWN demo](docs/media/demo.gif)
+![DAWN demo](.github/media/demo.gif)
 ```
 
 ## 3. Installation
