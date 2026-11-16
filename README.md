@@ -51,7 +51,7 @@ Place the file at `docs/media/demo.gif`, then replace this note with:
 
 ## 3. Installation
 
-DAWN runs on macOS 15 or later on Apple Silicon. Install a published build. Building from source is covered in [Development](#04-development).
+DAWN runs on macOS 15 or later on Apple Silicon. Install a published build. Building from source is covered in [Development](#4-development).
 
 ### 3.1. GitHub Release
 
@@ -59,7 +59,13 @@ Download the latest disk image from [GitHub Releases](https://github.com/open-da
 
 ### 3.2. Homebrew
 
-Homebrew is not available yet.
+```sh
+brew tap open-dawn/dawn
+brew trust open-dawn/dawn
+brew install --cask dawn
+```
+
+Newer Homebrew requires trusting third-party taps before install. The tap is [`open-dawn/homebrew-dawn`](https://github.com/open-dawn/homebrew-dawn).
 
 ## 4. Development
 
