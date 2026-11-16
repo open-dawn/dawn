@@ -7,11 +7,11 @@ on:
   workflow_dispatch:
     inputs:
       release_tag:
-        description: Stable release tag to publish
+        description: Stable release tag to publish (for example v1.0.0)
         required: true
         type: string
       dry_run:
-        description: Patch the cask locally but do not commit or push
+        description: Patch the cask locally but do not open a pull request
         required: false
         type: boolean
         default: true
@@ -55,6 +55,7 @@ jobs:
           CHECKSUM_FILENAME="${DMG_FILENAME}.sha256"
           ARTIFACT_DIRECTORY="$RUNNER_TEMP/homebrew-cask"
           TAP_DIRECTORY="$GITHUB_WORKSPACE/tap"
+          BRANCH_NAME="bump-dawn-${RELEASE_VERSION}"
 
           mkdir -p "$ARTIFACT_DIRECTORY"
 
@@ -64,6 +65,7 @@ jobs:
             echo "CHECKSUM_FILENAME=$CHECKSUM_FILENAME"
             echo "ARTIFACT_DIRECTORY=$ARTIFACT_DIRECTORY"
             echo "TAP_DIRECTORY=$TAP_DIRECTORY"
+            echo "BRANCH_NAME=$BRANCH_NAME"
           } >> "$GITHUB_ENV"
 
       - name: Require tap token
@@ -78,12 +80,30 @@ jobs:
             exit 1
           fi
 
-      - name: Download release checksum
+      - name: Verify release assets and read checksum
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
+
+          ASSET_NAMES="$(
+            gh release view \
+              "$RELEASE_TAG" \
+              --repo "$SOURCE_REPOSITORY" \
+              --json assets \
+              --jq '.assets[].name'
+          )"
+
+          if ! grep -Fxq "$DMG_FILENAME" <<<"$ASSET_NAMES"; then
+            echo "error: release is missing $DMG_FILENAME" >&2
+            exit 1
+          fi
+
+          if ! grep -Fxq "$CHECKSUM_FILENAME" <<<"$ASSET_NAMES"; then
+            echo "error: release is missing $CHECKSUM_FILENAME" >&2
+            exit 1
+          fi
 
           gh release download \
             "$RELEASE_TAG" \
@@ -93,7 +113,7 @@ jobs:
 
           CHECKSUM_PATH="$ARTIFACT_DIRECTORY/$CHECKSUM_FILENAME"
           if [[ ! -s "$CHECKSUM_PATH" ]]; then
-            echo "error: release is missing $CHECKSUM_FILENAME" >&2
+            echo "error: failed to download $CHECKSUM_FILENAME" >&2
             exit 1
           fi
 
@@ -173,8 +193,10 @@ jobs:
           echo "Updated $CASK_PATH:"
           grep -E '^[[:space:]]*(version|sha256)[[:space:]]+' "$CASK_FILE"
 
-      - name: Commit and push tap update
+      - name: Open tap pull request
         shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
         run: |
           set -euo pipefail
 
@@ -192,11 +214,43 @@ jobs:
           git -C "$TAP_DIRECTORY" diff --cached
 
           if [[ "$DRY_RUN" == "true" ]]; then
-            echo "Dry run enabled; skipping commit and push"
+            echo "Dry run enabled; skipping branch push and pull request"
             exit 0
           fi
 
-          git -C "$TAP_DIRECTORY" commit \
-            -m "dawn $RELEASE_VERSION"
+          git -C "$TAP_DIRECTORY" checkout -B "$BRANCH_NAME"
+          git -C "$TAP_DIRECTORY" commit -m "dawn $RELEASE_VERSION"
+          git -C "$TAP_DIRECTORY" push --force-with-lease origin "HEAD:$BRANCH_NAME"
 
-          git -C "$TAP_DIRECTORY" push origin "HEAD:$TAP_REF"
+          EXISTING_PR="$(
+            gh pr list \
+              --repo "$TAP_REPOSITORY" \
+              --head "$BRANCH_NAME" \
+              --base "$TAP_REF" \
+              --state open \
+              --json number \
+              --jq '.[0].number // empty'
+          )"
+
+          if [[ -n "$EXISTING_PR" ]]; then
+            echo "Updated existing pull request #$EXISTING_PR"
+            gh pr view "$EXISTING_PR" --repo "$TAP_REPOSITORY" --json url --jq .url
+            exit 0
+          fi
+
+          PR_BODY="$(cat <<EOF
+## Summary
+- Bump \`dawn\` cask to \`$RELEASE_VERSION\`
+- Update \`sha256\` from GitHub Release asset \`$CHECKSUM_FILENAME\`
+- Download URL remains the canonical GitHub Releases DMG
+
+Source release: https://github.com/${SOURCE_REPOSITORY}/releases/tag/${RELEASE_TAG}
+EOF
+)"
+
+          gh pr create \
+            --repo "$TAP_REPOSITORY" \
+            --base "$TAP_REF" \
+            --head "$BRANCH_NAME" \
+            --title "dawn $RELEASE_VERSION" \
+            --body "$PR_BODY"
