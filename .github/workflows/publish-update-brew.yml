@@ -238,19 +238,19 @@ jobs:
             exit 0
           fi
 
-          PR_BODY="$(cat <<EOF
-## Summary
-- Bump \`dawn\` cask to \`$RELEASE_VERSION\`
-- Update \`sha256\` from GitHub Release asset \`$CHECKSUM_FILENAME\`
-- Download URL remains the canonical GitHub Releases DMG
-
-Source release: https://github.com/${SOURCE_REPOSITORY}/releases/tag/${RELEASE_TAG}
-EOF
-)"
+          PR_BODY_PATH="$RUNNER_TEMP/homebrew-cask-pr-body.md"
+          {
+            echo "## Summary"
+            echo "- Bump \`dawn\` cask to \`${RELEASE_VERSION}\`"
+            echo "- Update \`sha256\` from GitHub Release asset \`${CHECKSUM_FILENAME}\`"
+            echo "- Download URL remains the canonical GitHub Releases DMG"
+            echo
+            echo "Source release: https://github.com/${SOURCE_REPOSITORY}/releases/tag/${RELEASE_TAG}"
+          } > "$PR_BODY_PATH"
 
           gh pr create \
             --repo "$TAP_REPOSITORY" \
             --base "$TAP_REF" \
             --head "$BRANCH_NAME" \
             --title "dawn $RELEASE_VERSION" \
-            --body "$PR_BODY"
+            --body-file "$PR_BODY_PATH"
