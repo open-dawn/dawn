@@ -13,11 +13,14 @@ public enum DawnTextStyle {
 
     // MARK: - Context Cards
 
-    public static let contextTitle: Font = .system(size: 12, weight: .bold)
-    public static let contextMetadata: Font = .system(size: 9, weight: .regular)
+    public static let contextTitle: Font = DawnFont.zain(.bold, size: 18, relativeTo: .title)
+    public static let contextMetadata: Font = DawnFont.gabarito(size: 10, relativeTo: .body)
+
+    public static let noWorkspaceTitle: Font = DawnFont.zain(.bold ,size: 28, relativeTo: .title)
+    public static let noWorkspaceBody: Font = DawnFont.gabarito(size: 16, relativeTo: .body)
 
     // MARK: Branding
-    public static let brandTitle: Font = .system(size: 24)
+    public static let brandTitle: Font = DawnFont.zain(.regular ,size: 24, relativeTo: .title)
     public static let compactBrandTitle: Font = .system(size: 20)
 
     // MARK: Screen hierarchy
@@ -25,7 +28,7 @@ public enum DawnTextStyle {
     public static let compactScreenTitle: Font = .system(size: 18, weight: .bold)
     public static let body: Font = .system(size: 14)
     public static let fieldLabel: Font = .system(size: 14, weight: .light)
-    public static let sectionLabel: Font = .system(size: 12, weight: .light)
+    public static let sectionLabel: Font = DawnFont.zain(.bold, size: 22, relativeTo: .title)
     public static let linkLabel: Font = .system(size: 12, weight: .light)
 
     // MARK: Options and supporting information

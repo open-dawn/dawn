@@ -53,6 +53,13 @@ struct MenuBarRootView: View {
         )
         .background {
             DawnColors.primaryBackground
+                .overlay(alignment: .bottom) {
+                    DuskMenuBarBackground()
+                        .frame(
+                            maxWidth: .infinity,
+                            alignment: .bottom
+                        )
+                }
                 .ignoresSafeArea()
         }
     }

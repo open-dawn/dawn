@@ -75,7 +75,7 @@ final class MenuBarController: NSObject, MenuBarControlling {
             return
         }
 
-        let statusItem = statusBar.statusItem(withLength: NSStatusItem.squareLength)
+        let statusItem = statusBar.statusItem(withLength: NSStatusItem.variableLength)
 
         self.statusItem = statusItem
         configureStatusItem(statusItem)
@@ -115,15 +115,26 @@ final class MenuBarController: NSObject, MenuBarControlling {
             return
         }
 
-        let image = DawnSymbol.nsImage ?? NSImage(
+        let image = (DawnSymbol.nsImage?.copy() as? NSImage) ?? NSImage(
             systemSymbolName: "sunrise.fill",
             accessibilityDescription: "DAWN"
         )
 
-        image?.isTemplate = true
-        image?.accessibilityDescription = "DAWN"
+        if let image {
+            let targetHeight: CGFloat = 12
+            let aspectRatio = image.size.width / image.size.height
+
+            image.size = NSSize(
+                width: targetHeight * aspectRatio,
+                height: targetHeight
+            )
+
+            image.isTemplate = true
+            image.accessibilityDescription = "DAWN"
+        }
 
         button.image = image
+        button.imageScaling = .scaleProportionallyDown
         button.toolTip = "DAWN"
         button.target = self
         button.action = #selector(handleStatusItemInteraction(_:))
