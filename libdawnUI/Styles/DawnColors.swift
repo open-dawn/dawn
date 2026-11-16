@@ -24,8 +24,15 @@ public enum DawnColors {
 
     public static let contextCardBackground = Color(.contextCardBackground)
     public static let contextCardHoveredBackground = Color(.contextCardHoveredBackground)
+
+    public static let selectedContextCardBackground = Color(.selectedContextCardBackground)
+    public static let selectedContextCardHoveredBackground = Color(.selectedContextCardHoveredBackground)
+
     public static let contextCardBorder = Color(.contextCardBorder)
     public static let contextCardHoveredBorder = Color(.contextCardHoveredBorder)
+
+    public static let contextCardContent = Color(.contextCardContent)
+    public static let contextCardContentActive = Color(.contextCardContentActive)
 
     public static let primaryBackground = Color(.primaryBackground) // #1f1f1f
     public static let secondaryBackground = Color(.secondaryBackground)

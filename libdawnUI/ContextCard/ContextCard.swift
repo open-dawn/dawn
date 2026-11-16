@@ -33,6 +33,14 @@ public struct ContextCard: View {
         max(model.applications.count - visibleApplications.count, 0)
     }
 
+    private var isActive: Bool {
+        if case .active = model.status {
+            return true
+        }
+
+        return false
+    }
+
     public init(
         model: ContextCardModel,
         isLoading: Bool = false,
@@ -51,25 +59,34 @@ public struct ContextCard: View {
                 HStack(spacing: 12) {
                     contextSymbol
 
-                    VStack(alignment: .leading, spacing: 3) {
-                        HStack {
+                    VStack(alignment: .leading, spacing: 0) {
+                        HStack(alignment: .center) {
                             Text(model.name)
                                 .font(DawnTextStyle.contextTitle)
+                                .foregroundStyle(
+                                    isActive ? DawnColors.contextCardContentActive : DawnColors.contextCardContent
+                                )
                                 .lineLimit(1)
 
                             Spacer()
 
-                            trailingControl
-                                .frame(width: 24)
+                            VStack {
+                                trailingControl
+                                    .frame(height: 6)
 
+                                Spacer()
+                            }
                         }
 
-                        statusContent
+                        HStack {
+                            if !isActive {
+                                applicationContent
+                            }
 
-                        if !isActive {
-                            applicationContent
+                            statusContent
                         }
                     }
+                    .frame(height: 12)
 
                 }
                 .contentShape(Rectangle())
@@ -84,9 +101,7 @@ public struct ContextCard: View {
         .frame(minHeight: 80)
         .background {
             RoundedRectangle(cornerRadius: 9)
-                .fill(
-                    isHovering ? DawnColors.contextCardHoveredBackground : DawnColors.contextCardBackground
-                )
+                .fill(cardBackgroundColor)
         }
         .overlay {
             RoundedRectangle(cornerRadius: 9)
@@ -109,24 +124,18 @@ public struct ContextCard: View {
                 Image(nsImage: image)
                     .resizable()
                     .scaledToFit()
-                    .frame(width: 36, height: 36)
+                    .frame(width: 46, height: 46)
+                    .foregroundStyle(
+                        isActive ? DawnColors.contextCardContentActive : DawnColors.contextCardContent
+                    )
             } else {
                 Image(systemName: "square.dashed")
                     .resizable()
                     .scaledToFit()
                     .frame(width: 36, height: 36)
-                    .foregroundStyle(.secondary)
-            }
-
-            if isActive {
-                Circle()
-                    .fill(.green)
-                    .frame(width: 9, height: 9)
-                    .overlay {
-                        Circle()
-                            .stroke(Color.black, lineWidth: 1)
-                    }
-                    .accessibilityHidden(true)
+                    .foregroundStyle(
+                        isActive ? DawnColors.contextCardContentActive : DawnColors.contextCardContent
+                    )
             }
         }
         .frame(width: 44, height: 44)
@@ -136,19 +145,24 @@ public struct ContextCard: View {
     private var statusContent: some View {
         switch model.status {
         case .active(let activityText):
-            Label(activityText, systemImage: "clock.fill")
+            Label(activityText, systemImage: "clock")
                 .font(DawnTextStyle.contextMetadata)
-                .foregroundStyle(.secondary)
-
-            Text("Currently active")
-                .font(DawnTextStyle.contextMetadata)
-                .foregroundStyle(.secondary)
+                .foregroundStyle(DawnColors.contextCardContentActive)
 
         case .inactive(let lastUsedText):
             if let lastUsedText {
-                Label(lastUsedText, systemImage: "clock.fill")
+                HStack(spacing: 0) {
+                    Spacer()
+
+                    Group {
+                        Label("Last use: ", systemImage: "clock")
+
+                        Text(lastUsedText)
+                            .bold()
+                    }
                     .font(DawnTextStyle.contextMetadata)
                     .foregroundStyle(.secondary)
+                }
             }
         }
     }
@@ -167,15 +181,6 @@ public struct ContextCard: View {
                             .resizable()
                             .scaledToFit()
                             .frame(width: 18, height: 18)
-                            .background {
-                                RoundedRectangle(cornerRadius: 4)
-                                    .fill(Color.black.opacity(0.25))
-                            }
-                            .clipShape(RoundedRectangle(cornerRadius: 4))
-                            .overlay {
-                                RoundedRectangle(cornerRadius: 4)
-                                    .stroke(Color.black.opacity(0.5), lineWidth: 1)
-                            }
                             .accessibilityHidden(true)
                     }
                 }
@@ -234,23 +239,32 @@ public struct ContextCard: View {
                 }
             } label: {
                 Image(systemName: "ellipsis")
-                    .foregroundStyle(.primary)
                     .frame(width: 24, height: 24)
                     .contentShape(Rectangle())
             }
-            .menuStyle(.borderlessButton)
+            .menuStyle(.button)
+            .buttonStyle(.plain)
             .menuIndicator(.hidden)
+            .foregroundStyle(isActive ? DawnColors.contextCardContentActive : DawnColors.contextCardContent)
             .fixedSize()
             .accessibilityLabel("Context actions")
         }
     }
 
-    private var isActive: Bool {
-        if case .active = model.status {
-            return true
-        }
+    private var cardBackgroundColor: Color {
+        return switch (isActive, isHovering) {
+        case (true, true):
+            DawnColors.selectedContextCardHoveredBackground
 
-        return false
+        case (true, false):
+            DawnColors.selectedContextCardBackground
+
+        case (false, true):
+            DawnColors.contextCardHoveredBackground
+
+        case (false, false):
+            DawnColors.contextCardBackground
+        }
     }
 
     private var statusAccessibilityValue: String {

@@ -75,7 +75,12 @@ extension MenuBarContextListView {
                 .padding(.top, 16)
                 .padding(.bottom, 4)
 
-            contextsScrollView(relativeTo: now)
+            if viewModel.inactiveContexts.isEmpty && viewModel.activeContext == nil {
+                noWorkspacesView
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+            } else {
+                contextsScrollView(relativeTo: now)
+            }
         }
         .frame(
             maxWidth: .infinity,
@@ -93,7 +98,7 @@ extension MenuBarContextListView {
             Text(viewModel.errorMessage ?? "")
         }
         .alert(
-            "Delete Context?",
+            "Delete workspace?",
             isPresented: isShowingDeleteConfirmation,
             presenting: viewModel.contextPendingDeletion
         ) { context in
@@ -128,11 +133,11 @@ extension MenuBarContextListView {
                     onCreateContext()
                 },
                 content: {
-                    Image(systemName: "plus")
+                    Image(systemName: "plus.square.fill.on.square.fill")
                         .font(DawnTextStyle.actionIcon)
                 }
             )
-            .accessibilityLabel("Create a context")
+            .accessibilityLabel("Create a workspace")
 
             DButton(
                 style: .icon,
@@ -142,7 +147,7 @@ extension MenuBarContextListView {
                     }
                 },
                 content: {
-                    Image(systemName: "gearshape")
+                    Image(systemName: "gearshape.fill")
                         .font(DawnTextStyle.actionIcon)
                 }
             )
@@ -174,8 +179,12 @@ extension MenuBarContextListView {
 
     private var contextsSectionHeader: some View {
         HStack {
-            Text("Contexts")
-                .font(DawnTextStyle.sectionLabel)
+            Spacer()
+
+            if !viewModel.workspace.contexts.isEmpty {
+                Text("Your workspaces")
+                    .font(DawnTextStyle.sectionLabel)
+            }
 
             Spacer()
         }
@@ -186,23 +195,24 @@ extension MenuBarContextListView {
 
     @ViewBuilder
     private func contextsContent(relativeTo now: Date) -> some View {
-        if viewModel.inactiveContexts.isEmpty && viewModel.activeContext == nil {
-            ContentUnavailableView(
-                "No Contexts",
-                systemImage: "square.stack",
-                description: Text("Create a context to see it here.")
-            )
-            .frame(maxWidth: .infinity)
-        } else if viewModel.inactiveContexts.isEmpty {
-            ContentUnavailableView(
-                "No other contexts",
-                systemImage: "square.stack"
-            )
-            .frame(maxWidth: .infinity)
+        if viewModel.inactiveContexts.isEmpty {
+            EmptyView()
         } else {
             ForEach(viewModel.inactiveContexts) { context in
                 contextCard(for: context, relativeTo: now)
             }
+        }
+    }
+
+    private var noWorkspacesView: some View {
+        VStack {
+            DuskSleepy.image(height: 74)
+
+            Text("No Workspaces".uppercased())
+                .font(DawnTextStyle.noWorkspaceTitle)
+
+            Text("Create a workspace to see it here")
+                .font(DawnTextStyle.noWorkspaceBody)
         }
     }
 }
