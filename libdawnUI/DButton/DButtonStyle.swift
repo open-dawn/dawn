@@ -10,6 +10,7 @@ import SwiftUI
 public enum DButtonStyle: CaseIterable {
     case primary
     case secondary
+    case accent
     case danger
     case warning
     case success
@@ -22,8 +23,9 @@ public enum DButtonStyle: CaseIterable {
 
     var fgStyle: Color {
         switch self {
-        case .primary: return DawnColors.secondaryBackground
+        case .primary: return DawnColors.primaryBackground
         case .secondary: return DawnColors.primaryForeground
+        case .accent: return DawnColors.contextCardContentActive
         case .danger: return DawnColors.dangerForeground
         case .warning: return DawnColors.warningForeground
         case .success: return DawnColors.successForeground
@@ -37,6 +39,7 @@ public enum DButtonStyle: CaseIterable {
         switch self {
         case .primary: return DawnColors.primaryForeground
         case .secondary: return DawnColors.secondaryBackground
+        case .accent: return DawnColors.selectedContextCardBackground
         case .danger: return DawnColors.dangerBackground
         case .warning: return DawnColors.warningBackground
         case .success: return DawnColors.successBackground
@@ -50,6 +53,7 @@ public enum DButtonStyle: CaseIterable {
         switch self {
         case .primary: return 8
         case .secondary: return 8
+        case .accent: return 8
         case .danger: return 8
         case .warning: return 8
         case .success: return 8
@@ -65,6 +69,7 @@ public enum DButtonStyle: CaseIterable {
         switch self {
         case .primary: return 12
         case .secondary: return 12
+        case .accent: return 12
         case .danger: return 12
         case .warning: return 12
         case .success: return 12
@@ -80,6 +85,7 @@ public enum DButtonStyle: CaseIterable {
         switch self {
         case .primary: return 16
         case .secondary: return 16
+        case .accent: return 16
         case .danger: return 16
         case .warning: return 16
         case .success: return 16
@@ -95,6 +101,7 @@ public enum DButtonStyle: CaseIterable {
         switch self {
         case .primary: return 8
         case .secondary: return 8
+        case .accent: return 8
         case .danger: return 8
         case .warning: return 8
         case .success: return 8
@@ -109,6 +116,7 @@ public enum DButtonStyle: CaseIterable {
         switch self {
         case .primary: return false
         case .secondary: return false
+        case .accent: return false
         case .danger: return false
         case .warning: return false
         case .success: return false
@@ -125,11 +133,12 @@ public enum DButtonStyle: CaseIterable {
         switch self {
         case .primary: return DawnTextStyle.buttonLabel
         case .secondary: return DawnTextStyle.buttonLabel
+        case .accent: return DawnTextStyle.buttonLabel
         case .danger: return DawnTextStyle.buttonLabel
         case .warning: return DawnTextStyle.buttonLabel
         case .success: return DawnTextStyle.buttonLabel
-        case .link: return DawnTextStyle.buttonLabel
-        case .linkSecondary: return DawnTextStyle.buttonLabel
+        case .link: return DawnTextStyle.primaryBold
+        case .linkSecondary: return DawnTextStyle.primary
         case .plain: return DawnTextStyle.body
         case .icon: return DawnTextStyle.actionIcon
         case .compactIcon: return DawnTextStyle.buttonIcon
@@ -141,6 +150,7 @@ public enum DButtonStyle: CaseIterable {
         switch self {
         case .primary: return DawnTextStyle.buttonIcon
         case .secondary: return DawnTextStyle.buttonIcon
+        case .accent: return DawnTextStyle.buttonIcon
         case .danger: return DawnTextStyle.buttonIcon
         case .warning: return DawnTextStyle.buttonIcon
         case .success: return DawnTextStyle.buttonIcon
@@ -157,6 +167,7 @@ public enum DButtonStyle: CaseIterable {
         switch self {
         case .primary: return 1
         case .secondary: return 1
+        case .accent: return 1
         case .danger: return 1
         case .warning: return 1
         case .success: return 1

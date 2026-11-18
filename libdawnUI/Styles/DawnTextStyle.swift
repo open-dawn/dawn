@@ -8,8 +8,9 @@
 import SwiftUI
 
 public enum DawnTextStyle {
-    public static let primary: Font = .system(size: 16, weight: .regular)
-    public static let secondary: Font = .system(size: 16, weight: .regular)
+    public static let primary: Font = DawnFont.gabarito(size: 16, relativeTo: .body)
+    public static let secondary: Font = DawnFont.gabarito(size: 16, relativeTo: .body)
+    public static let primaryBold: Font = DawnFont.gabarito(.bold, size: 16, relativeTo: .body)
 
     // MARK: - Context Cards
 
@@ -26,15 +27,16 @@ public enum DawnTextStyle {
     // MARK: Screen hierarchy
     public static let screenTitle: Font = .system(size: 21, weight: .bold)
     public static let compactScreenTitle: Font = .system(size: 18, weight: .bold)
-    public static let body: Font = .system(size: 14)
+    public static let body: Font = DawnFont.gabarito(size: 14, relativeTo: .body)
     public static let fieldLabel: Font = .system(size: 14, weight: .light)
     public static let sectionLabel: Font = DawnFont.zain(.bold, size: 22, relativeTo: .title)
-    public static let linkLabel: Font = .system(size: 12, weight: .light)
+    public static let linkLabel: Font = DawnFont.gabarito(size: 12, relativeTo: .caption)
 
     // MARK: Options and supporting information
     public static let optionTitle: Font = .system(size: 18, weight: .light)
-    public static let caption: Font = .system(size: 11)
-    public static let secondaryCaption: Font = .system(size: 11, weight: .light)
+    public static let caption: Font = DawnFont.gabarito(size: 12, relativeTo: .caption)
+    public static let captionBold: Font = DawnFont.gabarito(.bold, size: 12, relativeTo: .caption)
+    public static let secondaryCaption: Font = DawnFont.gabarito(size: 12, relativeTo: .caption)
 
     // MARK: Icons presented as typography
     public static let actionIcon: Font = .system(size: 20, weight: .light)
@@ -43,7 +45,7 @@ public enum DawnTextStyle {
 
     // MARK: - Button
 
-    public static let buttonLabel: Font = .system(size: 16, weight: .semibold)
+    public static let buttonLabel: Font = DawnFont.zain(.bold, size: 16, relativeTo: .body)
     public static let buttonIcon: Font = .system(size: 14, weight: .bold)
 
     // MARK: - Sidebar
