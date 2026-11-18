@@ -100,7 +100,8 @@ struct SettingsContent: View {
                 onCancel: {
                     isApplicationPickerPresented = false
                 }
-Other options}
+            )
+        }
     }
 
     private var settingsForm: some View {

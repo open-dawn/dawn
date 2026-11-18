@@ -55,18 +55,29 @@ struct ContextDetailApplicationList: View {
 
     private var fullWidthApplicationList: some View {
         VStack(alignment: .leading, spacing: 8) {
-            ForEach(Array(gridRows.enumerated()), id: \.offset) { _, row in
-                HStack(spacing: 8) {
-                    ForEach(row) { item in
-                        gridCell(for: item)
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                    }
+            if applications.isEmpty {
+                HStack(alignment: .center, spacing: 8) {
+                    addApplicationButton
+                        .fixedSize(horizontal: true, vertical: false)
+
+                    emptyStateLabel
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
-            }
-
-            if applications.isEmpty {
-                emptyStateLabel
+            } else {
+                ForEach(Array(gridRows.enumerated()), id: \.offset) { _, row in
+                    HStack(spacing: 8) {
+                        ForEach(row) { item in
+                            switch item {
+                            case .application:
+                                gridCell(for: item)
+                                    .frame(maxWidth: .infinity, alignment: .leading)
+                            case .add:
+                                gridCell(for: item)
+                            }
+                        }
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                }
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -127,6 +138,7 @@ struct ContextDetailApplicationList: View {
 
             if applications.isEmpty {
                 emptyStateLabel
+                    .padding(.vertical, 0)
             }
         }
     }
@@ -184,7 +196,8 @@ struct ContextDetailApplicationList: View {
         Text("Nothing selected yet. Click the 􀅼 button or drag an app here to add it.")
             .font(rowFont)
             .foregroundStyle(DawnColors.secondaryForeground)
-            .padding(.vertical)
+            .multilineTextAlignment(.leading)
+            .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     @ViewBuilder
