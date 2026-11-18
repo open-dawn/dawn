@@ -7,80 +7,48 @@ struct AboutView<Updater: AppUpdating>: View {
     let updater: Updater
 
     var body: some View {
-        VStack(spacing: 24) {
-            Spacer()
+        VStack(spacing: 32) {
+            Spacer(minLength: 0)
 
-            VStack(spacing: 8) {
-                DawnSymbol.image(height: 56)
-                Text("dawn")
-                    .font(.system(size: 32))
+            VStack(spacing: 32) {
+                VStack(alignment: .trailing, spacing: 0) {
+                    LogoComplete.image(height: 78)
+                        .accessibilityElement(children: .ignore)
+                        .accessibilityLabel("DAWN")
+
+                    versionLabel
+                }
+
+                descriptionLabel
             }
 
-            VStack(spacing: 4) {
-                Text("Version \(content.appVersion)")
-                    .font(DawnTextStyle.secondary)
-                    .foregroundStyle(DawnColors.secondaryForeground)
-                Text("\(content.ticket.commit.displayName)")
-                    .font(DawnTextStyle.secondary)
-                    .foregroundStyle(DawnColors.secondaryForeground)
-                    .onTapGesture {
-                        NSWorkspace.shared.open(content.ticket.commit.url)
-                    }
-            }
+            Spacer(minLength: 0)
 
-            VStack(spacing: 4) {
-                HStack(spacing: 4) {
-                    Text("Dawn is designed by")
-                        .font(DawnTextStyle.secondary)
-                        .foregroundStyle(DawnColors.secondaryForeground)
-
-                    DButton(style: .linkSecondary) {
-                        NSWorkspace.shared.open(content.ticket.marketingURL)
+            VStack(spacing: 16) {
+                HStack(alignment: .bottom, spacing: 8) {
+                    DButton(style: .primary) {
+                        NSWorkspace.shared.open(feedbackIssueURL)
                     } content: {
-                        Text("OpenDawn")
+                        Text("Give us feedback")
+                            .frame(maxWidth: .infinity)
                     }
+                    .frame(maxWidth: .infinity)
+                    .accessibilityHint(
+                        "Opens a feedback form in your browser"
+                    )
+
+                    updateControls
+                        .frame(maxWidth: .infinity)
                 }
 
-                HStack(spacing: 4) {
-                    Text("and is open source, under the")
-                        .font(DawnTextStyle.secondary)
-                        .foregroundStyle(DawnColors.secondaryForeground)
-
-                    DButton(style: .linkSecondary) {
-                        NSWorkspace.shared.open(content.ticket.licenseURL)
-                    } content: {
-                        Text(verbatim: content.ticket.license)
-                    }
-
-                    Text("license.")
-                        .font(DawnTextStyle.secondary)
-                        .foregroundStyle(DawnColors.secondaryForeground)
-                }
+                Text(content.ticket.copyright)
+                    .font(DawnTextStyle.primary)
+                    .foregroundStyle(DawnColors.secondaryForeground)
+                    .multilineTextAlignment(.center)
             }
-
-            Spacer()
-
-            HStack(alignment: .bottom, spacing: 16) {
-                DButton(style: .secondary) {
-                    NSWorkspace.shared.open(feedbackIssueURL)
-                } content: {
-                    Text("Give us Feedback")
-                } leading: {
-                    Image(systemName: "bubble.left.and.bubble.right")
-                }
-                .accessibilityHint(
-                    "Opens a feedback form in your browser"
-                )
-
-                updateControls
-            }
-
-            Text(content.ticket.copyright)
-                .font(DawnTextStyle.secondary)
-                .foregroundStyle(DawnColors.secondaryForeground)
         }
-        .frame(minWidth: 512, maxWidth: .infinity)
-        .padding(16)
+        .frame(minWidth: 512, maxWidth: .infinity, maxHeight: .infinity)
+        .padding(32)
         .background {
             DawnColors.primaryBackground
         }
@@ -88,6 +56,49 @@ struct AboutView<Updater: AppUpdating>: View {
 }
 
 extension AboutView {
+    private var shortCommitSHA: String {
+        String(content.ticket.commit.sha.prefix(7))
+    }
+
+    private var versionLabel: some View {
+        (
+            Text("Version ")
+                .font(DawnTextStyle.primary)
+            + Text(content.appVersion)
+                .font(DawnTextStyle.primaryBold)
+            + Text(" (\(shortCommitSHA))")
+                .font(DawnTextStyle.primary)
+        )
+        .foregroundStyle(DawnColors.primaryForeground)
+        .onTapGesture {
+            NSWorkspace.shared.open(content.ticket.commit.url)
+        }
+        .accessibilityAddTraits(.isButton)
+        .accessibilityHint("Opens the commit in your browser")
+    }
+
+    private var descriptionLabel: some View {
+        VStack(spacing: 0) {
+            Text("dawn is a window navigator to macOS.")
+                .font(DawnTextStyle.primary)
+
+            (
+                Text("it is open-source, under the ")
+                    .font(DawnTextStyle.primary)
+                + Text("\(content.ticket.license) License")
+                    .font(DawnTextStyle.primaryBold)
+                    .underline()
+            )
+            .onTapGesture {
+                NSWorkspace.shared.open(content.ticket.licenseURL)
+            }
+            .accessibilityAddTraits(.isLink)
+            .accessibilityHint("Opens the license in your browser")
+        }
+        .foregroundStyle(DawnColors.primaryForeground)
+        .multilineTextAlignment(.center)
+    }
+
     private var feedbackIssueURL: URL {
         let version = ProcessInfo.processInfo.operatingSystemVersion
         let macosVersion = [
@@ -112,32 +123,32 @@ extension AboutView {
                 Color.clear
                     .accessibilityHidden(true)
             } action: {
-                checkButton(title: "Check for Updates")
+                checkButton(title: "Check for updates")
             }
 
         case .checking:
             updatePanel {
                 statusText("Looking for available updates...")
             } action: {
-                disabledProgressButton(title: "Checking for Updates")
+                disabledProgressButton(title: "Checking for updates")
             }
 
         case .updateUnavailable(let reason):
             updatePanel {
                 statusText(unavailabilityMessage(for: reason))
             } action: {
-                checkButton(title: "Check Again")
+                checkButton(title: "Check again")
             }
 
         case .updateAvailable(let update):
             updatePanel {
                 releaseNotesControl(for: update)
             } action: {
-                DButton(style: .primary) {
+                DButton(style: .accent) {
                     updater.installAvailableUpdate()
                 } content: {
-                    Text("Update Now")
-                        .frame(minWidth: 200)
+                    Text("Update now")
+                        .frame(maxWidth: .infinity)
                 }
                 .accessibilityLabel("Update to version \(update.displayVersion)")
             }
@@ -146,7 +157,7 @@ extension AboutView {
             updatePanel {
                 statusText("Downloading version \(update.displayVersion)")
             } action: {
-                updateProgress(progress, title: "Downloading Update")
+                updateProgress(progress, title: "Downloading update")
             }
 
         case .extracting(let update, let progress):
@@ -155,20 +166,20 @@ extension AboutView {
                     "Preparing version \(update.displayVersion)..."
                 )
             } action: {
-                updateProgress(progress, title: "Preparing Update")
+                updateProgress(progress, title: "Preparing update")
             }
 
         case .readyToInstall(let update):
             updatePanel {
                 releaseNotesControl(for: update)
             } action: {
-                DButton(style: .primary) {
+                DButton(style: .accent) {
                     Task {
                         await updater.installAndRelaunch()
                     }
                 } content: {
-                    Text("Install and Relaunch")
-                        .frame(minWidth: 200)
+                    Text("Install and relaunch")
+                        .frame(maxWidth: .infinity)
                 }
                 .accessibilityLabel("Install version \(update.displayVersion) and relaunch Dawn")
             }
@@ -186,7 +197,7 @@ extension AboutView {
             updatePanel {
                 statusText(failureMessage(for: reason))
             } action: {
-                checkButton(title: "Try Again")
+                checkButton(title: "Try again")
             }
 
         }
@@ -198,20 +209,19 @@ extension AboutView {
     ) -> some View {
         VStack(spacing: 4) {
             status()
-                .frame(maxWidth: .infinity, minHeight: 36, maxHeight: 36)
+                .frame(maxWidth: .infinity, minHeight: 16, maxHeight: 36)
 
             action()
-                .frame(maxWidth: .infinity, minHeight: 44, maxHeight: 44)
+                .frame(maxWidth: .infinity)
         }
-        .frame(width: 240, height: 84)
     }
 
     private func checkButton(title: String) -> some View {
-        DButton(style: .secondary) {
+        DButton(style: .primary) {
             updater.checkForUpdates()
         } content: {
             Text(title)
-                .frame(minWidth: 200)
+                .frame(maxWidth: .infinity)
         }
         .disabled(!updater.canCheckForUpdates)
         .accessibilityLabel(title)
@@ -220,13 +230,13 @@ extension AboutView {
     private func disabledProgressButton(
         title: String
     ) -> some View {
-        DButton(style: .secondary) {
+        DButton(style: .primary) {
         } content: {
             ProgressView()
                 .controlSize(.small)
 
             Text(title)
-                .frame(minWidth: 168)
+                .frame(maxWidth: .infinity)
         }
         .disabled(true)
         .accessibilityElement(children: .ignore)
@@ -236,7 +246,7 @@ extension AboutView {
 
     private func statusText(_ message: String) -> some View {
         Text(message)
-            .font(DawnTextStyle.secondary)
+            .font(DawnTextStyle.primary)
             .foregroundStyle(DawnColors.secondaryForeground)
             .multilineTextAlignment(.center)
             .lineLimit(2)
@@ -249,10 +259,10 @@ extension AboutView {
         if let url =
             update.releaseNotesURL ?? update.informationURL
         {
-            DButton(style: .link) {
+            DButton(style: .linkSecondary) {
                 NSWorkspace.shared.open(url)
             } content: {
-                Text("What's New in \(update.displayVersion)")
+                Text("What's new in \(update.displayVersion)")
             } trailing: {
                 Image(systemName: "arrow.up.forward.square")
             }
@@ -281,7 +291,7 @@ extension AboutView {
                     .controlSize(.small)
 
                 Text(title)
-                    .font(DawnTextStyle.secondary)
+                    .font(DawnTextStyle.primary)
             }
             .accessibilityElement(children: .ignore)
             .accessibilityLabel(title)
@@ -298,10 +308,10 @@ extension AboutView {
                     value: clampedFraction,
                     total: 1
                 )
-                .frame(width: 200)
+                .frame(maxWidth: 200)
 
                 Text("\(percentage)%")
-                    .font(DawnTextStyle.secondary)
+                    .font(DawnTextStyle.primary)
                     .foregroundStyle(
                         DawnColors.secondaryForeground
                     )
