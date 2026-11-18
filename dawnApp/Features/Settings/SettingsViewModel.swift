@@ -25,6 +25,7 @@ final class SettingsViewModel {
 
     private var baseline = Settings()
     private let client: any SettingsViewStoreClient
+    private var persistTask: Task<Void, Never>?
 
     var hasUnsavedChanges: Bool {
         draft != baseline
@@ -57,23 +58,29 @@ final class SettingsViewModel {
         errorMessage = nil
     }
 
-    func setSettings() async {
-        do {
-            try await client.updateSettings(draft)
-            baseline = draft
-            error = nil
-            errorMessage = nil
-        } catch SettingsViewStoreError.notConnected {
+    func updateDraft(_ mutate: (inout Settings) -> Void) {
+        var updated = draft
+        mutate(&updated)
+        guard updated != draft else {
             return
-        } catch {
-            let persistenceError = ViewModelError.persistenceFailed
-            self.error = persistenceError
-            errorMessage = persistenceError.errorDescription
         }
+
+        draft = updated
+        schedulePersist()
+    }
+
+    func setSettings() async {
+        await persistDraft()
+    }
+
+    func flushPendingPersistence() async {
+        await persistTask?.value
     }
 
     func resetSettingsToDefaults() {
-        draft = Settings()
+        updateDraft { draft in
+            draft = Settings()
+        }
     }
 
     func dismissApplicationImportError() {
@@ -81,7 +88,9 @@ final class SettingsViewModel {
     }
 
     func removeProtectedApp(id: UUID) {
-        draft.protectedApps.removeAll { $0.id == id }
+        updateDraft { draft in
+            draft.protectedApps.removeAll { $0.id == id }
+        }
     }
 
     @discardableResult
@@ -124,7 +133,9 @@ final class SettingsViewModel {
         applicationImportError = firstError
 
         if !imported.isEmpty {
-            draft.protectedApps.append(contentsOf: imported)
+            updateDraft { draft in
+                draft.protectedApps.append(contentsOf: imported)
+            }
         }
 
         return sawValidApplication
@@ -158,11 +169,39 @@ final class SettingsViewModel {
             merged.append(application)
         }
 
-        guard merged != draft.protectedApps else {
+        updateDraft { draft in
+            draft.protectedApps = merged
+        }
+    }
+
+    private func schedulePersist() {
+        persistTask?.cancel()
+        persistTask = Task { [weak self] in
+            await self?.persistDraft()
+        }
+    }
+
+    private func persistDraft() async {
+        guard draft != baseline else {
             return
         }
 
-        draft.protectedApps = merged
+        let snapshot = draft
+
+        do {
+            try await client.updateSettings(snapshot)
+            if draft == snapshot {
+                baseline = snapshot
+            }
+            error = nil
+            errorMessage = nil
+        } catch SettingsViewStoreError.notConnected {
+            return
+        } catch {
+            let persistenceError = ViewModelError.persistenceFailed
+            self.error = persistenceError
+            errorMessage = persistenceError.errorDescription
+        }
     }
 
     private func normalizedBundleIdentifier(_ bundleIdentifier: String) -> String {

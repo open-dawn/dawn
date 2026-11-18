@@ -1,7 +1,7 @@
 import AppKit
-import SwiftUI
 import libdawn
 import libdawnUI
+import SwiftUI
 
 struct SettingsView: View {
     @Environment(SettingsViewStore.self)
@@ -69,13 +69,15 @@ struct SettingsContent: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 32) {
-            if commandLineTool.showsBanner {
-                CommandLineToolBanner(model: commandLineTool)
-            }
+        ScrollView {
+            VStack(alignment: .leading, spacing: 32) {
+                settingsForm
 
-            settingsForm
-            Spacer(minLength: 0)
+                if commandLineTool.showsBanner {
+                    CommandLineToolBanner(model: commandLineTool)
+                }
+            }
+            .frame(maxWidth: .infinity, alignment: .topLeading)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         .alert(
@@ -98,16 +100,14 @@ struct SettingsContent: View {
                 onCancel: {
                     isApplicationPickerPresented = false
                 }
-            )
-        }
+Other options}
     }
 
     private var settingsForm: some View {
         VStack(alignment: .leading, spacing: 32) {
             generalSettingsSection
             protectedAppsSection
-            permissionsSection
-            optionsSection
+            accessibilitySection
         }
         .disabled(interactionsDisabled)
         .opacity(isAgentConnected ? 1 : 0.45)
@@ -115,32 +115,35 @@ struct SettingsContent: View {
 
     private var generalSettingsSection: some View {
         VStack(alignment: .leading, spacing: 16) {
-            sectionTitle("General Settings")
+            sectionTitle("General")
 
-            VStack(spacing: 12) {
+            VStack(spacing: 16) {
                 settingsToggleRow(
-                    title: "Show Menu Bar Icon",
+                    title: "Show menu bar icon",
                     systemImage: "menubar.dock.rectangle",
-                    isOn: $viewModel.draft.showInMenuBar
+                    isOn: draftBinding(\.showInMenuBar)
                 )
                 settingsToggleRow(
-                    title: "Force app to quit",
+                    title: "Force apps to quit",
                     systemImage: "xmark.app",
-                    isOn: $viewModel.draft.forceAppsToQuit
+                    isOn: draftBinding(\.forceAppsToQuit)
                 )
                 settingsToggleRow(
-                    title: "Analytics Enabled",
-                    systemImage: "shareplay",
-                    isOn: $viewModel.draft.analyticsEnabled
+                    title: "Analytics enabled",
+                    systemImage: "chart.bar",
+                    isOn: draftBinding(\.analyticsEnabled)
                 )
             }
-            .padding(.horizontal, 24)
         }
     }
 
     private var protectedAppsSection: some View {
         ContextDetailApplicationList(
-            title: "Protected Apps",
+            title: "Protected applications",
+            subtitle: "(not affected by workspace changes)",
+            titleFont: DawnTextStyle.settingsSectionTitle,
+            titleColor: DawnColors.primaryForeground,
+            fillsAvailableWidth: true,
             applications: protectedApplications,
             interactionsDisabled: interactionsDisabled,
             horizontalPadding: 0,
@@ -169,51 +172,49 @@ struct SettingsContent: View {
         }
     }
 
-    private var permissionsSection: some View {
+    private var accessibilitySection: some View {
         VStack(alignment: .leading, spacing: 16) {
-            sectionTitle("Permissions")
-            accessibilityPermissionRow
-                .padding(.horizontal, 24)
-        }
-    }
+            sectionTitle("Other options")
 
-    private var optionsSection: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            DButton(style: .primary) {
-                Task {
-                    await viewModel.setSettings()
+            HStack(spacing: 12) {
+                HStack(spacing: 8) {
+                    Image(systemName: "hand.raised")
+                        .font(DawnTextStyle.actionIcon)
+                        .foregroundStyle(DawnColors.primaryForeground)
+                        .frame(width: 24, height: 24)
+                        .accessibilityHidden(true)
+
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Accessibility permission")
+                            .font(DawnTextStyle.primary)
+                            .foregroundStyle(DawnColors.primaryForeground)
+
+                        Text(accessibilityStatusDescription)
+                            .font(DawnTextStyle.primary)
+                            .foregroundStyle(DawnColors.secondaryForeground)
+                    }
                 }
-            } content: {
-                Text("Save Settings")
-                    .frame(maxWidth: .infinity)
-            }
-            .disabled(!viewModel.hasUnsavedChanges || interactionsDisabled)
-            .opacity(viewModel.hasUnsavedChanges && !interactionsDisabled ? 1 : 0.25)
-            .accessibilityLabel("Save Settings")
-        }
-    }
 
-    private var accessibilityPermissionRow: some View {
-        HStack {
-            VStack(alignment: .leading, spacing: 4) {
-                Text("Accessibility")
-                    .font(DawnTextStyle.body)
-                    .foregroundStyle(DawnColors.primaryForeground)
-                Text(accessibilityStatusDescription)
-                    .font(DawnTextStyle.caption)
-                    .foregroundStyle(DawnColors.secondaryForeground)
-            }
+                Spacer()
 
-            Spacer()
-
-            DButton(style: .secondary) {
-                Task {
-                    await accessibilityPermissionService.promptTrust()
+                DButton(style: .primary) {
+                    Task {
+                        await accessibilityPermissionService.promptTrust()
+                    }
+                } content: {
+                    Text(
+                        accessibilityPermissionService.isTrusted == true
+                            ? "Recheck"
+                            : "Grant access"
+                    )
                 }
-            } content: {
-                Text(accessibilityPermissionService.isTrusted == true ? "Recheck" : "Grant Access")
+                .disabled(
+                    accessibilityPermissionService.isLoading || !isAgentConnected
+                )
             }
-            .disabled(accessibilityPermissionService.isLoading || !isAgentConnected)
+            .padding(.horizontal, 12)
+            .padding(.vertical, 8)
+            .accessibilityElement(children: .contain)
         }
     }
 
@@ -230,23 +231,27 @@ struct SettingsContent: View {
 
     private func sectionTitle(_ title: String) -> some View {
         Text(title)
-            .font(DawnTextStyle.sectionLabel)
-            .foregroundStyle(DawnColors.secondaryForeground)
+            .font(DawnTextStyle.settingsSectionTitle)
+            .foregroundStyle(DawnColors.primaryForeground)
     }
 
-    private func settingsToggleRow(title: String, systemImage: String, isOn: Binding<Bool>) -> some View {
+    private func settingsToggleRow(
+        title: String,
+        systemImage: String,
+        isOn: Binding<Bool>
+    ) -> some View {
         HStack(spacing: 12) {
-            Image(systemName: systemImage)
-                .resizable()
-                .scaledToFit()
-                .font(DawnTextStyle.actionIcon)
-                .foregroundStyle(DawnColors.primaryForeground)
-                .frame(width: 24, height: 16)
-                .accessibilityHidden(true)
+            HStack(spacing: 8) {
+                Image(systemName: systemImage)
+                    .font(DawnTextStyle.actionIcon)
+                    .foregroundStyle(DawnColors.primaryForeground)
+                    .frame(width: 24, height: 24)
+                    .accessibilityHidden(true)
 
-            Text(title)
-                .font(DawnTextStyle.body)
-                .foregroundStyle(DawnColors.primaryForeground)
+                Text(title)
+                    .font(DawnTextStyle.primary)
+                    .foregroundStyle(DawnColors.primaryForeground)
+            }
 
             Spacer()
 
@@ -254,7 +259,22 @@ struct SettingsContent: View {
                 .labelsHidden()
                 .toggleStyle(.switch)
         }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 8)
         .accessibilityElement(children: .combine)
+    }
+
+    private func draftBinding(
+        _ keyPath: WritableKeyPath<libdawn.Settings, Bool>
+    ) -> Binding<Bool> {
+        Binding(
+            get: { viewModel.draft[keyPath: keyPath] },
+            set: { newValue in
+                viewModel.updateDraft { draft in
+                    draft[keyPath: keyPath] = newValue
+                }
+            }
+        )
     }
 }
 
@@ -324,17 +344,17 @@ private struct CommandLineToolBanner: View {
     var body: some View {
         HStack(alignment: .center, spacing: 12) {
             VStack(alignment: .leading, spacing: 4) {
-                Text("dawncli is available to install.")
-                    .font(DawnTextStyle.body)
+                Text("CLI is available to install.")
+                    .font(DawnTextStyle.primary)
                     .foregroundStyle(DawnColors.primaryForeground)
 
                 Text("Adds the command to Terminal.")
-                    .font(DawnTextStyle.caption)
+                    .font(DawnTextStyle.primary)
                     .foregroundStyle(DawnColors.secondaryForeground)
 
                 if let errorMessage = model.errorMessage {
                     Text(errorMessage)
-                        .font(DawnTextStyle.caption)
+                        .font(DawnTextStyle.primary)
                         .foregroundStyle(DawnColors.dangerForeground)
                 }
             }
@@ -354,9 +374,5 @@ private struct CommandLineToolBanner: View {
         }
         .padding(16)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background {
-            RoundedRectangle(cornerRadius: 8, style: .continuous)
-                .fill(DawnColors.secondaryBackground)
-        }
     }
 }

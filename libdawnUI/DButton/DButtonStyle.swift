@@ -22,7 +22,7 @@ public enum DButtonStyle: CaseIterable {
 
     var fgStyle: Color {
         switch self {
-        case .primary: return DawnColors.secondaryBackground
+        case .primary: return DawnColors.primaryBackground
         case .secondary: return DawnColors.primaryForeground
         case .danger: return DawnColors.dangerForeground
         case .warning: return DawnColors.warningForeground
