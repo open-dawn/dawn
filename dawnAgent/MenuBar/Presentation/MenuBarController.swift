@@ -29,6 +29,7 @@ extension NSStatusBar: StatusBarProviding {}
 
 @MainActor
 final class MenuBarController: NSObject, MenuBarControlling {
+    private let workspace: WorkspaceRuntime
     private let statusBar: any StatusBarProviding
     private var statusItem: NSStatusItem?
     private let appOpener: any DawnAppOpening
@@ -43,12 +44,29 @@ final class MenuBarController: NSObject, MenuBarControlling {
         statusItem != nil
     }
 
+    var statusItemButton: NSStatusBarButton? {
+        statusItem?.button
+    }
+
+    var hasActiveContext: Bool {
+        workspace.activeContextID != nil
+    }
+
+    var observedActiveContextID: UUID? {
+        workspace.activeContextID
+    }
+
+    var canUpdateStatusItemAppearance: Bool {
+        !isStopped
+    }
+
     init(
         workspace: WorkspaceRuntime,
         initiallyVisible: Bool = true,
         statusBar: any StatusBarProviding = NSStatusBar.system,
         appOpener: any DawnAppOpening = DawnAppOpener()
     ) {
+        self.workspace = workspace
         self.statusBar = statusBar
         self.appOpener = appOpener
 
@@ -56,6 +74,7 @@ final class MenuBarController: NSObject, MenuBarControlling {
 
         configurePanel(workspace: workspace)
         setVisible(initiallyVisible)
+        startObservingActiveContext()
     }
 
     func setVisible(_ isVisible: Bool) {
@@ -115,25 +134,7 @@ final class MenuBarController: NSObject, MenuBarControlling {
             return
         }
 
-        let image = (DawnSymbol.nsImage?.copy() as? NSImage) ?? NSImage(
-            systemSymbolName: "sunrise.fill",
-            accessibilityDescription: "DAWN"
-        )
-
-        if let image {
-            let targetHeight: CGFloat = 12
-            let aspectRatio = image.size.width / image.size.height
-
-            image.size = NSSize(
-                width: targetHeight * aspectRatio,
-                height: targetHeight
-            )
-
-            image.isTemplate = true
-            image.accessibilityDescription = "DAWN"
-        }
-
-        button.image = image
+        button.image = makeStatusItemImage(isActive: hasActiveContext)
         button.imageScaling = .scaleProportionallyDown
         button.toolTip = "DAWN"
         button.target = self
