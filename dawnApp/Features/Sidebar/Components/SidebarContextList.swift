@@ -7,23 +7,26 @@ struct SidebarContextList: View {
     @Binding var selectedDestination: SidebarDestination?
     @Binding var isArchivedSectionExpanded: Bool
     let searchText: String
-    let onCreateContext: () -> Void
+
+    private let activityTextFormatter = WorkspaceActivityTextFormatter()
 
     var body: some View {
-        ScrollView {
-            LazyVStack(alignment: .leading, spacing: 2) {
-                contextHeader
-                contextRows
+        TimelineView(.periodic(from: .now, by: 60)) { timeline in
+            ScrollView {
+                LazyVStack(alignment: .leading, spacing: SidebarMetrics.listSpacing) {
+                    contextHeader
+                    contextRows(relativeTo: timeline.date)
 
-                archivedHeader
+                    archivedHeader
 
-                if showsArchivedItems {
-                    archivedRows
+                    if showsArchivedItems {
+                        archivedRows(relativeTo: timeline.date)
+                    }
                 }
+                .padding(.horizontal, SidebarMetrics.horizontalPadding)
+                .padding(.vertical, 4)
+                .frame(maxWidth: .infinity, alignment: .leading)
             }
-            .padding(.horizontal, SidebarMetrics.horizontalPadding)
-            .padding(.vertical, 4)
-            .frame(maxWidth: .infinity, alignment: .leading)
         }
     }
 
@@ -40,43 +43,26 @@ struct SidebarContextList: View {
     }
 
     private var contextHeader: some View {
-        HStack(spacing: 8) {
-            Text("Contexts")
-                .font(DawnTextStyle.sidebarSectionHeader)
-                .foregroundStyle(DawnColors.sidebarForeground)
-
-            Spacer(minLength: 8)
-
-            Button(action: onCreateContext) {
-                Image(systemName: "plus")
-                    .font(DawnTextStyle.sidebarIcon)
-                    .foregroundStyle(DawnColors.sidebarIcon)
-                    .frame(width: SidebarMetrics.iconSize, height: SidebarMetrics.iconSize)
-                    .contentShape(Rectangle())
-            }
-            .buttonStyle(.plain)
-            .disabled(content.interactionsDisabled)
-            .help("Create a new context")
-            .accessibilityLabel("Create a new context")
-        }
-        .padding(.top, 8)
-        .padding(.bottom, 2)
+        Text("Your workspaces")
+            .font(DawnTextStyle.sidebarSectionHeader)
+            .foregroundStyle(DawnColors.sidebarForeground)
+            .padding(.bottom, 0)
     }
 
     @ViewBuilder
-    private var contextRows: some View {
+    private func contextRows(relativeTo now: Date) -> some View {
         if content.isLoading && content.contexts.isEmpty {
-            statusRow(title: "Loading contexts...", showsProgress: true)
+            statusRow(title: "Loading workspaces...", showsProgress: true)
         } else if content.contexts.isEmpty {
-            statusRow(title: "No contexts", showsProgress: false)
+            statusRow(title: "No workspaces", showsProgress: false)
         } else if filteredContexts.isEmpty {
             statusRow(
-                title: "No contexts matching \"\(searchText)\"",
+                title: "No workspaces matching \"\(searchText)\"",
                 showsProgress: false
             )
         } else {
             ForEach(filteredContexts) { context in
-                row(for: context)
+                row(for: context, relativeTo: now)
             }
         }
     }
@@ -87,35 +73,33 @@ struct SidebarContextList: View {
                 Image(systemName: showsArchivedItems ? "chevron.up" : "chevron.right")
                     .font(DawnTextStyle.sidebarChevron)
                     .foregroundStyle(DawnColors.sidebarIcon)
-                    .frame(width: 12, height: 12)
 
-                Text("Archived contexts (\(content.archivedContexts.count))")
+                Text("Archived workspaces")
                     .font(DawnTextStyle.sidebarSectionHeader)
                     .foregroundStyle(DawnColors.sidebarForeground)
                     .lineLimit(1)
 
                 Spacer(minLength: 0)
             }
-            .padding(.top, 10)
-            .padding(.bottom, 2)
+            .padding(.top, 8)
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
-        .accessibilityLabel("Archived contexts")
+        .accessibilityLabel("Archived workspaces")
         .accessibilityValue("\(content.archivedContexts.count)")
         .accessibilityHint(showsArchivedItems ? "Expanded" : "Collapsed")
     }
 
     @ViewBuilder
-    private var archivedRows: some View {
+    private func archivedRows(relativeTo now: Date) -> some View {
         if filteredArchivedContexts.isEmpty {
             let title = isSearching
-                ? "No archived contexts found"
-                : "No archived contexts"
+                ? "No archived workspaces found"
+                : "No archived workspaces"
             statusRow(title: title, showsProgress: false)
         } else {
             ForEach(filteredArchivedContexts) { context in
-                row(for: context)
+                row(for: context, relativeTo: now)
             }
         }
     }
@@ -128,9 +112,10 @@ struct SidebarContextList: View {
         ContextSearchFilter.filter(content.archivedContexts, searchText: searchText)
     }
 
-    private func row(for context: WorkspaceContext) -> some View {
+    private func row(for context: WorkspaceContext, relativeTo now: Date) -> some View {
         let isLoading = content.busyContextID == context.id
         let isEnabled = rowsEnabled || isLoading
+        let isActive = content.activeContextID == context.id
 
         return Button {
             selectedDestination = .context(context.id)
@@ -140,14 +125,32 @@ struct SidebarContextList: View {
                 symbol: context.symbol,
                 state: SidebarRowState(
                     isSelected: selectedDestination == .context(context.id),
-                    isActive: content.activeContextID == context.id,
+                    isActive: isActive,
                     isLoading: isLoading,
-                    isEnabled: isEnabled
+                    isEnabled: isEnabled,
+                    activityText: activityText(
+                        for: context,
+                        isActive: isActive,
+                        relativeTo: now
+                    )
                 )
             )
         }
         .buttonStyle(.plain)
         .disabled(!isEnabled)
+    }
+
+    private func activityText(
+        for context: WorkspaceContext,
+        isActive: Bool,
+        relativeTo now: Date
+    ) -> String {
+        activityTextFormatter.sidebarActivityText(
+            isActive: isActive,
+            activeSince: isActive ? content.activity.activeSince : nil,
+            lastUsedAt: content.activity.lastActiveAt(for: context.id),
+            relativeTo: now
+        )
     }
 
     private func statusRow(title: String, showsProgress: Bool) -> some View {
@@ -158,13 +161,13 @@ struct SidebarContextList: View {
             }
 
             Text(title)
-                .font(DawnTextStyle.sidebarMeta)
+                .font(DawnTextStyle.sidebarAction)
                 .foregroundStyle(DawnColors.sidebarSecondaryForeground)
                 .lineLimit(2)
                 .frame(maxWidth: .infinity, alignment: .leading)
         }
         .padding(.vertical, 8)
-        .padding(.horizontal, 12)
+        .padding(.horizontal, 8)
         .accessibilityElement(children: .combine)
     }
 

@@ -11,10 +11,8 @@ struct AppShellView: View {
             store: contextStore,
         )
         .frame(
-            minWidth: SidebarMetrics.width + SidebarMetrics.minimumDetailWidth,
-            maxWidth: .infinity,
-            minHeight: SidebarMetrics.minimumWindowHeight,
-            maxHeight: .infinity
+            width: SidebarMetrics.windowWidth,
+            height: SidebarMetrics.windowHeight
         )
     }
 
@@ -80,12 +78,12 @@ struct AppShellView: View {
         }
 
         var body: some View {
-            HSplitView {
+            HStack(spacing: 0) {
                 SidebarView(
                     content: SidebarContent(
                         contexts: activeContexts,
                         archivedContexts: archivedContexts,
-                        activeContextID: store.activity.activeContextID,
+                        activity: store.activity,
                         busyContextID: viewModel.operationInProgress,
                         isLoading: store.isLoading,
                         isAgentRunning: eventBusService.isConnected,
@@ -98,23 +96,26 @@ struct AppShellView: View {
                     onCreateContext: { viewModel.presentContextCreator() },
                     onDismissError: dismissSidebarError
                 )
-                .background {
-                    SplitViewDividerFix()
-                }
+                .frame(maxHeight: .infinity)
 
                 detail(for: navigation.selectedDestination)
-                    .frame(
-                        minWidth: SidebarMetrics.minimumDetailWidth,
-                        maxWidth: .infinity,
-                        maxHeight: .infinity
-                    )
+                    .frame(width: SidebarMetrics.detailWidth)
+                    .frame(maxHeight: .infinity)
                     .background {
                         DawnColors.primaryBackground
-                            .ignoresSafeArea()
                     }
             }
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .ignoresSafeArea()
+            .frame(
+                minWidth: SidebarMetrics.windowWidth,
+                idealWidth: SidebarMetrics.windowWidth,
+                maxWidth: SidebarMetrics.windowWidth,
+                minHeight: SidebarMetrics.windowHeight,
+                idealHeight: SidebarMetrics.windowHeight,
+                maxHeight: SidebarMetrics.windowHeight
+            )
+            .background {
+                shellBackground
+            }
             .background {
                 WindowTranslucency()
             }
@@ -148,6 +149,7 @@ struct AppShellView: View {
                 }
 
                 await refreshContextsAndResolvePendingRoute()
+                navigation.selectInitialWorkspaceIfNeeded(from: store.contexts)
             }
             .sheet(
                 isPresented: Binding<Bool>(
@@ -176,6 +178,16 @@ struct AppShellView: View {
             } message: {
                 Text(navigation.error?.localizedDescription ?? "")
             }
+        }
+
+        private var shellBackground: some View {
+            HStack(spacing: 0) {
+                SidebarBackground()
+                    .frame(width: SidebarMetrics.width)
+
+                DawnColors.primaryBackground
+            }
+            .ignoresSafeArea()
         }
 
         private func pushSidebarError(_ message: String?) {
@@ -236,7 +248,9 @@ extension AppShellView.AppShellContent {
     fileprivate func detail(for destination: SidebarDestination?) -> some View {
         switch destination {
         case let .context(contextID):
-            if let context = store.contexts.first(where: { $0.id == contextID }) {
+            if !eventBusService.isConnected {
+                AgentWaitingView()
+            } else if let context = store.contexts.first(where: { $0.id == contextID }) {
                 ContextDetailView(
                     context: context,
                     viewModel: viewModel,
@@ -244,14 +258,14 @@ extension AppShellView.AppShellContent {
                     onDelete: { deleted in
                         if navigation.selectedDestination == .context(deleted.id) {
                             navigation.selectedDestination = nil
+                            navigation.selectInitialWorkspaceIfNeeded(from: store.contexts)
                         }
                     }
                 )
             } else {
-                ContentUnavailableView(
-                    "Context not available",
-                    systemImage: "rectangle.stack.slash",
-                    description: Text("This context is no longer available.")
+                EmptyWorkspacesView(
+                    onCreateWorkspace: { viewModel.presentContextCreator() },
+                    interactionsDisabled: interactionsDisabled
                 )
             }
 
@@ -270,11 +284,14 @@ extension AppShellView.AppShellContent {
             )
 
         case nil:
-            ContentUnavailableView(
-                "No context selected",
-                systemImage: "sidebar.leading",
-                description: Text("Select a context in the sidebar, or create a new one.")
-            )
+            if !eventBusService.isConnected {
+                AgentWaitingView()
+            } else {
+                EmptyWorkspacesView(
+                    onCreateWorkspace: { viewModel.presentContextCreator() },
+                    interactionsDisabled: interactionsDisabled
+                )
+            }
         }
     }
 

@@ -43,4 +43,27 @@ public struct WorkspaceActivityTextFormatter: Sendable {
             relativeTo: now
         )
     }
+
+    public func sidebarActivityText(
+        isActive: Bool,
+        activeSince: Date?,
+        lastUsedAt: Date?,
+        relativeTo now: Date
+    ) -> String {
+        if isActive {
+            if let activeSince {
+                return activeText(since: activeSince, relativeTo: now)
+            }
+
+            return "In use"
+        }
+
+        guard let lastUsedAt else {
+            return "Never activated"
+        }
+
+        let relative = lastUsedText(at: lastUsedAt, relativeTo: now)
+        let capitalized = relative.prefix(1).uppercased() + relative.dropFirst()
+        return "Last use \(capitalized)"
+    }
 }

@@ -27,8 +27,8 @@ struct MainApp: App {
                     await appDelegate.settingsStore.refresh()
                 }
         }
-        .defaultSize(width: 1080, height: 680)
+        .defaultSize(width: SidebarMetrics.windowWidth, height: SidebarMetrics.windowHeight)
         .windowStyle(.hiddenTitleBar)
-        .windowResizability(.contentMinSize)
+        .windowResizability(.contentSize)
     }
 }
