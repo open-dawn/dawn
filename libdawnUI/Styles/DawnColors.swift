@@ -12,9 +12,26 @@ public enum DawnColors {
 
     public static let menuItemSecondaryForeground = Color.secondary
 
+    public static let emphasizedBody = Color(.emphasizedBody)
+
     // MARK: Inputs
 
     public static let inputBackground = Color(.inputBackground)
+
+    public static let primaryButtonBackground = Color(.primaryButtonBackground)
+    public static let primaryButtonBackgroundDisabled = Color(.primaryButtonBackgroundDisabled)
+
+    public static let activationPolicyBackground = Color(.activationPolicyBackground)
+
+    public static let activationPolicyTitle = Color(.activationPolicyTitle)
+
+    public static let activationPolicyDescription = Color(.activationPolicyDescription)
+
+    public static let activationPolicySelectedBackground = Color(.activationPolicySelectedBackground)
+
+    public static let activationPolicySelectedTitle = Color(.activationPolicySelectedTitle)
+
+    public static let activationPolicySelectedDescription = Color(.activationPolicySelectedDescription)
 
     // MARK: Selection
 

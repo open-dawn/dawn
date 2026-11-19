@@ -13,6 +13,7 @@ public struct DButton<Leading: View, Content: View, Trailing: View>: View {
     private let leading: Leading
     private let content: Content
     private let trailing: Trailing
+    @Environment(\.isEnabled) private var isEnabled
 
     public init(
         style: DButtonStyle = .primary,
@@ -51,7 +52,7 @@ public struct DButton<Leading: View, Content: View, Trailing: View>: View {
             .underline(style.underlined, color: style.fgStyle)
             .background {
                 RoundedRectangle(cornerRadius: style.cornerRadius)
-                    .fill(style.bgStyle)
+                    .fill(isEnabled ? style.bgStyle : style.bgStyleDisabled)
             }
             .contentShape(Rectangle())
         }

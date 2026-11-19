@@ -41,8 +41,13 @@ struct ContextApplicationsStepView: View {
     }
 
     var body: some View {
-        VStack(spacing: 28) {
-            Text("Choose your apps")
+        VStack {
+            (Text("Choose ")
+
+                + Text("apps")
+                .foregroundStyle(DawnColors.emphasizedBody)
+
+                + Text(" to open"))
                 .font(DawnTextStyle.screenTitle)
 
             selectionSummary
@@ -53,6 +58,8 @@ struct ContextApplicationsStepView: View {
 
             DButton(action: onNext) {
                 Text(confirmTitle)
+                    .font(DawnFont.zain(.bold, size: 20, relativeTo: .body))
+                    .foregroundStyle(DawnColors.selectionForeground)
                     .frame(maxWidth: .infinity)
             }
         }
@@ -60,17 +67,18 @@ struct ContextApplicationsStepView: View {
 
     private var selectionSummary: some View {
         VStack(spacing: 7) {
-            Text(selectionSummaryText)
-                .font(DawnTextStyle.body)
-
-            if !selectedApplications.isEmpty {
+            if selectedApplications.isEmpty {
+                Text("0 apps selected")
+                    .font(DawnTextStyle.body)
+                    .foregroundColor(DawnColors.menuItemSecondaryForeground)
+            } else {
                 HStack(spacing: -12) {
                     ForEach(selectedApplications.prefix(4)) { application in
                         selectedApplicationButton(application)
                     }
 
                     if selectedApplications.count > 4 {
-                        Text("+\(selectedApplications.count - 4)")
+                        Text(remainingApplicationsLabel)
                             .font(DawnTextStyle.caption)
                             .padding(.leading, 16)
                     }
@@ -143,7 +151,7 @@ struct ContextApplicationsStepView: View {
                     }
                 }
             }
-            .frame(height: 220)
+            .frame(maxHeight: .infinity)
         }
     }
 
@@ -199,6 +207,13 @@ struct ContextApplicationsStepView: View {
         let noun = count == 1 ? "app" : "apps"
 
         return "\(count) \(noun) selected"
+    }
+
+    private var remainingApplicationsLabel: String {
+        let count = selectedApplications.count - 4
+        let noun = count == 1 ? "app" : "apps"
+
+        return "+\(count) \(noun)"
     }
 
     private func toggleSelection(of applicationID: UUID) {
