@@ -65,4 +65,41 @@ struct WorkspaceActivityTextFormatterTests {
             ) == "5 minutes ago"
         )
     }
+
+    @Test("formats sidebar activity for active and inactive workspaces")
+    func formatsSidebarActivityText() {
+        let formatter = WorkspaceActivityTextFormatter(
+            locale: Locale(identifier: "en_US")
+        )
+        let now = Date(timeIntervalSince1970: 1_000)
+        let started = now.addingTimeInterval(-25 * 60)
+        let lastUsed = now.addingTimeInterval(-5 * 60)
+
+        #expect(
+            formatter.sidebarActivityText(
+                isActive: true,
+                activeSince: started,
+                lastUsedAt: nil,
+                relativeTo: now
+            ) == "25min in use"
+        )
+
+        #expect(
+            formatter.sidebarActivityText(
+                isActive: false,
+                activeSince: nil,
+                lastUsedAt: lastUsed,
+                relativeTo: now
+            ) == "Last use 5 minutes ago"
+        )
+
+        #expect(
+            formatter.sidebarActivityText(
+                isActive: false,
+                activeSince: nil,
+                lastUsedAt: nil,
+                relativeTo: now
+            ) == "Never activated"
+        )
+    }
 }

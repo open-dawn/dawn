@@ -103,4 +103,46 @@ struct AppNavigationModelTests {
         #expect(model.error == .contextsUnavailable)
         #expect(model.pendingRoute == nil)
     }
+
+    @Test("selects the first active workspace when nothing is selected")
+    func selectsInitialWorkspace() {
+        let first = WorkspaceContext(name: "Work", symbol: "briefcase")
+        let second = WorkspaceContext(name: "Home", symbol: "house")
+        let archived = WorkspaceContext(
+            name: "Old",
+            symbol: "archivebox",
+            isArchived: true
+        )
+        let model = AppNavigationModel()
+
+        model.selectInitialWorkspaceIfNeeded(from: [archived, first, second])
+
+        #expect(model.selectedDestination == .context(first.id))
+    }
+
+    @Test("does not override an existing selection")
+    func keepsExistingSelection() {
+        let first = WorkspaceContext(name: "Work", symbol: "briefcase")
+        let second = WorkspaceContext(name: "Home", symbol: "house")
+        let model = AppNavigationModel()
+        model.selectedDestination = .settings
+
+        model.selectInitialWorkspaceIfNeeded(from: [first, second])
+
+        #expect(model.selectedDestination == .settings)
+    }
+
+    @Test("leaves selection empty when there are no active workspaces")
+    func emptyWhenNoActiveWorkspaces() {
+        let archived = WorkspaceContext(
+            name: "Old",
+            symbol: "archivebox",
+            isArchived: true
+        )
+        let model = AppNavigationModel()
+
+        model.selectInitialWorkspaceIfNeeded(from: [archived])
+
+        #expect(model.selectedDestination == nil)
+    }
 }

@@ -101,10 +101,6 @@
             .frame(width: 300)
     }
 
-    #Preview("Sidebar / No context") {
-        SidebarPreview(content: SidebarPreviewData.empty)
-    }
-
     #Preview("Sidebar / Update available") {
         SidebarPreview(
             content: SidebarPreviewData.populated,
@@ -133,7 +129,7 @@
         }
 
         var body: some View {
-            HSplitView {
+            HStack(spacing: 0) {
                 SidebarView(
                     content: content,
                     availableUpdate: availableUpdate,
@@ -142,15 +138,12 @@
                     onCreateContext: {},
                     onDismissError: {}
                 )
-                .background {
-                    SplitViewDividerFix()
-                }
 
                 previewDetail
             }
             .ignoresSafeArea()
             .preferredColorScheme(.dark)
-            .frame(width: 980, height: 640)
+            .frame(width: SidebarMetrics.windowWidth, height: SidebarMetrics.windowHeight)
         }
 
         private var previewDetail: some View {
@@ -162,11 +155,8 @@
                     .font(DawnTextStyle.sidebarFooter)
                     .foregroundStyle(DawnColors.sidebarSecondaryForeground)
             }
-            .frame(
-                minWidth: SidebarMetrics.minimumDetailWidth,
-                maxWidth: .infinity,
-                maxHeight: .infinity
-            )
+            .frame(width: SidebarMetrics.detailWidth)
+            .frame(maxHeight: .infinity)
         }
 
         private var detailTitle: String {
@@ -176,11 +166,11 @@
             case .about:
                 "About"
             case .context(let identifier):
-                contextName(identifier) ?? "Context"
+                contextName(identifier) ?? "Workspace"
             case .debug:
                 "Debug"
             case nil:
-                "No context selected"
+                "No workspace selected"
             }
         }
 
@@ -197,17 +187,21 @@
             specimen(
                 "Selected",
                 name: "Study",
-                state: SidebarRowState(isSelected: true)
+                state: SidebarRowState(isSelected: true, activityText: "Last use Yesterday")
             )
             specimen(
                 "Active",
                 name: "Apple Developer Academy",
-                state: SidebarRowState(isActive: true)
+                state: SidebarRowState(isActive: true, activityText: "5h 12min in use")
             )
             specimen(
                 "Selected and active",
                 name: "Apple Developer Academy",
-                state: SidebarRowState(isSelected: true, isActive: true)
+                state: SidebarRowState(
+                    isSelected: true,
+                    isActive: true,
+                    activityText: "5h 12min in use"
+                )
             )
             specimen(
                 "Disabled",
@@ -269,7 +263,8 @@
         static let archived = makeContext(
             "10000000-0000-0000-0000-000000000004",
             name: "Appppppple IPHONE 2 DUO!!!",
-            symbol: "book.fill"
+            symbol: "book.fill",
+            isArchived: true
         )
 
         static let longName = makeContext(
@@ -289,23 +284,30 @@
             SidebarContent(
                 contexts: [academy, gaming, study],
                 archivedContexts: [archived],
-                activeContextID: academy.id,
+                activity: WorkspaceActivityState(
+                    activeSession: .init(
+                        contextID: academy.id,
+                        startedAt: Date().addingTimeInterval(-5 * 3600 - 12 * 60)
+                    ),
+                    lastActiveAtByContextID: [
+                        gaming.id: Date().addingTimeInterval(-86_400),
+                        study.id: Date().addingTimeInterval(-86_400),
+                    ]
+                )
             )
         }
 
         static var empty: SidebarContent {
-            SidebarContent(
-                contexts: [],
-                archivedContexts: [],
-                activeContextID: nil,
-            )
+            SidebarContent()
         }
 
         static var full: SidebarContent {
             SidebarContent(
                 contexts: [academy, gaming, study],
                 archivedContexts: [oldContext],
-                activeContextID: academy.id,
+                activity: WorkspaceActivityState(
+                    activeSession: .init(contextID: academy.id, startedAt: Date().addingTimeInterval(-3600))
+                ),
                 isAgentRunning: false,
                 interactionsDisabled: true,
             )
@@ -314,7 +316,8 @@
         static let oldContext = makeContext(
             "10000000-0000-0000-0000-000000000006",
             name: "Personal (2024)",
-            symbol: "archivebox"
+            symbol: "archivebox",
+            isArchived: true
         )
 
         static var loading: SidebarContent {
@@ -345,7 +348,9 @@
             SidebarContent(
                 contexts: [longName, gaming, study],
                 archivedContexts: [archived],
-                activeContextID: longName.id,
+                activity: WorkspaceActivityState(
+                    activeSession: .init(contextID: longName.id, startedAt: Date().addingTimeInterval(-600))
+                )
             )
         }
 
@@ -354,18 +359,21 @@
             content.errorMessages = [
                 SidebarErrorMessage(text: "The workspace manager could not switch contexts.")
             ]
+            content.isAgentRunning = false
             return content
         }
 
         private static func makeContext(
             _ identifier: String,
             name: String,
-            symbol: String
+            symbol: String,
+            isArchived: Bool = false
         ) -> WorkspaceContext {
             WorkspaceContext(
                 id: UUID(uuidString: identifier) ?? UUID(),
                 name: name,
-                symbol: symbol
+                symbol: symbol,
+                isArchived: isArchived
             )
         }
     }
