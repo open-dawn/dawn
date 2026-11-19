@@ -35,7 +35,20 @@ public enum DButtonStyle: CaseIterable {
 
     var bgStyle: Color {
         switch self {
-        case .primary: return DawnColors.primaryForeground
+        case .primary: return DawnColors.primaryButtonBackground
+        case .secondary: return DawnColors.secondaryBackground
+        case .danger: return DawnColors.dangerBackground
+        case .warning: return DawnColors.warningBackground
+        case .success: return DawnColors.successBackground
+        case .link: return .clear
+        case .linkSecondary: return .clear
+        case .plain, .icon, .compactIcon, .compactLink: return .clear
+        }
+    }
+
+    var bgStyleDisabled: Color {
+        switch self {
+        case .primary: return DawnColors.primaryButtonBackgroundDisabled
         case .secondary: return DawnColors.secondaryBackground
         case .danger: return DawnColors.dangerBackground
         case .warning: return DawnColors.warningBackground
@@ -63,7 +76,7 @@ public enum DButtonStyle: CaseIterable {
 
     var verticalPadding: CGFloat {
         switch self {
-        case .primary: return 12
+        case .primary: return 8
         case .secondary: return 12
         case .danger: return 12
         case .warning: return 12

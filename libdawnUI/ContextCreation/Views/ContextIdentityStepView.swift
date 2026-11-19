@@ -21,10 +21,27 @@ struct ContextIdentityStepView: View {
 
     var body: some View {
         VStack(spacing: 32) {
-            ContextCreationStepHeader(
-                title: "Name your workspace",
-                subtitle: "Choose a name and symbol for your workspace.",
-            )
+            VStack(spacing: 6) {
+                Text("Name your workspace")
+                    .font(DawnTextStyle.screenTitle)
+
+                (Text("Choose a ")
+
+                    + Text("name")
+                    .font(DawnTextStyle.emphasizedBody)
+                    .foregroundColor(DawnColors.emphasizedBody)
+
+                    + Text(" and ")
+
+                    + Text("symbol")
+                    .font(DawnTextStyle.emphasizedBody)
+                    .foregroundColor(DawnColors.emphasizedBody)
+
+                    + Text(" for your workspace"))
+                    .font(DawnTextStyle.body)
+                    .foregroundColor(DawnColors.menuItemSecondaryForeground)
+            }
+            .multilineTextAlignment(.center)
 
             VStack(alignment: .leading, spacing: 20) {
                 nameField
@@ -35,10 +52,11 @@ struct ContextIdentityStepView: View {
 
             DButton(action: onNext) {
                 Text("Next")
+                    .font(DawnFont.zain(.bold, size: 20, relativeTo: .body))
+                    .foregroundStyle(DawnColors.selectionForeground)
                     .frame(maxWidth: .infinity)
             }
             .disabled(!canContinue)
-            .opacity(canContinue ? 1 : 0.5)
         }
     }
 

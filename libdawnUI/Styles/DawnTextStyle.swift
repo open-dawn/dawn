@@ -16,17 +16,21 @@ public enum DawnTextStyle {
     public static let contextTitle: Font = DawnFont.zain(.bold, size: 18, relativeTo: .title)
     public static let contextMetadata: Font = DawnFont.gabarito(size: 10, relativeTo: .body)
 
-    public static let noWorkspaceTitle: Font = DawnFont.zain(.bold ,size: 28, relativeTo: .title)
+    public static let noWorkspaceTitle: Font = DawnFont.zain(.bold, size: 28, relativeTo: .title)
     public static let noWorkspaceBody: Font = DawnFont.gabarito(size: 16, relativeTo: .body)
 
     // MARK: Branding
-    public static let brandTitle: Font = DawnFont.zain(.regular ,size: 24, relativeTo: .title)
+    public static let brandTitle: Font = DawnFont.zain(.regular, size: 24, relativeTo: .title)
     public static let compactBrandTitle: Font = .system(size: 20)
 
     // MARK: Screen hierarchy
-    public static let screenTitle: Font = .system(size: 21, weight: .bold)
+    public static let screenTitle: Font = DawnFont.zain(.bold, size: 28, relativeTo: .title)
     public static let compactScreenTitle: Font = .system(size: 18, weight: .bold)
-    public static let body: Font = .system(size: 14)
+    public static let body: Font = DawnFont.gabarito(size: 16, relativeTo: .body)
+    public static let emphasizedBody: Font = DawnFont.gabarito(.bold, size: 16, relativeTo: .body)
+    public static let confirmationTitle: Font = DawnFont.zain(.bold, size: 24, relativeTo: .title2)
+    public static let confirmationWorkspaceTitle: Font = DawnFont.zain(.bold, size: 16, relativeTo: .headline)
+    public static let confirmationAction: Font = DawnFont.gabarito(size: 16, relativeTo: .body)
     public static let fieldLabel: Font = .system(size: 14, weight: .light)
     public static let sectionLabel: Font = DawnFont.zain(.bold, size: 22, relativeTo: .title)
     public static let linkLabel: Font = .system(size: 12, weight: .light)
@@ -45,6 +49,12 @@ public enum DawnTextStyle {
 
     public static let buttonLabel: Font = .system(size: 16, weight: .semibold)
     public static let buttonIcon: Font = .system(size: 14, weight: .bold)
+
+    public static let activationPolicyTitle: Font = DawnFont.gabarito(size: 12, relativeTo: .caption)
+
+    public static let activationPolicyDescription: Font = DawnFont.gabarito(size: 10, relativeTo: .caption2)
+
+    public static let activationPolicyIcon: Font = .system(size: 16, weight: .medium)
 
     // MARK: - Sidebar
 

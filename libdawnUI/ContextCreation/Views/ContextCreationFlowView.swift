@@ -151,6 +151,10 @@ public struct ContextCreationFlowView: View {
             )
         case .confirmation:
             ContextCreationConfirmationView(
+                name: draft.name,
+                symbolName: draft.symbolName ?? "square.dashed",
+                applications: draft.selectedApplications,
+                activationPolicy: draft.activationPolicy,
                 onFinishAndSwitch: finishAndSwitch,
                 onFinish: onExit
             )
