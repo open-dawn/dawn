@@ -53,15 +53,24 @@ public enum DawnColors {
 
     public static let sidebarBackground = Color(.sidebarBackground)
     public static let sidebarRowSelected = Color(.sidebarRowSelected)
+    public static let sidebarRowActive = Color(.sidebarRowActive)
     public static let sidebarForeground = Color(.sidebarForeground)
+    public static let sidebarSelectedForeground = Color(.sidebarSelectedForeground)
+    public static let sidebarSelectedMeta = Color(.sidebarSelectedMeta)
+    public static let sidebarActiveForeground = Color(.sidebarActiveForeground)
+    public static let sidebarActiveMeta = Color(.sidebarActiveMeta)
 
     public static let sidebarIcon = Color(.sidebarIcon)
     public static let sidebarSecondaryForeground = Color(.sidebarSecondaryForeground)
     public static let sidebarTertiaryForeground = Color(.sidebarTertiaryForeground)
+    public static let sidebarMeta = Color(.sidebarMeta)
     public static let sidebarActive = Color(.sidebarActive)
 
-    public static let sidebarWarningBackground = Color(.sidebarWarningBackground).opacity(0.15)
+    public static let sidebarBannerBackground = Color(.sidebarBannerBackground)
+    public static let sidebarErrorForeground = Color(.sidebarErrorForeground)
     public static let sidebarWarningForeground = Color(.sidebarWarningForeground)
+    public static let sidebarWarningButtonBackground = Color(.sidebarWarningForeground)
+    public static let sidebarWarningButtonForeground = Color(.sidebarWarningButtonForeground)
 
     public static let textFieldInset = Color(.textFieldInset)
 }

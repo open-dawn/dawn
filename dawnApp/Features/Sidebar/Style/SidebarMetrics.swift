@@ -3,29 +3,42 @@ import libdawnUI
 import SwiftUI
 
 enum SidebarMetrics {
-    // Sidebar and details sizes
-    static let width: CGFloat = 260
-    static let minimumDetailWidth: CGFloat = 520
-    static let idealDetailWidth: CGFloat = 760
-    static let minimumWindowHeight: CGFloat = 560
+    static let width: CGFloat = 280
+    static let detailWidth: CGFloat = 680
+    static let windowWidth: CGFloat = width + detailWidth
+    static let windowHeight: CGFloat = 680
 
-    // Inner paddings
-    static let horizontalPadding: CGFloat = 12
-    static let sectionSpacing: CGFloat = 14
+    static let minimumDetailWidth: CGFloat = detailWidth
+    static let idealDetailWidth: CGFloat = detailWidth
+    static let minimumWindowHeight: CGFloat = windowHeight
+
+    static let horizontalPadding: CGFloat = 24
+    static let titleBarPadding: CGFloat = 12
+    static let sectionSpacing: CGFloat = 24
+    static let listSpacing: CGFloat = 4
     static let footerSpacing: CGFloat = 8
     static let controlHeight: CGFloat = 28
-    static let cornerRadius: CGFloat = 8
+    static let cornerRadius: CGFloat = 4
+    static let rowCornerRadius: CGFloat = 4
 
-    // Context icon
-    static let iconSize: CGFloat = 24
+    static let iconSize: CGFloat = 15
+    static let iconTextSpacing: CGFloat = 8
+    static let rowIconSize: CGFloat = 24
     static let activeBadgeSize: CGFloat = 10
 
-    // Others
-    static let warningVerticalPadding: CGFloat = 10
+    static let warningVerticalPadding: CGFloat = 8
     static let tooltipNameLength = 24
 
-    static func fill(isSelected: Bool) -> Color {
-        isSelected ? DawnColors.sidebarRowSelected : .clear
+    static func fill(isSelected: Bool, isActive: Bool) -> Color {
+        if isActive {
+            return DawnColors.sidebarRowActive
+        }
+
+        if isSelected {
+            return DawnColors.sidebarRowSelected
+        }
+
+        return .clear
     }
 }
 

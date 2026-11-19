@@ -35,8 +35,7 @@ struct SidebarView: View {
             content: content,
             selectedDestination: $selectedDestination,
             isArchivedSectionExpanded: $isArchivedSectionExpanded,
-            searchText: searchText,
-            onCreateContext: onCreateContext
+            searchText: searchText
         )
         .safeAreaInset(edge: .top, spacing: 0) {
             topSection
@@ -62,7 +61,7 @@ struct SidebarView: View {
             )
         }
         .padding(.horizontal, SidebarMetrics.horizontalPadding)
-        .padding(.top, SidebarMetrics.footerSpacing)
+        .padding(.top, SidebarMetrics.titleBarPadding)
         .padding(.bottom, SidebarMetrics.footerSpacing)
         .frame(maxWidth: .infinity)
         .background {

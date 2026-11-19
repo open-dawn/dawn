@@ -61,15 +61,29 @@ final class AppNavigationModel {
     func contextsDidChange(_ contexts: [WorkspaceContext]) {
         selectedDestination = selectedDestination?.reconciled(with: contexts)
 
-        guard case .context(let contextID) = pendingRoute,
-              containsContext(contextID, in: contexts)
-        else {
+        if case .context(let contextID) = pendingRoute,
+           containsContext(contextID, in: contexts)
+        {
+            pendingRoute = nil
+            error = nil
+            selectedDestination = .context(contextID)
             return
         }
 
-        pendingRoute = nil
-        error = nil
-        selectedDestination = .context(contextID)
+        selectInitialWorkspaceIfNeeded(from: contexts)
+    }
+
+    func selectInitialWorkspaceIfNeeded(from contexts: [WorkspaceContext]) {
+        guard selectedDestination == nil, pendingRoute == nil, error == nil else {
+            return
+        }
+
+        let activeContexts = contexts.filter { !$0.isArchived }
+        guard let first = activeContexts.first else {
+            return
+        }
+
+        selectedDestination = .context(first.id)
     }
 
     func contextRefreshSucceeded(with contexts: [WorkspaceContext]) {
