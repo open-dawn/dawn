@@ -17,7 +17,6 @@ final class ContextDetailViewModel {
     var isCreatingOrEditing: Bool
 
     private var committed: WorkspaceContext?
-    private var latestSnapshot: WorkspaceContext?
     private var saveInFlight = false
     private var saveAgain = false
     private var isChangingArchival = false
@@ -170,8 +169,6 @@ final class ContextDetailViewModel {
 
 extension ContextDetailViewModel {
     func adopt(_ snapshot: WorkspaceContext) {
-        latestSnapshot = snapshot
-
         guard var current = draft, current.id == snapshot.id else {
             pendingSave?.cancel()
             pendingSave = nil
@@ -182,19 +179,7 @@ extension ContextDetailViewModel {
             return
         }
 
-        if current.name == committed?.name {
-            current.name = snapshot.name
-        }
-        if current.symbol == committed?.symbol {
-            current.symbol = snapshot.symbol
-        }
-        if current.transition.activationPolicy == committed?.transition.activationPolicy {
-            current.transition.activationPolicy = snapshot.transition.activationPolicy
-        }
-        if current.applications == committed?.applications {
-            current.applications = snapshot.applications
-        }
-        current.transition.terminalCommand = snapshot.transition.terminalCommand
+        current.mergeCleanFields(from: snapshot, committed: committed)
         current.isArchived = snapshot.isArchived
         draft = current
 
@@ -203,19 +188,7 @@ extension ContextDetailViewModel {
         }
 
         committed.isArchived = snapshot.isArchived
-        committed.transition.terminalCommand = snapshot.transition.terminalCommand
-        if current.name == snapshot.name {
-            committed.name = snapshot.name
-        }
-        if current.symbol == snapshot.symbol {
-            committed.symbol = snapshot.symbol
-        }
-        if current.transition.activationPolicy == snapshot.transition.activationPolicy {
-            committed.transition.activationPolicy = snapshot.transition.activationPolicy
-        }
-        if current.applications == snapshot.applications {
-            committed.applications = snapshot.applications
-        }
+        committed.alignCleanFields(with: current, snapshot: snapshot)
         self.committed = committed
     }
 
@@ -248,6 +221,21 @@ extension ContextDetailViewModel {
         current.transition.activationPolicy = policy
         draft = current
         scheduleSave(after: .zero)
+    }
+
+    func setTerminalCommand(_ command: String) {
+        guard var current = draft else {
+            return
+        }
+
+        let normalized = normalizedTerminalCommand(command)
+        guard current.transition.terminalCommand != normalized else {
+            return
+        }
+
+        current.transition.terminalCommand = normalized
+        draft = current
+        scheduleSave(after: saveDebounce)
     }
 
     func setApplications(_ applications: [WorkspaceApplication]) {
@@ -359,13 +347,14 @@ extension ContextDetailViewModel {
         name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
     }
 
-    private func payloadToSave() -> WorkspaceContext? {
-        guard var saving = draft else {
-            return nil
-        }
+    private func normalizedTerminalCommand(_ command: String) -> String? {
+        let trimmed = command.trimmingCharacters(in: .whitespacesAndNewlines)
+        return trimmed.isEmpty ? nil : trimmed
+    }
 
-        if let latestSnapshot, latestSnapshot.id == saving.id {
-            saving.transition.terminalCommand = latestSnapshot.transition.terminalCommand
+    private func payloadToSave() -> WorkspaceContext? {
+        guard let saving = draft else {
+            return nil
         }
 
         guard let committed, committed.id == saving.id else {

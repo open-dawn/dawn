@@ -14,56 +14,52 @@ struct ContextDetailApplicationList: View {
     @State private var isDropTargeted = false
 
     var body: some View {
-        VStack(alignment: .leading) {
+        VStack(alignment: .leading, spacing: 8) {
             Text(title)
-                .font(DawnTextStyle.sectionLabel)
+                .font(DawnTextStyle.detailSectionLabel)
+                .foregroundStyle(DawnColors.primaryForeground)
 
             FlowLayout(spacing: 8) {
                 ForEach(applications) { app in
-                    HStack {
+                    HStack(spacing: 8) {
                         if let appPath = app.applicationURL?.path(percentEncoded: false) {
                             Image(nsImage: NSWorkspace.shared.icon(forFile: appPath))
+                                .resizable()
+                                .frame(width: 22, height: 22)
                         } else {
                             Image(systemName: "questionmark.square")
+                                .frame(width: 22, height: 22)
                         }
+
                         Text(app.displayName)
-                            .font(DawnTextStyle.secondary)
+                            .font(DawnTextStyle.detailField)
+                            .foregroundStyle(DawnColors.primaryForeground)
+                            .lineLimit(1)
 
                         DButton(style: .plain) {
                             onRemoveApplication(app)
                         } content: {
                             Image(systemName: "xmark")
-                                .padding(.leading, 16)
+                                .font(DawnTextStyle.detailField)
+                                .foregroundStyle(DawnColors.primaryForeground)
                         }
                         .disabled(interactionsDisabled)
                         .accessibilityLabel("Remove \(app.displayName)")
                     }
-                    .padding(8)
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 8)
                     .background {
-                        DawnColors.secondaryBackground
+                        DawnColors.activationPolicyBackground
                     }
-                    .clipShape(RoundedRectangle(cornerRadius: 8))
+                    .clipShape(RoundedRectangle(cornerRadius: 4))
                 }
 
-                DButton(style: .plain) {
-                    onAddApplications()
-                } content: {
-                    Image(systemName: "plus")
-                        .padding(8)
-                        .background {
-                            DawnColors.secondaryBackground
-                        }
-                        .clipShape(RoundedRectangle(cornerRadius: 8))
-                        .padding(9.5)
-                }
-                .disabled(interactionsDisabled)
-                .accessibilityLabel("Add application")
+                addButton
 
                 if applications.isEmpty {
-                    Text("Nothing selected yet. Click the 􀅼 button or drag an app here to add it.")
-                        .font(DawnTextStyle.primary)
-                        .foregroundStyle(DawnColors.secondaryForeground)
-                        .padding(.vertical)
+                    Text("Nothing selected yet")
+                        .font(DawnTextStyle.detailSupporting)
+                        .foregroundStyle(DawnColors.activationPolicyDescription)
                 }
             }
         }
@@ -83,5 +79,23 @@ struct ContextDetailApplicationList: View {
         } isTargeted: { isTargeted in
             isDropTargeted = isTargeted && !interactionsDisabled
         }
+    }
+
+    private var addButton: some View {
+        DButton(style: .plain) {
+            onAddApplications()
+        } content: {
+            Image(systemName: "plus")
+                .font(.system(size: 12, weight: .black))
+                .foregroundStyle(DawnColors.primaryForeground)
+                .frame(width: 30)
+                .padding(.vertical, 8)
+                .background {
+                    DawnColors.activationPolicyBackground
+                }
+                .clipShape(RoundedRectangle(cornerRadius: 4))
+        }
+        .disabled(interactionsDisabled)
+        .accessibilityLabel("Add application")
     }
 }

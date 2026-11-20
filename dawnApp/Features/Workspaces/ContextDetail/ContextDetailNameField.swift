@@ -9,9 +9,10 @@ struct ContextDetailNameField: View {
     @State private var isValidationPresented = false
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
+        VStack(alignment: .leading, spacing: 4) {
             Text("Name")
-                .font(DawnTextStyle.sectionLabel)
+                .font(DawnTextStyle.detailSectionLabel)
+                .foregroundStyle(DawnColors.primaryForeground)
 
             nameInput
                 .popover(isPresented: $isValidationPresented, arrowEdge: .bottom) {
@@ -24,25 +25,25 @@ struct ContextDetailNameField: View {
     }
 
     private var nameInput: some View {
-        HStack {
-            Image(systemName: "textformat")
-                .font(DawnTextStyle.textFieldSecondaryIcon)
-                .foregroundStyle(DawnColors.secondaryForeground)
-
-            TextField("Name", text: Binding(get: {
-                name
-            }, set: { newName in
-                onNameChange(newName)
-            }))
-            .textFieldStyle(.plain)
-        }
-        .padding(8)
+        TextField(
+            "Workspace name",
+            text: Binding(
+                get: { name },
+                set: { onNameChange($0) }
+            )
+        )
+        .font(DawnTextStyle.detailField)
+        .foregroundStyle(DawnColors.primaryForeground)
+        .textFieldStyle(.plain)
+        .padding(.horizontal, 12)
+        .padding(.vertical, 8)
+        .frame(maxWidth: .infinity, alignment: .leading)
         .background {
-            DawnColors.textFieldInset
+            DawnColors.activationPolicyBackground
         }
-        .clipShape(RoundedRectangle(cornerRadius: 8))
+        .clipShape(RoundedRectangle(cornerRadius: 4))
         .overlay {
-            RoundedRectangle(cornerRadius: 8)
+            RoundedRectangle(cornerRadius: 4)
                 .strokeBorder(
                     validationMessage == nil ? Color.clear : DawnColors.dangerForeground,
                     lineWidth: 1

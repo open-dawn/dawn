@@ -969,6 +969,65 @@ struct ContextDetailViewModelTests {
         #expect(viewModel.draft?.name == "Home")
     }
 
+    @Test("A debounced terminal command change saves the trimmed command")
+    func debouncedTerminalCommandSave() async {
+        let context = WorkspaceContext(name: "Work", symbol: "briefcase")
+        let contextManager = WorkspaceContextManagerSpy()
+        let viewModel = ContextDetailViewModel(
+            contextManager: contextManager,
+            saveDebounce: .zero
+        )
+
+        viewModel.adopt(context)
+        viewModel.setTerminalCommand("  echo hi  ")
+        await viewModel.pendingSave?.value
+
+        #expect(contextManager.updatedContexts.count == 1)
+        #expect(contextManager.updatedContexts.first?.transition.terminalCommand == "echo hi")
+        #expect(viewModel.draft?.transition.terminalCommand == "echo hi")
+    }
+
+    @Test("Clearing the terminal command saves nil")
+    func clearingTerminalCommandSavesNil() async {
+        let context = WorkspaceContext(
+            name: "Work",
+            symbol: "briefcase",
+            transition: WorkspaceTransition(terminalCommand: "echo hi")
+        )
+        let contextManager = WorkspaceContextManagerSpy()
+        let viewModel = ContextDetailViewModel(
+            contextManager: contextManager,
+            saveDebounce: .zero
+        )
+
+        viewModel.adopt(context)
+        viewModel.setTerminalCommand("   ")
+        await viewModel.pendingSave?.value
+
+        #expect(contextManager.updatedContexts.count == 1)
+        #expect(contextManager.updatedContexts.first?.transition.terminalCommand == nil)
+    }
+
+    @Test("Adopting a snapshot keeps a dirty terminal command")
+    func adoptKeepsDirtyTerminalCommand() async {
+        let context = WorkspaceContext(name: "Work", symbol: "briefcase")
+        let viewModel = ContextDetailViewModel(
+            contextManager: WorkspaceContextManagerSpy(),
+            saveDebounce: .zero
+        )
+        viewModel.adopt(context)
+        viewModel.setTerminalCommand("echo local")
+
+        var remote = context
+        remote.transition = WorkspaceTransition(terminalCommand: "echo remote")
+        viewModel.adopt(remote)
+
+        #expect(viewModel.draft?.transition.terminalCommand == "echo local")
+
+        await viewModel.pendingSave?.value
+        #expect(viewModel.draft?.transition.terminalCommand == "echo local")
+    }
+
     private let sampleApplication = WorkspaceApplication(
         bundleIdentifier: "com.apple.Safari",
         displayName: "Safari"

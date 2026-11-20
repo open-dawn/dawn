@@ -7,12 +7,13 @@ struct ContextDetailSymbolPicker: View {
     let onSymbolChange: (String) -> Void
 
     var body: some View {
-        VStack(alignment: .leading) {
+        VStack(alignment: .leading, spacing: 4) {
             Text("Symbol")
-                .font(DawnTextStyle.sectionLabel)
+                .font(DawnTextStyle.detailSectionLabel)
+                .foregroundStyle(DawnColors.primaryForeground)
 
-            ScrollView(.horizontal) {
-                HStack(spacing: 0) {
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 10) {
                     ForEach(ContextSymbols.allCases, id: \.self) { candidate in
                         DButton(
                             style: .plain,
@@ -21,23 +22,22 @@ struct ContextDetailSymbolPicker: View {
                             },
                             content: {
                                 Image(systemName: candidate.rawValue)
-                                    .font(DawnTextStyle.symbolPickerIcon)
+                                    .font(.system(size: 24))
                                     .foregroundStyle(
                                         candidate.rawValue == symbol
-                                        ? DawnColors.selectionForeground
-                                        : DawnColors.primaryForeground
+                                        ? DawnColors.activationPolicySelectedTitle
+                                        : DawnColors.activationPolicyDescription
                                     )
-                                    .frame(maxWidth: .infinity, minHeight: 53)
+                                    .frame(width: 48, height: 47)
                                     .background(
                                         candidate.rawValue == symbol
-                                        ? DawnColors.selectionBackground
+                                        ? DawnColors.activationPolicySelectedBackground
                                         : Color.clear
                                     )
-                                    .clipShape(RoundedRectangle(cornerRadius: 7))
+                                    .clipShape(RoundedRectangle(cornerRadius: 4))
                             }
                         )
                         .accessibilityAddTraits(candidate.rawValue == symbol ? .isSelected : [])
-                        .frame(width: 56, height: 56)
                     }
                 }
             }
