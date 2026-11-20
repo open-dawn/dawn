@@ -16,13 +16,20 @@ struct ContextDetailHeader: View {
     @State private var isDeleteConfirmationPresented = false
 
     var body: some View {
-        HStack(spacing: 24) {
-            Label(name, systemImage: symbol)
-                .contentTransition(.symbolEffect)
-                .font(DawnTextStyle.screenTitle)
-                .animation(.spring, value: symbol)
+        HStack(spacing: 10) {
+            Label {
+                Text(name)
+                    .font(DawnTextStyle.detailTitle)
+                    .foregroundStyle(DawnColors.primaryForeground)
+                    .lineLimit(1)
+            } icon: {
+                Image(systemName: symbol)
+                    .font(DawnTextStyle.detailTitle)
+                    .contentTransition(.symbolEffect)
+            }
+            .animation(.spring, value: symbol)
 
-            Spacer()
+            Spacer(minLength: 0)
 
             if !isArchived {
                 if isActive {
@@ -35,10 +42,10 @@ struct ContextDetailHeader: View {
                     }
                     .disabled(interactionsDisabled)
                 } else {
-                    DButton(style: .success) {
+                    DButton(style: .primary) {
                         onActivate()
                     } content: {
-                        Text("Activate")
+                        Text("Start")
                     } leading: {
                         Image(systemName: "play.fill")
                     }
@@ -67,11 +74,11 @@ struct ContextDetailHeader: View {
                         .foregroundStyle(DawnColors.dangerForeground)
                 }
             } label: {
-                DButton(style: .icon) {
-                } content: {
-                    Image(systemName: "ellipsis.circle")
-                }
-                .allowsHitTesting(false)
+                Image(systemName: "ellipsis")
+                    .font(DawnTextStyle.detailField)
+                    .foregroundStyle(DawnColors.primaryForeground)
+                    .frame(width: 24, height: 24)
+                    .contentShape(Rectangle())
             }
             .menuStyle(.borderlessButton)
             .menuIndicator(.hidden)
@@ -93,6 +100,5 @@ struct ContextDetailHeader: View {
             }
         }
         .padding(.horizontal, 32)
-        .padding(.bottom, 32)
     }
 }
