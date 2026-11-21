@@ -68,7 +68,7 @@ private struct SettingsViewPreviewHost: View {
         .padding(24)
         .frame(width: 720, height: 640)
         .background(DawnColors.primaryBackground)
-        .preferredColorScheme(.dark)
+        .preferredColorScheme(.light)
         .task {
             guard viewModel == nil else {
                 return
