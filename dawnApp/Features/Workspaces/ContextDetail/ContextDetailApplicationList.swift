@@ -9,8 +9,8 @@ struct ContextDetailApplicationList: View {
     var titleColor: Color = DawnColors.primaryForeground
     var fillsAvailableWidth: Bool = false
     let applications: [WorkspaceApplication]
-    let interactionsDisabled: Bool
     var horizontalPadding: CGFloat = 32
+    var interactionsDisabled: Bool
     let onAddApplications: () -> Void
     let onRemoveApplication: (WorkspaceApplication) -> Void
     let onDropApplications: ([URL]) -> Bool

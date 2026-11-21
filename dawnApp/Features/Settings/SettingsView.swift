@@ -146,8 +146,8 @@ struct SettingsContent: View {
             titleColor: DawnColors.primaryForeground,
             fillsAvailableWidth: true,
             applications: protectedApplications,
-            interactionsDisabled: interactionsDisabled,
             horizontalPadding: 0,
+            interactionsDisabled: interactionsDisabled,
             onAddApplications: {
                 isApplicationPickerPresented = true
             },

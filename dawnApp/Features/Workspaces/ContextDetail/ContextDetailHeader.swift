@@ -42,7 +42,7 @@ struct ContextDetailHeader: View {
                     }
                     .disabled(interactionsDisabled)
                 } else {
-                    DButton(style: .primary) {
+                    DButton(style: .detailPrimary) {
                         onActivate()
                     } content: {
                         Text("Start")

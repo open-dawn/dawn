@@ -33,6 +33,8 @@ public enum DawnColors {
 
     public static let activationPolicySelectedDescription = Color(.activationPolicySelectedDescription)
 
+    public static let detailForeground = Color(.detailForeground)
+
     // MARK: Selection
 
     public static let selectionBackground = Color(.selectionBackground)

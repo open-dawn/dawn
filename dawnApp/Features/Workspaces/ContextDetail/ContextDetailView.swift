@@ -63,13 +63,17 @@ struct ContextDetailView: View {
                 VStack(alignment: .leading, spacing: 16) {
                     ContextDetailNameField(
                         name: editedContext.name,
-                        validationMessage: nameValidationMessage
+                        validationMessage: nameValidationMessage,
+                        interactionsDisabled: interactionsDisabled,
                     ) { newName in
                         viewModel.setName(newName)
                     }
                     .padding(.horizontal, 32)
 
-                    ContextDetailSymbolPicker(symbol: editedContext.symbol) { newSymbol in
+                    ContextDetailSymbolPicker(
+                        symbol: editedContext.symbol,
+                        interactionsDisabled: interactionsDisabled
+                    ) { newSymbol in
                         viewModel.setSymbol(newSymbol)
                     }
                     .padding(.horizontal, 32)
@@ -90,7 +94,8 @@ struct ContextDetailView: View {
                 )
 
                 ContextDetailActivationPolicyPicker(
-                    policy: editedContext.transition.activationPolicy
+                    policy: editedContext.transition.activationPolicy,
+                    interactionsDisabled: interactionsDisabled
                 ) { policy in
                     viewModel.setActivationPolicy(policy)
                 }
@@ -104,7 +109,6 @@ struct ContextDetailView: View {
 
                 Spacer(minLength: 0)
             }
-            .padding(.vertical, 32)
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
             .onChange(of: context, initial: true) { _, snapshot in
                 viewModel.adopt(snapshot)

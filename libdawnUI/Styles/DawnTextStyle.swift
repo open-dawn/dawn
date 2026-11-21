@@ -44,7 +44,7 @@ public enum DawnTextStyle {
     // MARK: - Context detail (Figma fixed sizes)
 
     /// Detail pane title (Figma: Zain Bold 16).
-    public static let detailTitle: Font = DawnFont.zain(.bold, size: 16, relativeTo: .headline)
+    public static let detailTitle: Font = DawnFont.zain(.bold, size: 24, relativeTo: .headline)
     /// Section labels in the detail pane (Figma: Gabarito Bold 12).
     public static let detailSectionLabel: Font = DawnFont.gabarito(.bold, size: 12, relativeTo: .caption)
     /// Field / chip body text in the detail pane (Figma: Gabarito Regular 12).
@@ -69,6 +69,8 @@ public enum DawnTextStyle {
 
     public static let buttonLabel: Font = .system(size: 16, weight: .semibold)
     public static let buttonIcon: Font = .system(size: 14, weight: .bold)
+
+    public static let detailButton: Font = DawnFont.zain(.bold ,size: 16, relativeTo: .body)
 
     public static let activationPolicyTitle: Font = DawnFont.gabarito(size: 12, relativeTo: .caption)
 

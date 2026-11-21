@@ -4,6 +4,7 @@ import SwiftUI
 
 struct ContextDetailSymbolPicker: View {
     let symbol: String
+    let interactionsDisabled: Bool
     let onSymbolChange: (String) -> Void
 
     var body: some View {
@@ -37,6 +38,7 @@ struct ContextDetailSymbolPicker: View {
                                     .clipShape(RoundedRectangle(cornerRadius: 4))
                             }
                         )
+                        .disabled(interactionsDisabled)
                         .accessibilityAddTraits(candidate.rawValue == symbol ? .isSelected : [])
                     }
                 }

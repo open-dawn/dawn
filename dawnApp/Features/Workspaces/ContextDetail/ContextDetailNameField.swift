@@ -4,6 +4,7 @@ import SwiftUI
 struct ContextDetailNameField: View {
     let name: String
     var validationMessage: String?
+    let interactionsDisabled: Bool
     let onNameChange: (String) -> Void
 
     @State private var isValidationPresented = false
@@ -30,11 +31,14 @@ struct ContextDetailNameField: View {
             text: Binding(
                 get: { name },
                 set: { onNameChange($0) }
-            )
+            ),
+            prompt: Text("Workspace name")
+                .foregroundColor(DawnColors.detailForeground)
         )
         .font(DawnTextStyle.detailField)
         .foregroundStyle(DawnColors.primaryForeground)
         .textFieldStyle(.plain)
+        .disabled(interactionsDisabled)
         .padding(.horizontal, 12)
         .padding(.vertical, 8)
         .frame(maxWidth: .infinity, alignment: .leading)

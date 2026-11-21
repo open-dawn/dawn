@@ -4,6 +4,7 @@ import SwiftUI
 
 struct ContextDetailActivationPolicyPicker: View {
     let policy: WorkspaceActivationPolicy
+    let interactionsDisabled: Bool
     let onPolicyChange: (WorkspaceActivationPolicy) -> Void
 
     private let columns = [
@@ -24,6 +25,7 @@ struct ContextDetailActivationPolicyPicker: View {
                         isSelected: policy == candidate,
                         action: { onPolicyChange(candidate) }
                     )
+                    .disabled(interactionsDisabled)
                 }
             }
         }
