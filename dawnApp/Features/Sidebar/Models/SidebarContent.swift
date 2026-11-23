@@ -4,7 +4,7 @@ import libdawn
 struct SidebarContent {
     var contexts: [WorkspaceContext] = []
     var archivedContexts: [WorkspaceContext] = []
-    var activeContextID: UUID?
+    var activity: WorkspaceActivityState = .empty
     var busyContextID: UUID?
     var isLoading = false
     var isAgentRunning = true
@@ -12,6 +12,10 @@ struct SidebarContent {
     var interactionsDisabled = false
     /// Newest error first (FILO). Cap enforced by the shell when pushing.
     var errorMessages: [SidebarErrorMessage] = []
+
+    var activeContextID: UUID? {
+        activity.activeContextID
+    }
 }
 
 struct SidebarErrorMessage: Identifiable, Equatable {
@@ -35,4 +39,5 @@ struct SidebarRowState: Equatable {
     var isActive = false
     var isLoading = false
     var isEnabled = true
+    var activityText = "Never activated"
 }

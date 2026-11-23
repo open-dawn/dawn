@@ -22,30 +22,28 @@ struct SidebarFooter: View {
             updateButton
 
             #if DEBUG
-            footerButton(
-                title: "Debug",
-                systemImage: "ladybug",
-                showsTitle: true,
-                isSelected: selectedDestination == .debug,
-                action: { selectedDestination = .debug }
-            )
+                SidebarButton(
+                    title: "Debug",
+                    systemImage: "ladybug",
+                    expands: true,
+                    isSelected: selectedDestination == .debug,
+                    action: { selectedDestination = .debug }
+                )
             #endif
 
             HStack(alignment: .center, spacing: 8) {
-
-                footerButton(
+                SidebarButton(
                     title: "Settings",
-                    systemImage: "gearshape",
-                    showsTitle: true,
+                    systemImage: "gearshape.fill",
                     isSelected: selectedDestination == .settings,
                     action: { selectedDestination = .settings }
                 )
 
                 Spacer(minLength: 0)
 
-                footerButton(
+                SidebarButton(
                     title: "About",
-                    systemImage: "info.circle",
+                    systemImage: "info.circle.fill",
                     showsTitle: false,
                     isSelected: selectedDestination == .about,
                     action: { selectedDestination = .about }
@@ -55,45 +53,66 @@ struct SidebarFooter: View {
     }
 
     private var agentWarning: some View {
-        HStack(spacing: 6) {
-            Image(systemName: "exclamationmark.triangle.fill")
-                .font(DawnTextStyle.sidebarIcon)
-                .accessibilityHidden(true)
+        HStack(alignment: .center, spacing: 12) {
+            HStack(alignment: .center, spacing: 4) {
+                Image(systemName: "exclamationmark.triangle.fill")
+                    .font(DawnTextStyle.sidebarBannerIcon)
+                    .foregroundStyle(DawnColors.sidebarWarningForeground)
+                    .accessibilityHidden(true)
 
-            Text("The DAWN Agent is not running")
-                .font(DawnTextStyle.sidebarWarning)
-                .lineLimit(1)
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Dawn Agent is not running")
+                        .font(DawnTextStyle.sidebarBannerTitle)
+                        .foregroundStyle(DawnColors.sidebarForeground)
+                        .lineLimit(2)
+
+                    Text("Restart to start a new workspace")
+                        .font(DawnTextStyle.sidebarBannerBody)
+                        .foregroundStyle(DawnColors.sidebarForeground)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+            }
         }
-        .foregroundStyle(DawnColors.sidebarWarningForeground)
-        .frame(maxWidth: .infinity)
-        .padding(.vertical, SidebarMetrics.warningVerticalPadding)
+        .padding(8)
+        .frame(maxWidth: .infinity, alignment: .leading)
         .background {
             RoundedRectangle(cornerRadius: SidebarMetrics.cornerRadius, style: .continuous)
-                .fill(DawnColors.sidebarWarningBackground)
+                .fill(DawnColors.sidebarBannerBackground)
         }
         .accessibilityElement(children: .ignore)
-        .accessibilityLabel("The DAWN Agent is not running")
+        .accessibilityLabel("Dawn Agent is not running")
+        .accessibilityValue("Workspaces stay unavailable until the agent starts.")
     }
 
     private var accessibilityError: some View {
         Button {
             selectedDestination = .settings
         } label: {
-            HStack(spacing: 6) {
+            HStack(alignment: .center, spacing: 4) {
                 Image(systemName: "exclamationmark.triangle.fill")
-                    .font(DawnTextStyle.sidebarIcon)
+                    .font(DawnTextStyle.sidebarBannerIcon)
+                    .foregroundStyle(DawnColors.sidebarErrorForeground)
                     .accessibilityHidden(true)
 
-                Text("Accessibility permission required")
-                    .font(DawnTextStyle.sidebarWarning)
-                    .lineLimit(2)
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Accessibility required")
+                        .font(DawnTextStyle.sidebarBannerTitle)
+                        .foregroundStyle(DawnColors.sidebarForeground)
+                        .lineLimit(1)
+
+                    // Text("Open Settings to grant Accessibility permission.")
+                    //     .font(DawnTextStyle.sidebarBannerBody)
+                    //     .foregroundStyle(DawnColors.sidebarForeground)
+                    //     .fixedSize(horizontal: false, vertical: true)
+                }
+
+                Spacer(minLength: 0)
             }
-            .foregroundStyle(DawnColors.dangerForeground)
-            .frame(maxWidth: .infinity)
-            .padding(.vertical, SidebarMetrics.warningVerticalPadding)
+            .padding(8)
+            .frame(maxWidth: .infinity, alignment: .leading)
             .background {
                 RoundedRectangle(cornerRadius: SidebarMetrics.cornerRadius, style: .continuous)
-                    .fill(DawnColors.dangerForeground.opacity(0.15))
+                    .fill(DawnColors.sidebarBannerBackground)
             }
             .contentShape(Rectangle())
         }
@@ -105,73 +124,23 @@ struct SidebarFooter: View {
     @ViewBuilder
     private var updateButton: some View {
         if let update = availableUpdate {
-            Button {
-                selectedDestination = .about
-            } label: {
-                HStack(spacing: 6) {
-                    Image(systemName: "arrow.down.circle")
-                        .font(DawnTextStyle.sidebarIcon)
-                        .frame(width: SidebarMetrics.iconSize, height: SidebarMetrics.iconSize)
-                        .accessibilityHidden(true)
-
-                    Text("Update Now")
-                        .font(DawnTextStyle.sidebarFooter)
-                        .lineLimit(1)
-
+            SidebarButton(
+                title: "Update Now",
+                systemImage: "arrow.down.circle",
+                expands: true,
+                action: { selectedDestination = .about },
+                accessory: {
                     Text(update.displayVersion)
                         .font(DawnTextStyle.sidebarMeta)
                         .foregroundStyle(DawnColors.sidebarTertiaryForeground)
                         .lineLimit(1)
-
-                    Spacer(minLength: 0)
                 }
-                .foregroundStyle(DawnColors.sidebarForeground)
-                .padding(.horizontal, 8)
-                .frame(minHeight: SidebarMetrics.controlHeight)
-                .contentShape(Rectangle())
-            }
-            .buttonStyle(.plain)
-            .accessibilityLabel("Update available")
+            )
             .help("Update to version \(update.displayVersion)")
+            .accessibilityLabel("Update available")
             .accessibilityValue("Version \(update.displayVersion)")
             .accessibilityHint("Opens About to review and install the update")
         }
-    }
-
-    private func footerButton(
-        title: String,
-        systemImage: String,
-        showsTitle: Bool,
-        isSelected: Bool,
-        action: @escaping () -> Void
-    ) -> some View {
-        Button(action: action) {
-            HStack(spacing: 8) {
-                Image(systemName: systemImage)
-                    .font(DawnTextStyle.sidebarIcon)
-                    .frame(width: SidebarMetrics.iconSize, height: SidebarMetrics.iconSize)
-
-                if showsTitle {
-                    Text(title)
-                        .font(DawnTextStyle.sidebarFooter)
-                        .lineLimit(1)
-                }
-            }
-            .foregroundStyle(DawnColors.sidebarForeground)
-            .padding(.horizontal, 8)
-            .frame(minHeight: SidebarMetrics.controlHeight)
-            .background {
-                RoundedRectangle(cornerRadius: SidebarMetrics.cornerRadius, style: .continuous)
-                    .fill(SidebarMetrics.fill(isSelected: isSelected))
-            }
-            .contentShape(
-                RoundedRectangle(cornerRadius: SidebarMetrics.cornerRadius, style: .continuous)
-            )
-        }
-        .buttonStyle(.plain)
-        .help(title)
-        .accessibilityLabel(title)
-        .accessibilityAddTraits(isSelected ? .isSelected : AccessibilityTraits())
     }
 
     @ViewBuilder
@@ -186,37 +155,47 @@ struct SidebarFooter: View {
     }
 
     private func errorBanner(_ message: String, isTopMost: Bool) -> some View {
-        HStack(spacing: 6) {
+        HStack(alignment: .center, spacing: 4) {
             Image(systemName: "exclamationmark.triangle.fill")
-                .font(DawnTextStyle.sidebarIcon)
+                .font(DawnTextStyle.sidebarBannerIcon)
+                .foregroundStyle(DawnColors.sidebarErrorForeground)
                 .accessibilityHidden(true)
 
-            Text(message)
-                .font(DawnTextStyle.sidebarWarning)
-                .lineLimit(3)
+            VStack(alignment: .leading, spacing: 4) {
+                HStack(alignment: .center) {
+                    Text("Error")
+                        .font(DawnTextStyle.sidebarBannerTitle)
+                        .foregroundStyle(DawnColors.sidebarForeground)
+
+                    Spacer(minLength: 8)
+
+                    if isTopMost {
+                        Button(action: onDismissError) {
+                            Image(systemName: "xmark")
+                                .font(.system(size: 8, weight: .semibold))
+                                .foregroundStyle(DawnColors.sidebarForeground)
+                                .padding(4)
+                                .contentShape(Rectangle())
+                        }
+                        .buttonStyle(.plain)
+                        .accessibilityLabel("Dismiss error")
+                    }
+                }
+
+                Text(message)
+                    .font(DawnTextStyle.sidebarBannerBody)
+                    .foregroundStyle(DawnColors.sidebarForeground)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
         }
-        .foregroundStyle(DawnColors.dangerForeground)
-        .frame(maxWidth: .infinity)
-        .padding(.vertical, SidebarMetrics.warningVerticalPadding)
+        .padding(8)
+        .frame(maxWidth: .infinity, alignment: .leading)
         .background {
             RoundedRectangle(cornerRadius: SidebarMetrics.cornerRadius, style: .continuous)
-                .fill(DawnColors.dangerForeground.opacity(0.15))
+                .fill(DawnColors.sidebarBannerBackground)
         }
-        .accessibilityElement(children: .ignore)
-        .accessibilityLabel(message)
-        .accessibilityAction {
-            guard isTopMost else {
-                return
-            }
-
-            onDismissError()
-        }
-        .onTapGesture {
-            guard isTopMost else {
-                return
-            }
-
-            onDismissError()
-        }
+        .accessibilityElement(children: isTopMost ? .contain : .ignore)
+        .accessibilityLabel("Error")
+        .accessibilityValue(message)
     }
 }

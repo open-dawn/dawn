@@ -10,10 +10,11 @@ struct SidebarQuickActions: View {
     @FocusState private var isSearchFieldFocused: Bool
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 4) {
-            inlineButton(
-                title: "New context",
+        VStack(alignment: .leading, spacing: 8) {
+            SidebarButton(
+                title: "New Workspace",
                 systemImage: "plus",
+                expands: true,
                 action: onCreateContext
             )
             .disabled(interactionsDisabled)
@@ -21,9 +22,10 @@ struct SidebarQuickActions: View {
             if isSearchPresented {
                 searchField
             } else {
-                inlineButton(
+                SidebarButton(
                     title: "Search",
                     systemImage: "magnifyingglass",
+                    expands: true,
                     action: presentSearch
                 )
                 .keyboardShortcut("f", modifiers: .command)
@@ -43,10 +45,11 @@ struct SidebarQuickActions: View {
     }
 
     private var searchField: some View {
-        HStack(spacing: 8) {
+        HStack(spacing: SidebarMetrics.iconTextSpacing) {
             Image(systemName: "magnifyingglass")
                 .font(DawnTextStyle.sidebarIcon)
                 .foregroundStyle(DawnColors.sidebarIcon)
+                .frame(width: SidebarMetrics.iconSize, height: SidebarMetrics.iconSize)
                 .accessibilityHidden(true)
 
             TextField("Search", text: $searchText)
@@ -55,7 +58,7 @@ struct SidebarQuickActions: View {
                 .foregroundStyle(DawnColors.sidebarForeground)
                 .tint(DawnColors.sidebarActive)
                 .focused($isSearchFieldFocused)
-                .accessibilityLabel("Search contexts")
+                .accessibilityLabel("Search workspaces")
                 .onKeyPress(.escape) {
                     isSearchPresented = false
                     return .handled
@@ -71,7 +74,7 @@ struct SidebarQuickActions: View {
             .help("Clear search")
             .accessibilityLabel("Clear search")
         }
-        .padding(.horizontal, 10)
+        .padding(.horizontal, 8)
         .frame(minHeight: SidebarMetrics.controlHeight)
         .background {
             RoundedRectangle(cornerRadius: SidebarMetrics.cornerRadius, style: .continuous)
@@ -85,32 +88,5 @@ struct SidebarQuickActions: View {
 
     private func dismissSearch() {
         isSearchPresented = false
-    }
-
-    private func inlineButton(
-        title: String,
-        systemImage: String,
-        action: @escaping () -> Void
-    ) -> some View {
-        Button(action: action) {
-            HStack(spacing: 8) {
-                Image(systemName: systemImage)
-                    .font(DawnTextStyle.sidebarIcon)
-                    .foregroundStyle(DawnColors.sidebarIcon)
-                    .frame(width: SidebarMetrics.iconSize, height: SidebarMetrics.iconSize)
-
-                Text(title)
-                    .font(DawnTextStyle.sidebarAction)
-                    .foregroundStyle(DawnColors.sidebarForeground)
-                    .lineLimit(1)
-
-                Spacer(minLength: 0)
-            }
-            .padding(.horizontal, 8)
-            .frame(minHeight: SidebarMetrics.controlHeight)
-            .contentShape(Rectangle())
-        }
-        .buttonStyle(.plain)
-        .help(title)
     }
 }
