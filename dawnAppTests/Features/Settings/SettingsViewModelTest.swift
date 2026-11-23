@@ -33,8 +33,8 @@ struct SettingsViewModelTests {
         #expect(!viewModel.isLoading)
     }
 
-    @Test("hasUnsavedChanges tracks draft edits and clears after apply")
-    func hasUnsavedChangesTracksEdits() async {
+    @Test("draft updates persist immediately")
+    func draftUpdatesPersistImmediately() async {
         let client = SettingsViewStoreClientSpy(
             settings: Settings(launchAtLogin: false)
         )
@@ -43,11 +43,13 @@ struct SettingsViewModelTests {
         await viewModel.load()
         #expect(!viewModel.hasUnsavedChanges)
 
-        viewModel.draft.launchAtLogin = true
-        #expect(viewModel.hasUnsavedChanges)
+        viewModel.updateDraft { draft in
+            draft.launchAtLogin = true
+        }
+        await viewModel.flushPendingPersistence()
 
-        await viewModel.setSettings()
         #expect(!viewModel.hasUnsavedChanges)
+        #expect(client.updatedSettings == [Settings(launchAtLogin: true)])
         #expect(viewModel.error == nil)
     }
 
@@ -82,11 +84,13 @@ struct SettingsViewModelTests {
         let viewModel = SettingsViewModel(client: client)
 
         await viewModel.load()
-        viewModel.draft.launchAtLogin = true
-        viewModel.draft.showInMenuBar = false
-        viewModel.draft.forceAppsToQuit = true
-        viewModel.draft.analyticsEnabled = true
-        await viewModel.setSettings()
+        viewModel.updateDraft { draft in
+            draft.launchAtLogin = true
+            draft.showInMenuBar = false
+            draft.forceAppsToQuit = true
+            draft.analyticsEnabled = true
+        }
+        await viewModel.flushPendingPersistence()
 
         let expected = Settings(
             launchAtLogin: true,
@@ -119,9 +123,11 @@ struct SettingsViewModelTests {
         let viewModel = SettingsViewModel(client: client)
 
         await viewModel.load()
-        viewModel.draft.launchAtLogin = false
-        viewModel.draft.forceAppsToQuit = true
-        await viewModel.setSettings()
+        viewModel.updateDraft { draft in
+            draft.launchAtLogin = false
+            draft.forceAppsToQuit = true
+        }
+        await viewModel.flushPendingPersistence()
 
         #expect(viewModel.draft.launchAtLogin == false)
         #expect(viewModel.draft.forceAppsToQuit)
@@ -151,24 +157,29 @@ struct SettingsViewModelTests {
 
         await viewModel.load()
         viewModel.resetSettingsToDefaults()
+        await viewModel.flushPendingPersistence()
 
         #expect(viewModel.draft == Settings())
+        #expect(client.updatedSettings == [Settings()])
     }
 
-    @Test("remove protected app updates the draft")
+    @Test("remove protected app updates and persists the draft")
     func removeProtectedApp() async {
         let app = ProtectedApplication(
             bundleIdentifier: "com.apple.Safari",
             displayName: "Safari"
         )
-        let viewModel = SettingsViewModel(
-            client: SettingsViewStoreClientSpy(settings: Settings(protectedApps: [app]))
+        let client = SettingsViewStoreClientSpy(
+            settings: Settings(protectedApps: [app])
         )
+        let viewModel = SettingsViewModel(client: client)
 
         await viewModel.load()
         viewModel.removeProtectedApp(id: app.id)
+        await viewModel.flushPendingPersistence()
 
         #expect(viewModel.draft.protectedApps.isEmpty)
+        #expect(client.updatedSettings == [Settings(protectedApps: [])])
     }
 
     @Test("A protected app selection keeps existing rows, appends new ones, and drops the rest")
@@ -185,11 +196,10 @@ struct SettingsViewModelTests {
             bundleIdentifier: "com.apple.Notes",
             displayName: "Notes"
         )
-        let viewModel = SettingsViewModel(
-            client: SettingsViewStoreClientSpy(
-                settings: Settings(protectedApps: [kept, removed])
-            )
+        let client = SettingsViewStoreClientSpy(
+            settings: Settings(protectedApps: [kept, removed])
         )
+        let viewModel = SettingsViewModel(client: client)
 
         await viewModel.load()
         viewModel.applyProtectedApplicationSelection([
@@ -199,10 +209,16 @@ struct SettingsViewModelTests {
             ),
             added,
         ])
+        await viewModel.flushPendingPersistence()
 
         #expect(viewModel.draft.protectedApps == [kept, added])
         #expect(viewModel.draft.protectedApps.first?.id == kept.id)
-        #expect(viewModel.hasUnsavedChanges)
+        #expect(!viewModel.hasUnsavedChanges)
+        #expect(
+            client.updatedSettings == [
+                Settings(protectedApps: [kept, added])
+            ]
+        )
     }
 
     @Test("A case-different bundle identifier keeps the existing protected app")
@@ -224,6 +240,7 @@ struct SettingsViewModelTests {
                 displayName: "Safari Browser"
             ),
         ])
+        await viewModel.flushPendingPersistence()
 
         #expect(viewModel.draft.protectedApps == [existing])
         #expect(!viewModel.hasUnsavedChanges)
@@ -239,11 +256,10 @@ struct SettingsViewModelTests {
             bundleIdentifier: "com.apple.mail",
             displayName: "Mail"
         )
-        let viewModel = SettingsViewModel(
-            client: SettingsViewStoreClientSpy(
-                settings: Settings(protectedApps: [safari, mail])
-            )
+        let client = SettingsViewStoreClientSpy(
+            settings: Settings(protectedApps: [safari, mail])
         )
+        let viewModel = SettingsViewModel(client: client)
 
         await viewModel.load()
         viewModel.applyProtectedApplicationSelection([
@@ -256,9 +272,11 @@ struct SettingsViewModelTests {
                 displayName: "Renamed Safari"
             ),
         ])
+        await viewModel.flushPendingPersistence()
 
         #expect(viewModel.draft.protectedApps == [safari, mail])
         #expect(!viewModel.hasUnsavedChanges)
+        #expect(client.updatedSettings.isEmpty)
     }
 
     @Test("Dropping application bundles appends them")
@@ -272,16 +290,19 @@ struct SettingsViewModelTests {
             try? FileManager.default.removeItem(at: mail.deletingLastPathComponent())
         }
 
-        let viewModel = SettingsViewModel(client: SettingsViewStoreClientSpy())
+        let client = SettingsViewStoreClientSpy()
+        let viewModel = SettingsViewModel(client: client)
         await viewModel.load()
 
         let accepted = viewModel.addProtectedApplications(at: [mail])
+        await viewModel.flushPendingPersistence()
 
         #expect(accepted)
         #expect(viewModel.draft.protectedApps.map(\.bundleIdentifier) == ["com.example.mail"])
         #expect(viewModel.draft.protectedApps.map(\.displayName) == ["Example Mail"])
         #expect(viewModel.applicationImportError == nil)
-        #expect(viewModel.hasUnsavedChanges)
+        #expect(!viewModel.hasUnsavedChanges)
+        #expect(client.updatedSettings.count == 1)
     }
 
     @Test("Dropping an application that is already protected does not change the draft")
@@ -299,19 +320,20 @@ struct SettingsViewModelTests {
             try? FileManager.default.removeItem(at: mail.deletingLastPathComponent())
         }
 
-        let viewModel = SettingsViewModel(
-            client: SettingsViewStoreClientSpy(
-                settings: Settings(protectedApps: [existing])
-            )
+        let client = SettingsViewStoreClientSpy(
+            settings: Settings(protectedApps: [existing])
         )
+        let viewModel = SettingsViewModel(client: client)
         await viewModel.load()
 
         let accepted = viewModel.addProtectedApplications(at: [mail])
+        await viewModel.flushPendingPersistence()
 
         #expect(accepted)
         #expect(viewModel.draft.protectedApps == [existing])
         #expect(viewModel.applicationImportError == nil)
         #expect(!viewModel.hasUnsavedChanges)
+        #expect(client.updatedSettings.isEmpty)
     }
 }
 

@@ -51,11 +51,11 @@ public enum DawnColors {
     public static let contextCardContent = Color(.contextCardContent)
     public static let contextCardContentActive = Color(.contextCardContentActive)
 
-    public static let primaryBackground = Color(.primaryBackground) // #1f1f1f
+    public static let primaryBackground = Color(.primaryBackground) // #FDF6EE / #212121
     public static let secondaryBackground = Color(.secondaryBackground)
 
-    public static let primaryForeground = Color(.primaryForeground)
-    public static let secondaryForeground = Color(.secondaryForeground)
+    public static let primaryForeground = Color(.primaryForeground) // #272727 / #FFFFFF
+    public static let secondaryForeground = Color(.secondaryForeground) // #636363
 
     public static let dangerBackground = Color.red.opacity(0.15)
     public static let dangerForeground = Color.red
