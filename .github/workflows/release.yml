@@ -19,7 +19,7 @@ concurrency:
   cancel-in-progress: false
 
 env:
-  DEVELOPER_DIR: /Applications/Xcode_26.5.app/Contents/Developer
+  DEVELOPER_DIR: /Applications/Xcode_27.2.app/Contents/Developer
 
   XCODEGEN_VERSION: "2.46.0"
   XCODEGEN_SHA256: "4d9e34b62172d645eed6457cac13fc222569974098ef4ee9c3368bedf0196806"
@@ -30,7 +30,7 @@ env:
 jobs:
   release:
     name: Build release
-    runs-on: macos-26
+    runs-on: macos-27
     timeout-minutes: 60
     environment: release
 
