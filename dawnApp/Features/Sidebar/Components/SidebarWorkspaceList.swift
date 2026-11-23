@@ -45,6 +45,7 @@ struct SidebarWorkspaceList: View {
     private var workspaceHeader: some View {
         Text("Your workspaces")
             .font(DawnTextStyle.sidebarSectionHeader)
+            .dawnZainOpticalAlignment()
             .foregroundStyle(DawnColors.sidebarForeground)
             .padding(.bottom, 0)
     }
@@ -76,6 +77,7 @@ struct SidebarWorkspaceList: View {
 
                 Text("Archived workspaces")
                     .font(DawnTextStyle.sidebarSectionHeader)
+                    .dawnZainOpticalAlignment()
                     .foregroundStyle(DawnColors.sidebarForeground)
                     .lineLimit(1)
 

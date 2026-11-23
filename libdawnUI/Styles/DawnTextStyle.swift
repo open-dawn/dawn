@@ -82,7 +82,7 @@ public enum DawnTextStyle {
 
     // MARK: - Button
 
-    public static let buttonLabel: Font = .system(size: bodySize, weight: .semibold)
+    public static let buttonLabel: Font = DawnFont.zain(.bold, size: bodySize, relativeTo: .body)
     public static let buttonIcon: Font = .system(size: secondarySize, weight: .bold)
 
     public static let detailButton: Font = DawnFont.zain(.bold, size: bodySize, relativeTo: .body)

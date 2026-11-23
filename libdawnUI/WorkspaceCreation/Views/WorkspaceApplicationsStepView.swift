@@ -49,6 +49,7 @@ struct WorkspaceApplicationsStepView: View {
 
                 + Text(" to open"))
                 .font(DawnTextStyle.screenTitle)
+                .dawnZainOpticalAlignment()
 
             selectionSummary
             searchBar
@@ -58,8 +59,6 @@ struct WorkspaceApplicationsStepView: View {
 
             DButton(action: onNext) {
                 Text(confirmTitle)
-                    .font(DawnFont.zain(.bold, size: DawnTextStyle.bodySize, relativeTo: .body))
-                    .foregroundStyle(DawnColors.selectionForeground)
                     .frame(maxWidth: .infinity)
             }
         }

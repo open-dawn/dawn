@@ -32,6 +32,7 @@ struct WorkspaceCreationConfirmationView: View {
         VStack(spacing: 0) {
             Text("Congrats!")
                 .font(DawnTextStyle.confirmationTitle)
+                .dawnZainOpticalAlignment()
                 .foregroundStyle(DawnColors.primaryForeground)
 
             (
@@ -58,6 +59,7 @@ struct WorkspaceCreationConfirmationView: View {
                 HStack(alignment: .lastTextBaseline, spacing: 8) {
                     Text(name)
                         .font(DawnTextStyle.confirmationWorkspaceTitle)
+                        .dawnZainOpticalAlignment()
                         .foregroundStyle(DawnColors.workspaceCardContent)
                         .lineLimit(1)
                         .layoutPriority(1)

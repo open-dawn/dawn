@@ -39,6 +39,7 @@ public struct DButton<Leading: View, Content: View, Trailing: View>: View {
 
                 content
                     .font(style.labelFont)
+                    .dawnZainOpticalAlignment(enabled: style.usesZainOpticalAlignment)
 
                 if Trailing.self != EmptyView.self {
                     trailing

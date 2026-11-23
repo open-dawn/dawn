@@ -17,6 +17,7 @@ struct WorkspaceOpeningBehaviorStepView: View {
         VStack {
             Text("When this workspace opens")
                 .font(DawnTextStyle.screenTitle)
+                .dawnZainOpticalAlignment()
 
             (Text("It ")
 

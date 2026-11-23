@@ -20,6 +20,7 @@ struct WorkspaceDetailHeader: View {
             Label {
                 Text(name)
                     .font(DawnTextStyle.detailTitle)
+                    .dawnZainOpticalAlignment()
                     .foregroundStyle(DawnColors.primaryForeground)
                     .lineLimit(1)
             } icon: {

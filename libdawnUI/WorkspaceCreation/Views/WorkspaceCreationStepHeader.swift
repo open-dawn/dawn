@@ -36,6 +36,7 @@ struct WorkspaceCreationStepHeader: View {
         VStack(spacing: 6) {
             Text(title)
                 .font(style.titleFont)
+                .dawnZainOpticalAlignment()
 
             Text(subtitle)
                 .font(DawnTextStyle.body)

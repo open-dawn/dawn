@@ -24,6 +24,7 @@ struct WorkspaceIdentityStepView: View {
             VStack(spacing: 6) {
                 Text("Name your workspace")
                     .font(DawnTextStyle.screenTitle)
+                    .dawnZainOpticalAlignment()
 
                 (Text("Choose a ")
 
@@ -52,8 +53,6 @@ struct WorkspaceIdentityStepView: View {
 
             DButton(action: onNext) {
                 Text("Next")
-                    .font(DawnFont.zain(.bold, size: DawnTextStyle.bodySize, relativeTo: .body))
-                    .foregroundStyle(DawnColors.selectionForeground)
                     .frame(maxWidth: .infinity)
             }
             .disabled(!canContinue)

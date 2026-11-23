@@ -12,6 +12,7 @@ struct EmptyWorkspacesView: View {
             VStack(spacing: 4) {
                 Text("No workspaces yet")
                     .font(DawnTextStyle.noWorkspaceTitle)
+                    .dawnZainOpticalAlignment()
                     .foregroundStyle(DawnColors.sidebarMeta)
 
                 (

@@ -184,6 +184,7 @@ extension MenuBarWorkspaceListView {
             if !viewModel.runtime.workspaces.isEmpty {
                 Text("Your workspaces")
                     .font(DawnTextStyle.sectionLabel)
+                    .dawnZainOpticalAlignment()
             }
 
             Spacer()
@@ -210,6 +211,7 @@ extension MenuBarWorkspaceListView {
 
             Text("No Workspaces".uppercased())
                 .font(DawnTextStyle.noWorkspaceTitle)
+                .dawnZainOpticalAlignment()
 
             Text("Create a workspace to see it here")
                 .font(DawnTextStyle.noWorkspaceBody)

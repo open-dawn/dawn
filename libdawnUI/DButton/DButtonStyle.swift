@@ -170,6 +170,17 @@ public enum DButtonStyle: CaseIterable {
         }
     }
 
+    /// Zain label styles need optical top padding; icon-only styles do not.
+    var usesZainOpticalAlignment: Bool {
+        switch self {
+        case .primary, .secondary, .accent, .danger, .warning, .success,
+            .link, .linkSecondary, .detailPrimary:
+            true
+        case .plain, .icon, .compactIcon, .compactLink:
+            false
+        }
+    }
+
     var iconFont: Font {
         switch self {
         case .primary: return DawnTextStyle.buttonIcon

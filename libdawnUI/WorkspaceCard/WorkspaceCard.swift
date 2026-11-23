@@ -63,6 +63,7 @@ public struct WorkspaceCard: View {
                         HStack(alignment: .center) {
                             Text(model.name)
                                 .font(DawnTextStyle.workspaceTitle)
+                                .dawnZainOpticalAlignment()
                                 .foregroundStyle(
                                     isActive ? DawnColors.workspaceCardContentActive : DawnColors.workspaceCardContent
                                 )

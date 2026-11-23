@@ -30,6 +30,7 @@ struct SidebarWorkspaceRow: View {
 
                     Text(state.activityText)
                         .font(DawnTextStyle.sidebarSectionHeader)
+                        .dawnZainOpticalAlignment()
                         .lineLimit(1)
                 }
                 .foregroundStyle(metaColor)
