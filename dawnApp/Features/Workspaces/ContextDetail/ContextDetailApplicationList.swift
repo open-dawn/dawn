@@ -5,12 +5,12 @@ import SwiftUI
 struct ContextDetailApplicationList: View {
     var title: String = "Applications"
     var subtitle: String?
-    var titleFont: Font = DawnTextStyle.sectionLabel
-    var titleColor: Color = DawnColors.secondaryForeground
+    var titleFont: Font = DawnTextStyle.detailSectionLabel
+    var titleColor: Color = DawnColors.primaryForeground
     var fillsAvailableWidth: Bool = false
     let applications: [WorkspaceApplication]
-    let interactionsDisabled: Bool
     var horizontalPadding: CGFloat = 32
+    var interactionsDisabled: Bool
     let onAddApplications: () -> Void
     let onRemoveApplication: (WorkspaceApplication) -> Void
     let onDropApplications: ([URL]) -> Bool
@@ -18,7 +18,7 @@ struct ContextDetailApplicationList: View {
     @State private var isDropTargeted = false
 
     private var rowFont: Font {
-        fillsAvailableWidth ? DawnTextStyle.primary : DawnTextStyle.caption
+        fillsAvailableWidth ? DawnTextStyle.primary : DawnTextStyle.detailField
     }
 
     private var iconSize: CGFloat {
@@ -170,7 +170,9 @@ struct ContextDetailApplicationList: View {
         .padding(.vertical, 8)
         .frame(maxWidth: .infinity, alignment: .leading)
         .background {
-            DawnColors.contextCardBackground
+            fillsAvailableWidth
+                ? DawnColors.contextCardBackground
+                : DawnColors.activationPolicyBackground
         }
         .clipShape(RoundedRectangle(cornerRadius: 4))
     }
@@ -182,20 +184,33 @@ struct ContextDetailApplicationList: View {
             Image(systemName: "plus")
                 .font(fillsAvailableWidth ? DawnTextStyle.primaryBold : DawnTextStyle.captionBold)
                 .foregroundStyle(DawnColors.primaryForeground)
-                .frame(width: 44, height: 44)
+                .frame(
+                    width: fillsAvailableWidth ? 44 : 30,
+                    height: fillsAvailableWidth ? 44 : nil
+                )
+                .padding(.vertical, fillsAvailableWidth ? 0 : 8)
                 .background {
-                    DawnColors.contextCardBackground
+                    fillsAvailableWidth
+                        ? DawnColors.contextCardBackground
+                        : DawnColors.activationPolicyBackground
                 }
                 .clipShape(RoundedRectangle(cornerRadius: 4))
         }
         .disabled(interactionsDisabled)
         .accessibilityLabel("Add application")
     }
-
     private var emptyStateLabel: some View {
-        Text("Nothing selected yet. Click the 􀅼 button or drag an app here to add it.")
+        Text(
+            fillsAvailableWidth
+                ? "Nothing selected yet. Click the 􀅼 button or drag an app here to add it."
+                : "Nothing selected yet"
+        )
             .font(rowFont)
-            .foregroundStyle(DawnColors.secondaryForeground)
+            .foregroundStyle(
+                fillsAvailableWidth
+                    ? DawnColors.secondaryForeground
+                    : DawnColors.activationPolicyDescription
+            )
             .multilineTextAlignment(.leading)
             .frame(maxWidth: .infinity, alignment: .leading)
     }

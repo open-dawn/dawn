@@ -23,7 +23,7 @@ struct ContextDetailView: View {
 
     var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 16) {
+            VStack(alignment: .leading, spacing: 32) {
                 ContextDetailHeader(
                     name: editedContext.name,
                     symbol: editedContext.symbol,
@@ -60,19 +60,24 @@ struct ContextDetailView: View {
                     }
                 )
 
-                HStack(alignment: .top, spacing: 32) {
+                VStack(alignment: .leading, spacing: 16) {
                     ContextDetailNameField(
                         name: editedContext.name,
-                        validationMessage: nameValidationMessage
+                        validationMessage: nameValidationMessage,
+                        interactionsDisabled: interactionsDisabled,
                     ) { newName in
                         viewModel.setName(newName)
                     }
+                    .padding(.horizontal, 32)
 
-                    ContextDetailSymbolPicker(symbol: editedContext.symbol) { newSymbol in
+                    ContextDetailSymbolPicker(
+                        symbol: editedContext.symbol,
+                        interactionsDisabled: interactionsDisabled
+                    ) { newSymbol in
                         viewModel.setSymbol(newSymbol)
                     }
+                    .padding(.horizontal, 32)
                 }
-                .padding(.horizontal, 32)
 
                 ContextDetailApplicationList(
                     applications: editedContext.applications,
@@ -89,12 +94,20 @@ struct ContextDetailView: View {
                 )
 
                 ContextDetailActivationPolicyPicker(
-                    policy: editedContext.transition.activationPolicy
+                    policy: editedContext.transition.activationPolicy,
+                    interactionsDisabled: interactionsDisabled
                 ) { policy in
                     viewModel.setActivationPolicy(policy)
                 }
 
-                Spacer()
+                ContextDetailTerminalCommandField(
+                    command: editedContext.transition.terminalCommand ?? "",
+                    interactionsDisabled: interactionsDisabled
+                ) { command in
+                    viewModel.setTerminalCommand(command)
+                }
+
+                Spacer(minLength: 0)
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
             .onChange(of: context, initial: true) { _, snapshot in

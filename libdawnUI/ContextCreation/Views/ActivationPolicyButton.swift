@@ -8,12 +8,22 @@
 import SwiftUI
 import libdawn
 
-struct ActivationPolicyButton: View {
-    let policy: WorkspaceActivationPolicy
-    let isSelected: Bool
-    let action: () -> Void
+public struct ActivationPolicyButton: View {
+    public let policy: WorkspaceActivationPolicy
+    public let isSelected: Bool
+    public let action: () -> Void
 
-    var body: some View {
+    public init(
+        policy: WorkspaceActivationPolicy,
+        isSelected: Bool,
+        action: @escaping () -> Void
+    ) {
+        self.policy = policy
+        self.isSelected = isSelected
+        self.action = action
+    }
+
+    public var body: some View {
         DButton(
             style: .plain,
             action: action

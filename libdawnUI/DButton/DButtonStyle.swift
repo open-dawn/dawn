@@ -20,6 +20,7 @@ public enum DButtonStyle: CaseIterable {
     case icon
     case compactIcon
     case compactLink
+    case detailPrimary
 
     var fgStyle: Color {
         switch self {
@@ -32,6 +33,7 @@ public enum DButtonStyle: CaseIterable {
         case .link: return DawnColors.primaryForeground
         case .linkSecondary: return DawnColors.secondaryForeground
         case .plain, .icon, .compactIcon, .compactLink: return DawnColors.primaryForeground
+        case .detailPrimary: return DawnColors.selectionForeground
         }
     }
 
@@ -46,6 +48,7 @@ public enum DButtonStyle: CaseIterable {
         case .link: return .clear
         case .linkSecondary: return .clear
         case .plain, .icon, .compactIcon, .compactLink: return .clear
+        case .detailPrimary: return DawnColors.primaryButtonBackground
         }
     }
 
@@ -60,6 +63,7 @@ public enum DButtonStyle: CaseIterable {
         case .link: return .clear
         case .linkSecondary: return .clear
         case .plain, .icon, .compactIcon, .compactLink: return .clear
+        case .detailPrimary: return DawnColors.primaryButtonBackgroundDisabled
         }
     }
 
@@ -76,6 +80,7 @@ public enum DButtonStyle: CaseIterable {
         case .plain: return 8
         case .icon, .compactIcon: return 0
         case .compactLink: return 4
+        case .detailPrimary: return 4
         }
     }
 
@@ -92,6 +97,7 @@ public enum DButtonStyle: CaseIterable {
         case .icon: return 4
         case .compactIcon: return 2
         case .plain, .compactLink: return 0
+        case .detailPrimary: return 8
         }
     }
 
@@ -108,6 +114,7 @@ public enum DButtonStyle: CaseIterable {
         case .icon: return 4
         case .compactIcon: return 2
         case .plain, .compactLink: return 0
+        case .detailPrimary: return 12
         }
     }
 
@@ -123,6 +130,7 @@ public enum DButtonStyle: CaseIterable {
         case .linkSecondary: return 8
         case .plain, .compactLink: return 0
         case .icon, .compactIcon: return 4
+        case .detailPrimary: return 8
         }
     }
 
@@ -140,6 +148,7 @@ public enum DButtonStyle: CaseIterable {
         case .icon: return false
         case .compactIcon: return false
         case .compactLink: return true
+        case .detailPrimary: return false
         }
     }
 
@@ -157,6 +166,7 @@ public enum DButtonStyle: CaseIterable {
         case .icon: return DawnTextStyle.actionIcon
         case .compactIcon: return DawnTextStyle.buttonIcon
         case .compactLink: return DawnTextStyle.linkLabel
+        case .detailPrimary: return DawnTextStyle.detailButton
         }
     }
 
@@ -174,6 +184,7 @@ public enum DButtonStyle: CaseIterable {
         case .icon: return DawnTextStyle.actionIcon
         case .compactLink: return DawnTextStyle.buttonIcon
         case .compactIcon: return DawnTextStyle.actionIcon
+        case .detailPrimary: return DawnTextStyle.detailButton
         }
     }
 
@@ -191,6 +202,7 @@ public enum DButtonStyle: CaseIterable {
         case .icon: return 1
         case .compactIcon: return 1
         case .compactLink: return 1
+        case .detailPrimary: return 1
         }
     }
 }
