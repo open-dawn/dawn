@@ -5,7 +5,7 @@ import Testing
 @testable import dawnApp
 
 @MainActor
-private final class FakeAccessibilityEventBus: SettingsContextEventBus {
+private final class FakeAccessibilityEventBus: SettingsWorkspaceEventBus {
     var askHandler: ((Event) async throws -> Event)?
 
     func addListener(_: any Listener, kinds _: Set<EventKind>?) {}

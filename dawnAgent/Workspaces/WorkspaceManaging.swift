@@ -9,16 +9,16 @@ import Foundation
 import libdawn
 
 public struct WorkspaceSnapshot: Codable, Equatable, Sendable {
-    public let contexts: [WorkspaceContext]
+    public let workspaces: [Workspace]
     public let activity: WorkspaceActivityState
 
-    public init(contexts: [WorkspaceContext], activity: WorkspaceActivityState) {
-        self.contexts = contexts
+    public init(workspaces: [Workspace], activity: WorkspaceActivityState) {
+        self.workspaces = workspaces
         self.activity = activity
     }
 }
 
 @MainActor
-protocol WorkspaceManaging: ContextProviding, WorkspaceActivityManaging {
+protocol WorkspaceManaging: WorkspaceProviding, WorkspaceActivityManaging {
     func getWorkspaceSnapshot() async -> WorkspaceSnapshot
 }

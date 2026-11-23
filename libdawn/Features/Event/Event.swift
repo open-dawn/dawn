@@ -6,19 +6,19 @@ public enum Event: Codable, Sendable, Equatable {
     // MARK: Initialize
     case initialized(InitializedEvent)
 
-    // MARK: Context
-    case getContexts(GetContextsEvent)
-    case contextsFetched(ContextsFetchedEvent)
-    case switchContext(SwitchContextEvent)
-    case createContext(CreateContextEvent)
-    case updateContext(UpdateContextEvent)
-    case deleteContext(DeleteContextEvent)
-    case archiveContext(ArchiveContextEvent)
-    case unarchiveContext(UnarchiveContextEvent)
-    case stopContext(StopContextEvent)
+    // MARK: Workspace
+    case getWorkspaces(GetWorkspacesEvent)
+    case workspacesFetched(WorkspacesFetchedEvent)
+    case switchWorkspace(SwitchWorkspaceEvent)
+    case createWorkspace(CreateWorkspaceEvent)
+    case updateWorkspace(UpdateWorkspaceEvent)
+    case deleteWorkspace(DeleteWorkspaceEvent)
+    case archiveWorkspace(ArchiveWorkspaceEvent)
+    case unarchiveWorkspace(UnarchiveWorkspaceEvent)
+    case stopWorkspace(StopWorkspaceEvent)
 
-    case availableContexts(AvailableContextsEvent)
-    case contextMutationAcknowledged(ContextMutationAcknowledgement)
+    case availableWorkspaces(AvailableWorkspacesEvent)
+    case workspaceMutationAcknowledged(WorkspaceMutationAcknowledgement)
 
     // MARK: Accessibility
     case getAccessibilityStatus(GetAccessibilityStatusEvent)
@@ -47,17 +47,17 @@ public enum Event: Codable, Sendable, Equatable {
         case .debugPing: .debugPing
         case .debugPong: .debugPong
         case .initialized: .initialized
-        case .getContexts: .getContexts
-        case .contextsFetched: .contextsFetched
-        case .createContext: .createContext
-        case .updateContext: .updateContext
-        case .deleteContext: .deleteContext
-        case .archiveContext: .archiveContext
-        case .unarchiveContext: .unarchiveContext
-        case .switchContext: .switchContext
-        case .stopContext: .stopContext
-        case .contextMutationAcknowledged: .contextMutationAcknowledged
-        case .availableContexts: .availableContexts
+        case .getWorkspaces: .getWorkspaces
+        case .workspacesFetched: .workspacesFetched
+        case .createWorkspace: .createWorkspace
+        case .updateWorkspace: .updateWorkspace
+        case .deleteWorkspace: .deleteWorkspace
+        case .archiveWorkspace: .archiveWorkspace
+        case .unarchiveWorkspace: .unarchiveWorkspace
+        case .switchWorkspace: .switchWorkspace
+        case .stopWorkspace: .stopWorkspace
+        case .workspaceMutationAcknowledged: .workspaceMutationAcknowledged
+        case .availableWorkspaces: .availableWorkspaces
         case .getAccessibilityStatus: .getAccessibilityStatus
         case .promptAccessibilityTrust: .promptAccessibilityTrust
         case .accessibilityStatus: .accessibilityStatus

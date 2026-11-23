@@ -4,19 +4,19 @@ public enum EventKind: String, Codable, Sendable, Hashable, CaseIterable {
 
     case initialized
 
-    // MARK: Contexts
-    case getContexts
-    case contextsFetched
-    case switchContext
-    case createContext
-    case updateContext
-    case deleteContext
-    case archiveContext
-    case unarchiveContext
-    case stopContext
+    // MARK: Workspaces
+    case getWorkspaces
+    case workspacesFetched
+    case switchWorkspace
+    case createWorkspace
+    case updateWorkspace
+    case deleteWorkspace
+    case archiveWorkspace
+    case unarchiveWorkspace
+    case stopWorkspace
 
-    case availableContexts
-    case contextMutationAcknowledged
+    case availableWorkspaces
+    case workspaceMutationAcknowledged
 
     // MARK: Accessibility
     case getAccessibilityStatus

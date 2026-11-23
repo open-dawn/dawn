@@ -51,6 +51,7 @@ public struct DawnBrand: View {
             DawnSymbol.image(height: style.symbolHeight)
 
             Text("dawn")
+                .dawnZainOpticalAlignment()
         }
         .font(style.font)
         .accessibilityElement(children: .ignore)

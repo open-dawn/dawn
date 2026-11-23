@@ -8,16 +8,32 @@ import SwiftUI
 
 public enum DawnSymbol {
     public static var nsImage: NSImage? {
-        DawnUIBundle.bundle.image(forResource: "DawnSymbol")
+        nsImage(isActive: true)
+    }
+
+    public static var deactivatedNSImage: NSImage? {
+        nsImage(isActive: false)
+    }
+
+    public static func nsImage(isActive: Bool) -> NSImage? {
+        let resourceName = isActive ? "DawnSymbol" : "DawnSymbolDesactivated"
+        return DawnUIBundle.bundle.image(forResource: resourceName)
     }
 
     public static func image(height: CGFloat) -> some View {
-        Image("DawnSymbol", bundle: DawnUIBundle.bundle)
-            .renderingMode(.template)
-            .resizable()
-            .scaledToFit()
-            .frame(height: height)
-            .accessibilityHidden(true)
+        image(height: height, isActive: true)
+    }
+
+    public static func image(height: CGFloat, isActive: Bool) -> some View {
+        Image(
+            isActive ? "DawnSymbol" : "DawnSymbolDesactivated",
+            bundle: DawnUIBundle.bundle
+        )
+        .renderingMode(.template)
+        .resizable()
+        .scaledToFit()
+        .frame(height: height)
+        .accessibilityHidden(true)
     }
 }
 

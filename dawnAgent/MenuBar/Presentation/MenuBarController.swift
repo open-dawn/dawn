@@ -29,6 +29,7 @@ extension NSStatusBar: StatusBarProviding {}
 
 @MainActor
 final class MenuBarController: NSObject, MenuBarControlling {
+    private let workspace: WorkspaceRuntime
     private let statusBar: any StatusBarProviding
     private var statusItem: NSStatusItem?
     private let appOpener: any DawnAppOpening
@@ -43,12 +44,29 @@ final class MenuBarController: NSObject, MenuBarControlling {
         statusItem != nil
     }
 
+    var statusItemButton: NSStatusBarButton? {
+        statusItem?.button
+    }
+
+    var hasActiveWorkspace: Bool {
+        workspace.activeWorkspaceID != nil
+    }
+
+    var observedActiveWorkspaceID: UUID? {
+        workspace.activeWorkspaceID
+    }
+
+    var canUpdateStatusItemAppearance: Bool {
+        !isStopped
+    }
+
     init(
         workspace: WorkspaceRuntime,
         initiallyVisible: Bool = true,
         statusBar: any StatusBarProviding = NSStatusBar.system,
         appOpener: any DawnAppOpening = DawnAppOpener()
     ) {
+        self.workspace = workspace
         self.statusBar = statusBar
         self.appOpener = appOpener
 
@@ -56,6 +74,7 @@ final class MenuBarController: NSObject, MenuBarControlling {
 
         configurePanel(workspace: workspace)
         setVisible(initiallyVisible)
+        startObservingActiveWorkspace()
     }
 
     func setVisible(_ isVisible: Bool) {
@@ -75,7 +94,7 @@ final class MenuBarController: NSObject, MenuBarControlling {
             return
         }
 
-        let statusItem = statusBar.statusItem(withLength: NSStatusItem.squareLength)
+        let statusItem = statusBar.statusItem(withLength: NSStatusItem.variableLength)
 
         self.statusItem = statusItem
         configureStatusItem(statusItem)
@@ -115,15 +134,8 @@ final class MenuBarController: NSObject, MenuBarControlling {
             return
         }
 
-        let image = DawnSymbol.nsImage ?? NSImage(
-            systemSymbolName: "sunrise.fill",
-            accessibilityDescription: "DAWN"
-        )
-
-        image?.isTemplate = true
-        image?.accessibilityDescription = "DAWN"
-
-        button.image = image
+        button.image = makeStatusItemImage(isActive: hasActiveWorkspace)
+        button.imageScaling = .scaleProportionallyDown
         button.toolTip = "DAWN"
         button.target = self
         button.action = #selector(handleStatusItemInteraction(_:))

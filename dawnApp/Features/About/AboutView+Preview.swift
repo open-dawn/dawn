@@ -26,7 +26,7 @@ private struct AboutPreview: View {
             content: AboutContent.loadRequired(),
             updater: updater
         )
-        .frame(width: 640, height: 520)
+        .frame(width: 640, height: 640)
     }
 }
 

@@ -37,7 +37,7 @@ struct AgentUpdatePreparerTests {
     @Test("Stops an active workspace and remains ready for update")
     func stopsActiveWorkspace() async throws {
         let workspace = WorkspaceUpdatePreparingSpy(
-            activeContextID: UUID()
+            activeWorkspaceID: UUID()
         )
         let lifecycle = AgentLifecycleState()
 
@@ -57,7 +57,7 @@ struct AgentUpdatePreparerTests {
     @Test("Does not stop an inactive workspace")
     func doesNotStopInactiveWorkspace() async throws {
         let workspace = WorkspaceUpdatePreparingSpy(
-            activeContextID: nil
+            activeWorkspaceID: nil
         )
         let lifecycle = AgentLifecycleState()
 
@@ -76,7 +76,7 @@ struct AgentUpdatePreparerTests {
     @Test("Repeated preparation does not stop workspace twice")
     func repeatedPreparationIsIdempotent() async throws {
         let workspace = WorkspaceUpdatePreparingSpy(
-            activeContextID: UUID()
+            activeWorkspaceID: UUID()
         )
         let lifecycle = AgentLifecycleState()
 
@@ -96,7 +96,7 @@ struct AgentUpdatePreparerTests {
     @Test("Failed preparation restores running state and permits retry")
     func failureRestoresRunningState() async throws {
         let workspace = WorkspaceUpdatePreparingSpy(
-            activeContextID: UUID()
+            activeWorkspaceID: UUID()
         )
         workspace.error = PreparationTestError.expected
 
@@ -127,7 +127,7 @@ struct AgentUpdatePreparerTests {
     @Test("Cancellation restores running state and permits another preparation")
     func cancellationRestoresRunningState() async throws {
         let workspace = WorkspaceUpdatePreparingSpy(
-            activeContextID: UUID()
+            activeWorkspaceID: UUID()
         )
         let lifecycle = AgentLifecycleState()
 
@@ -148,7 +148,7 @@ struct AgentUpdatePreparerTests {
         #expect(lifecycle.phase == .running)
         #expect(lifecycle.acceptsMutations)
 
-        workspace.activeContextID = UUID()
+        workspace.activeWorkspaceID = UUID()
 
         try await preparer.prepareForApplicationUpdate()
 
@@ -161,23 +161,23 @@ struct AgentUpdatePreparerTests {
 private final class WorkspaceUpdatePreparingSpy:
     WorkspaceUpdatePreparing
 {
-    var activeContextID: UUID?
+    var activeWorkspaceID: UUID?
     var error: Error?
 
     private(set) var stopCallCount = 0
 
-    init(activeContextID: UUID? = nil) {
-        self.activeContextID = activeContextID
+    init(activeWorkspaceID: UUID? = nil) {
+        self.activeWorkspaceID = activeWorkspaceID
     }
 
-    func stopActiveContext() async throws {
+    func stopActiveWorkspace() async throws {
         stopCallCount += 1
 
         if let error {
             throw error
         }
 
-        activeContextID = nil
+        activeWorkspaceID = nil
     }
 }
 

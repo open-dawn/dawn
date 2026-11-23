@@ -15,43 +15,43 @@ import Testing
 struct WorkspaceActivityStateTests {
     @Test("first activation starts an active session")
     func firstActivation() async throws {
-        let contextID = UUID()
+        let workspaceID = UUID()
         let startedAt = Date(timeIntervalSince1970: 100)
         var state = WorkspaceActivityState.empty
 
         state.activate(
-            contextID: contextID,
+            workspaceID: workspaceID,
             at: startedAt
         )
 
-        #expect(state.activeContextID == contextID)
+        #expect(state.activeWorkspaceID == workspaceID)
         #expect(state.activeSince == startedAt)
-        #expect(state.lastActiveAt(for: contextID) == nil)
+        #expect(state.lastActiveAt(for: workspaceID) == nil)
     }
 
     @Test("repeated activation preserves the original start time")
     func repeatedActivation() {
-        let contextID = UUID()
+        let workspaceID = UUID()
         let startedAt = Date(timeIntervalSince1970: 100)
         let repeatedAt = Date(timeIntervalSince1970: 200)
         var state = WorkspaceActivityState.empty
 
         state.activate(
-            contextID: contextID,
+            workspaceID: workspaceID,
             at: startedAt
         )
 
         state.activate(
-            contextID: contextID,
+            workspaceID: workspaceID,
             at: repeatedAt
         )
 
         #expect(state.activeSince == startedAt)
-        #expect(state.lastActiveAt(for: contextID) == nil)
+        #expect(state.lastActiveAt(for: workspaceID) == nil)
     }
 
     @Test("switching ends the previous session")
-    func switchingContext() {
+    func switchingWorkspace() {
         let firstID = UUID()
         let secondID = UUID()
         let firstStartedAt = Date(timeIntervalSince1970: 100)
@@ -59,16 +59,16 @@ struct WorkspaceActivityStateTests {
         var state = WorkspaceActivityState.empty
 
         state.activate(
-            contextID: firstID,
+            workspaceID: firstID,
             at: firstStartedAt
         )
 
         state.activate(
-            contextID: secondID,
+            workspaceID: secondID,
             at: switchedAt
         )
 
-        #expect(state.activeContextID == secondID)
+        #expect(state.activeWorkspaceID == secondID)
         #expect(state.activeSince == switchedAt)
         #expect(
             state.lastActiveAt(for: firstID) == switchedAt
@@ -76,22 +76,22 @@ struct WorkspaceActivityStateTests {
     }
 
     @Test("stopping records the last-active time")
-    func stoppingContext() {
-        let contextID = UUID()
+    func stoppingWorkspace() {
+        let workspaceID = UUID()
         let stoppedAt = Date(timeIntervalSince1970: 200)
         var state = WorkspaceActivityState.empty
 
         state.activate(
-            contextID: contextID,
+            workspaceID: workspaceID,
             at: Date(timeIntervalSince1970: 100)
         )
 
         state.stop(at: stoppedAt)
 
-        #expect(state.activeContextID == nil)
+        #expect(state.activeWorkspaceID == nil)
         #expect(state.activeSince == nil)
         #expect(
-            state.lastActiveAt(for: contextID) == stoppedAt
+            state.lastActiveAt(for: workspaceID) == stoppedAt
         )
     }
 
@@ -102,22 +102,22 @@ struct WorkspaceActivityStateTests {
         var state = WorkspaceActivityState.empty
 
         state.activate(
-            contextID: removedID,
+            workspaceID: removedID,
             at: Date(timeIntervalSince1970: 100)
         )
         state.stop(
             at: Date(timeIntervalSince1970: 200)
         )
         state.activate(
-            contextID: retainedID,
+            workspaceID: retainedID,
             at: Date(timeIntervalSince1970: 300)
         )
 
         state.reconcile(
-            validContextIDs: [retainedID]
+            validWorkspaceIDs: [retainedID]
         )
 
-        #expect(state.activeContextID == retainedID)
+        #expect(state.activeWorkspaceID == retainedID)
         #expect(
             state.lastActiveAt(for: removedID) == nil
         )
@@ -125,11 +125,11 @@ struct WorkspaceActivityStateTests {
 
     @Test("activity metadata survives encoding")
     func codableRoundTrip() throws {
-        let contextID = UUID()
+        let workspaceID = UUID()
         var expected = WorkspaceActivityState.empty
 
         expected.activate(
-            contextID: contextID,
+            workspaceID: workspaceID,
             at: Date(timeIntervalSince1970: 100)
         )
 
@@ -144,18 +144,18 @@ struct WorkspaceActivityStateTests {
 
     @Test("clearing the active session keeps last-active history")
     func clearActiveSessionKeepsHistory() {
-        let contextID = UUID()
+        let workspaceID = UUID()
         let otherID = UUID()
         let startedAt = Date(timeIntervalSince1970: 100)
         var state = WorkspaceActivityState.empty
 
-        state.activate(contextID: contextID, at: startedAt)
+        state.activate(workspaceID: workspaceID, at: startedAt)
         state.stop(at: Date(timeIntervalSince1970: 150))
-        state.activate(contextID: otherID, at: Date(timeIntervalSince1970: 200))
+        state.activate(workspaceID: otherID, at: Date(timeIntervalSince1970: 200))
         state.clearActiveSession(for: otherID)
 
-        #expect(state.activeContextID == nil)
-        #expect(state.lastActiveAt(for: contextID) == Date(timeIntervalSince1970: 150))
+        #expect(state.activeWorkspaceID == nil)
+        #expect(state.lastActiveAt(for: workspaceID) == Date(timeIntervalSince1970: 150))
         #expect(state.lastActiveAt(for: otherID) == nil)
     }
 }

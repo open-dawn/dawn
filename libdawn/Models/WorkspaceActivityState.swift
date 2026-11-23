@@ -9,20 +9,20 @@ import Foundation
 
 public struct WorkspaceActivityState: Codable, Equatable, Sendable {
     public struct ActiveSession: Codable, Equatable, Sendable {
-        public let contextID: UUID
+        public let workspaceID: UUID
         public let startedAt: Date
 
-        public init(contextID: UUID, startedAt: Date) {
-            self.contextID = contextID
+        public init(workspaceID: UUID, startedAt: Date) {
+            self.workspaceID = workspaceID
             self.startedAt = startedAt
         }
     }
 
     public private(set) var activeSession: ActiveSession?
-    public private(set) var lastActiveAtByContextID: [UUID: Date]
+    public private(set) var lastActiveAtByWorkspaceID: [UUID: Date]
 
-    public var activeContextID: UUID? {
-        activeSession?.contextID
+    public var activeWorkspaceID: UUID? {
+        activeSession?.workspaceID
     }
 
     public var activeSince: Date? {
@@ -31,26 +31,26 @@ public struct WorkspaceActivityState: Codable, Equatable, Sendable {
 
     public static let empty = WorkspaceActivityState()
 
-    public init(activeSession: ActiveSession? = nil, lastActiveAtByContextID: [UUID: Date] = [:]) {
+    public init(activeSession: ActiveSession? = nil, lastActiveAtByWorkspaceID: [UUID: Date] = [:]) {
         self.activeSession = activeSession
-        self.lastActiveAtByContextID = lastActiveAtByContextID
+        self.lastActiveAtByWorkspaceID = lastActiveAtByWorkspaceID
     }
 
-    public func lastActiveAt(for contextID: UUID) -> Date? {
-        lastActiveAtByContextID[contextID]
+    public func lastActiveAt(for workspaceID: UUID) -> Date? {
+        lastActiveAtByWorkspaceID[workspaceID]
     }
 
-    public mutating func activate(contextID: UUID, at date: Date) {
-        guard activeSession?.contextID != contextID else {
+    public mutating func activate(workspaceID: UUID, at date: Date) {
+        guard activeSession?.workspaceID != workspaceID else {
             return
         }
 
         if let previousSession = activeSession {
-            lastActiveAtByContextID[previousSession.contextID] = date
+            lastActiveAtByWorkspaceID[previousSession.workspaceID] = date
         }
 
         activeSession = ActiveSession(
-            contextID: contextID,
+            workspaceID: workspaceID,
             startedAt: date
         )
     }
@@ -60,29 +60,29 @@ public struct WorkspaceActivityState: Codable, Equatable, Sendable {
             return
         }
 
-        lastActiveAtByContextID[activeSession.contextID] = date
+        lastActiveAtByWorkspaceID[activeSession.workspaceID] = date
 
         self.activeSession = nil
     }
 
-    public mutating func removeContext(id contextID: UUID) {
-        clearActiveSession(for: contextID)
-        lastActiveAtByContextID[contextID] = nil
+    public mutating func removeWorkspace(id workspaceID: UUID) {
+        clearActiveSession(for: workspaceID)
+        lastActiveAtByWorkspaceID[workspaceID] = nil
     }
 
-    public mutating func clearActiveSession(for contextID: UUID) {
-        if activeSession?.contextID == contextID {
+    public mutating func clearActiveSession(for workspaceID: UUID) {
+        if activeSession?.workspaceID == workspaceID {
             activeSession = nil
         }
     }
 
-    public mutating func reconcile(validContextIDs: Set<UUID>) {
-        if let activeContextID, !validContextIDs.contains(activeContextID) {
+    public mutating func reconcile(validWorkspaceIDs: Set<UUID>) {
+        if let activeWorkspaceID, !validWorkspaceIDs.contains(activeWorkspaceID) {
             activeSession = nil
         }
 
-        lastActiveAtByContextID = lastActiveAtByContextID.filter {
-            validContextIDs.contains($0.key)
+        lastActiveAtByWorkspaceID = lastActiveAtByWorkspaceID.filter {
+            validWorkspaceIDs.contains($0.key)
         }
     }
 }

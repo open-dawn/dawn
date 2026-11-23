@@ -55,18 +55,18 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         bus: EventBus,
         store: SettingsStore
     ) async throws -> AgentRuntimeComponents {
-        let publisher = EventBusContextSnapshotPublisher(
+        let publisher = EventBusWorkspaceSnapshotPublisher(
             bus: bus
         )
 
-        let contextManager = ContextManager(
+        let workspaceCatalog = WorkspaceCatalog(
             store: store,
             snapshotPublisher: publisher
         )
 
         return AgentRuntimeComponents(
             workspace: WorkspaceRuntime(
-                contextManager: contextManager,
+                workspaceCatalog: workspaceCatalog,
                 snapshotPublisher: publisher
             )
         )
@@ -129,7 +129,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             return .terminateLater
         }
 
-        guard let workspaceRuntime, workspaceRuntime.activeContextID != nil else {
+        guard let workspaceRuntime, workspaceRuntime.activeWorkspaceID != nil else {
             return .terminateNow
         }
 
@@ -137,7 +137,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         Task { @MainActor in
             do {
-                try await workspaceRuntime.stopActiveContext()
+                try await workspaceRuntime.stopActiveWorkspace()
                 sender.reply(toApplicationShouldTerminate: true)
             } catch {
                 isPreparingToTerminate = false
@@ -238,8 +238,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private func reconcileRestoredActivity(in workspace: WorkspaceRuntime) async throws {
         try Task.checkCancellation()
 
-        if workspace.activeContextID != nil {
-            try await workspace.stopActiveContext()
+        if workspace.activeWorkspaceID != nil {
+            try await workspace.stopActiveWorkspace()
         }
 
         try Task.checkCancellation()

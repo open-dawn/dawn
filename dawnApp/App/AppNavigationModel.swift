@@ -10,15 +10,15 @@ import Observation
 import libdawn
 
 enum AppNavigationError: Error, Equatable, LocalizedError {
-    case contextNotFound(UUID)
-    case contextsUnavailable
+    case workspaceNotFound(UUID)
+    case workspacesUnavailable
 
     var errorDescription: String? {
         switch self {
-        case .contextNotFound:
-            "The requested context is no longer available."
-        case .contextsUnavailable:
-            "DAWN couldn't load your contexts. Try again."
+        case .workspaceNotFound:
+            "The requested workspace is no longer available."
+        case .workspacesUnavailable:
+            "DAWN couldn't load your workspaces. Try again."
         }
     }
 }
@@ -32,7 +32,7 @@ final class AppNavigationModel {
     private(set) var error: AppNavigationError?
 
     @discardableResult
-    func receive(_ route: DawnAppRoute, availableContexts: [WorkspaceContext]) -> Bool {
+    func receive(_ route: DawnAppRoute, availableWorkspaces: [Workspace]) -> Bool {
         pendingRoute = nil
         error = nil
 
@@ -44,12 +44,12 @@ final class AppNavigationModel {
             selectedDestination = .settings
             return false
 
-        case .context(let contextID):
-            if containsContext(
-                contextID,
-                in: availableContexts
+        case .workspace(let workspaceID):
+            if containsWorkspace(
+                workspaceID,
+                in: availableWorkspaces
             ) {
-                selectedDestination = .context(contextID)
+                selectedDestination = .workspace(workspaceID)
                 return false
             }
 
@@ -58,52 +58,66 @@ final class AppNavigationModel {
         }
     }
 
-    func contextsDidChange(_ contexts: [WorkspaceContext]) {
-        selectedDestination = selectedDestination?.reconciled(with: contexts)
+    func workspacesDidChange(_ workspaces: [Workspace]) {
+        selectedDestination = selectedDestination?.reconciled(with: workspaces)
 
-        guard case .context(let contextID) = pendingRoute,
-              containsContext(contextID, in: contexts)
-        else {
+        if case .workspace(let workspaceID) = pendingRoute,
+           containsWorkspace(workspaceID, in: workspaces)
+        {
+            pendingRoute = nil
+            error = nil
+            selectedDestination = .workspace(workspaceID)
+            return
+        }
+
+        selectInitialWorkspaceIfNeeded(from: workspaces)
+    }
+
+    func selectInitialWorkspaceIfNeeded(from workspaces: [Workspace]) {
+        guard selectedDestination == nil, pendingRoute == nil, error == nil else {
+            return
+        }
+
+        let activeWorkspaces = workspaces.filter { !$0.isArchived }
+        guard let first = activeWorkspaces.first else {
+            return
+        }
+
+        selectedDestination = .workspace(first.id)
+    }
+
+    func workspaceRefreshSucceeded(with workspaces: [Workspace]) {
+        guard case .workspace(let workspaceID) = pendingRoute else {
             return
         }
 
         pendingRoute = nil
-        error = nil
-        selectedDestination = .context(contextID)
-    }
 
-    func contextRefreshSucceeded(with contexts: [WorkspaceContext]) {
-        guard case .context(let contextID) = pendingRoute else {
-            return
-        }
-
-        pendingRoute = nil
-
-        guard containsContext(contextID, in: contexts) else {
-            error = .contextNotFound(contextID)
+        guard containsWorkspace(workspaceID, in: workspaces) else {
+            error = .workspaceNotFound(workspaceID)
             return
         }
 
         error = nil
-        selectedDestination = .context(contextID)
+        selectedDestination = .workspace(workspaceID)
     }
 
-    func contextRefreshFailed() {
+    func workspaceRefreshFailed() {
         guard pendingRoute != nil else {
             return
         }
 
         pendingRoute = nil
-        error = .contextsUnavailable
+        error = .workspacesUnavailable
     }
 
     func dismissError() {
         error = nil
     }
 
-    private func containsContext(_ contextID: UUID, in contexts: [WorkspaceContext]) -> Bool {
-        contexts.contains {
-            $0.id == contextID
+    private func containsWorkspace(_ workspaceID: UUID, in workspaces: [Workspace]) -> Bool {
+        workspaces.contains {
+            $0.id == workspaceID
         }
     }
 }

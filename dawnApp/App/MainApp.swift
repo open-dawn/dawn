@@ -8,7 +8,7 @@ struct MainApp: App {
         WindowGroup {
             AppShellView()
                 .environment(appDelegate.eventBusService)
-                .environment(appDelegate.contextStore)
+                .environment(appDelegate.workspaceStore)
                 .environment(appDelegate.updaterService)
                 .environment(appDelegate.accessibilityPermissionService)
                 .environment(appDelegate.settingsStore)
@@ -22,13 +22,13 @@ struct MainApp: App {
                         return
                     }
 
-                    await appDelegate.contextStore.refresh()
+                    await appDelegate.workspaceStore.refresh()
                     await appDelegate.accessibilityPermissionService.refresh()
                     await appDelegate.settingsStore.refresh()
                 }
         }
-        .defaultSize(width: 1080, height: 680)
+        .defaultSize(width: SidebarMetrics.windowWidth, height: SidebarMetrics.windowHeight)
         .windowStyle(.hiddenTitleBar)
-        .windowResizability(.contentMinSize)
+        .windowResizability(.contentSize)
     }
 }

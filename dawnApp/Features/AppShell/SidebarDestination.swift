@@ -2,16 +2,16 @@ import Foundation
 import libdawn
 
 enum SidebarDestination: Hashable {
-    case context(UUID)
+    case workspace(UUID)
     case settings
     case about
     #if DEBUG
     case debug
     #endif
 
-    var contextID: UUID? {
+    var workspaceID: UUID? {
         switch self {
-        case let .context(id): id
+        case let .workspace(id): id
         case .settings, .about:
             nil
         #if DEBUG
@@ -21,11 +21,11 @@ enum SidebarDestination: Hashable {
         }
     }
 
-    func reconciled(with contexts: [WorkspaceContext]) -> SidebarDestination? {
-        guard let contextID else {
+    func reconciled(with workspaces: [Workspace]) -> SidebarDestination? {
+        guard let workspaceID else {
             return self
         }
 
-        return contexts.contains { $0.id == contextID } ? self : nil
+        return workspaces.contains { $0.id == workspaceID } ? self : nil
     }
 }

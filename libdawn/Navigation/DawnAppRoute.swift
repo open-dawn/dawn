@@ -12,7 +12,7 @@ public enum DawnAppRoute: Hashable, Sendable {
 
     case application
     case settings
-    case context(UUID)
+    case workspace(UUID)
 
     public var url: URL {
         var components = URLComponents()
@@ -24,8 +24,8 @@ public enum DawnAppRoute: Hashable, Sendable {
         case .settings:
             components.host = "settings"
 
-        case .context(let uUID):
-            components.host = "context"
+        case .workspace(let uUID):
+            components.host = "workspace"
             components.path = "/\(uUID.uuidString)"
         }
 
@@ -68,13 +68,13 @@ public enum DawnAppRoute: Hashable, Sendable {
 
             self = .settings
 
-        case "context":
+        case "workspace":
             guard pathComponents.count == 1,
-                  let contextID = UUID(uuidString: String(pathComponents[0])) else {
+                  let workspaceID = UUID(uuidString: String(pathComponents[0])) else {
                 return nil
             }
 
-            self = .context(contextID)
+            self = .workspace(workspaceID)
 
         default:
             return nil

@@ -11,43 +11,46 @@ struct EventTests {
             (event: Event.debugPing(DebugPingEvent()), kind: EventKind.debugPing),
             (event: Event.debugPong(DebugPongEvent()), kind: EventKind.debugPong),
             (event: Event.initialized(InitializedEvent()), kind: EventKind.initialized),
-            (event: Event.getContexts(GetContextsEvent()), kind: EventKind.getContexts),
-            (event: Event.contextsFetched(ContextsFetchedEvent(contexts: [])), kind: EventKind.contextsFetched),
+            (event: Event.getWorkspaces(GetWorkspacesEvent()), kind: EventKind.getWorkspaces),
+            (event: Event.workspacesFetched(WorkspacesFetchedEvent(workspaces: [])), kind: EventKind.workspacesFetched),
             (
-                event: Event.availableContexts(AvailableContextsEvent(contexts: [])),
-                kind: EventKind.availableContexts
+                event: Event.availableWorkspaces(AvailableWorkspacesEvent(workspaces: [])),
+                kind: EventKind.availableWorkspaces
             ),
             (
-                event: Event.createContext(
-                    CreateContextEvent(name: "placeholder", symbol: "book", applications: [])
+                event: Event.createWorkspace(
+                    CreateWorkspaceEvent(name: "placeholder", symbol: "book", applications: [])
                 ),
-                kind: EventKind.createContext
+                kind: EventKind.createWorkspace
             ),
             (
-                event: Event.updateContext(
-                    UpdateContextEvent(
-                        context: WorkspaceContext(name: "placeholder", symbol: "book")
+                event: Event.updateWorkspace(
+                    UpdateWorkspaceEvent(
+                        workspace: Workspace(name: "placeholder", symbol: "book")
                     )
                 ),
-                kind: EventKind.updateContext
+                kind: EventKind.updateWorkspace
             ),
-            (event: Event.deleteContext(DeleteContextEvent(contextID: UUID())), kind: EventKind.deleteContext),
-            (event: Event.archiveContext(ArchiveContextEvent(contextID: UUID())), kind: EventKind.archiveContext),
+            (event: Event.deleteWorkspace(DeleteWorkspaceEvent(workspaceID: UUID())), kind: EventKind.deleteWorkspace),
             (
-                event: Event.unarchiveContext(UnarchiveContextEvent(contextID: UUID())),
-                kind: EventKind.unarchiveContext
-            ),
-            (
-                event: Event.switchContext(SwitchContextEvent(contextID: UUID())),
-                kind: EventKind.switchContext
+                event: Event.archiveWorkspace(ArchiveWorkspaceEvent(workspaceID: UUID())),
+                kind: EventKind.archiveWorkspace
             ),
             (
-                event: Event.stopContext(StopContextEvent(contextID: UUID())),
-                kind: EventKind.stopContext
+                event: Event.unarchiveWorkspace(UnarchiveWorkspaceEvent(workspaceID: UUID())),
+                kind: EventKind.unarchiveWorkspace
             ),
             (
-                event: Event.contextMutationAcknowledged(.success(contextID: UUID())),
-                kind: EventKind.contextMutationAcknowledged
+                event: Event.switchWorkspace(SwitchWorkspaceEvent(workspaceID: UUID())),
+                kind: EventKind.switchWorkspace
+            ),
+            (
+                event: Event.stopWorkspace(StopWorkspaceEvent(workspaceID: UUID())),
+                kind: EventKind.stopWorkspace
+            ),
+            (
+                event: Event.workspaceMutationAcknowledged(.success(workspaceID: UUID())),
+                kind: EventKind.workspaceMutationAcknowledged
             ),
             (
                 event: Event.getAccessibilityStatus(GetAccessibilityStatusEvent()),
@@ -143,34 +146,38 @@ struct EventTests {
             Event.debugPing(DebugPingEvent()),
             .debugPong(DebugPongEvent(message: "hello")),
             .initialized(InitializedEvent()),
-            .getContexts(GetContextsEvent()),
-            .contextsFetched(ContextsFetchedEvent(contexts: [])),
-            .createContext(CreateContextEvent(name: "placeholder", symbol: "book", applications: [])),
-            .updateContext(UpdateContextEvent(context: WorkspaceContext(name: "placeholder", symbol: "book"))),
-            .deleteContext(DeleteContextEvent(contextID: UUID())),
-            .archiveContext(ArchiveContextEvent(contextID: UUID())),
-            .unarchiveContext(UnarchiveContextEvent(contextID: UUID())),
-            .switchContext(SwitchContextEvent(contextID: UUID())),
-            .stopContext(StopContextEvent(contextID: UUID())),
-            .contextMutationAcknowledged(ContextMutationAcknowledgement.success(contextID: UUID())),
-            .contextMutationAcknowledged(ContextMutationAcknowledgement.failure(failure: .emptyContextName)),
-            .contextMutationAcknowledged(ContextMutationAcknowledgement.failure(failure: .contextNotFound(UUID()))),
-            .contextMutationAcknowledged(ContextMutationAcknowledgement.failure(failure: .contextNotActive(UUID()))),
-            .availableContexts(
-                AvailableContextsEvent(
-                    contexts: [
-                        WorkspaceContext(name: "Placeholder", symbol: "book"),
-                        WorkspaceContext(name: "Old", symbol: "archivebox", isArchived: true),
+            .getWorkspaces(GetWorkspacesEvent()),
+            .workspacesFetched(WorkspacesFetchedEvent(workspaces: [])),
+            .createWorkspace(CreateWorkspaceEvent(name: "placeholder", symbol: "book", applications: [])),
+            .updateWorkspace(UpdateWorkspaceEvent(workspace: Workspace(name: "placeholder", symbol: "book"))),
+            .deleteWorkspace(DeleteWorkspaceEvent(workspaceID: UUID())),
+            .archiveWorkspace(ArchiveWorkspaceEvent(workspaceID: UUID())),
+            .unarchiveWorkspace(UnarchiveWorkspaceEvent(workspaceID: UUID())),
+            .switchWorkspace(SwitchWorkspaceEvent(workspaceID: UUID())),
+            .stopWorkspace(StopWorkspaceEvent(workspaceID: UUID())),
+            .workspaceMutationAcknowledged(WorkspaceMutationAcknowledgement.success(workspaceID: UUID())),
+            .workspaceMutationAcknowledged(WorkspaceMutationAcknowledgement.failure(failure: .emptyWorkspaceName)),
+            .workspaceMutationAcknowledged(
+                WorkspaceMutationAcknowledgement.failure(failure: .workspaceNotFound(UUID()))
+            ),
+            .workspaceMutationAcknowledged(
+                WorkspaceMutationAcknowledgement.failure(failure: .workspaceNotActive(UUID()))
+            ),
+            .availableWorkspaces(
+                AvailableWorkspacesEvent(
+                    workspaces: [
+                        Workspace(name: "Placeholder", symbol: "book"),
+                        Workspace(name: "Old", symbol: "archivebox", isArchived: true),
                     ],
                     activity: WorkspaceActivityState(
                         activeSession: .init(
-                            contextID: UUID(),
+                            workspaceID: UUID(),
                             startedAt: Date(timeIntervalSince1970: 100)
                         )
                     )
                 )
             ),
-            .contextMutationAcknowledged(ContextMutationAcknowledgement.failure(failure: .updateInProgress)),
+            .workspaceMutationAcknowledged(WorkspaceMutationAcknowledgement.failure(failure: .updateInProgress)),
             .getAccessibilityStatus(GetAccessibilityStatusEvent()),
             .promptAccessibilityTrust(PromptAccessibilityTrustEvent()),
             .accessibilityStatus(AccessibilityStatusEvent(isTrusted: false)),
@@ -219,13 +226,13 @@ struct EventTests {
         #expect(decoded == event)
     }
 
-    @Test("Context snapshots decode activity from older payloads as empty")
-    func contextSnapshotsDecodeOlderPayloads() throws {
-        let data = Data(#"{"contexts":[]}"#.utf8)
+    @Test("Workspace snapshots decode activity from older payloads as empty")
+    func workspaceSnapshotsDecodeOlderPayloads() throws {
+        let data = Data(#"{"workspaces":[]}"#.utf8)
         let decoder = JSONDecoder()
 
-        let available = try decoder.decode(AvailableContextsEvent.self, from: data)
-        let fetched = try decoder.decode(ContextsFetchedEvent.self, from: data)
+        let available = try decoder.decode(AvailableWorkspacesEvent.self, from: data)
+        let fetched = try decoder.decode(WorkspacesFetchedEvent.self, from: data)
 
         #expect(available.activity == .empty)
         #expect(fetched.activity == .empty)
