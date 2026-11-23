@@ -30,7 +30,7 @@ env:
 jobs:
   release:
     name: Build release
-    runs-on: macos-27
+    runs-on: xcode-27
     timeout-minutes: 60
     environment: release
 
