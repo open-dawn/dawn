@@ -36,8 +36,8 @@ actor SettingsStore {
         let loadedDocument = document
 
         document.workspaceActivity.reconcile(
-            validContextIDs: Set(
-                document.contexts.map(
+            validWorkspaceIDs: Set(
+                document.workspaces.map(
                     \.id
                 )
             )
@@ -57,13 +57,13 @@ actor SettingsStore {
         document
     }
 
-    func createContext(
+    func createWorkspace(
         name: String,
         symbol: String,
         applications: [WorkspaceApplication] = [],
         transition: WorkspaceTransition = .default
-    ) async throws -> WorkspaceContext {
-        let newContext = WorkspaceContext(
+    ) async throws -> Workspace {
+        let newWorkspace = Workspace(
             name: name,
             symbol: symbol,
             applications: applications,
@@ -71,55 +71,55 @@ actor SettingsStore {
         )
 
         return try await mutate { candidate in
-            candidate.contexts.append(newContext)
-            return newContext
+            candidate.workspaces.append(newWorkspace)
+            return newWorkspace
         }
     }
 
-    func updateContext(
-        _ updatedContext: WorkspaceContext
+    func updateWorkspace(
+        _ updatedWorkspace: Workspace
     ) async throws {
         try await mutate { candidate in
             guard
-                let contextIndex = candidate.contexts.firstIndex(
-                    where: { $0.id == updatedContext.id }
+                let workspaceIndex = candidate.workspaces.firstIndex(
+                    where: { $0.id == updatedWorkspace.id }
                 )
             else {
-                throw SettingsStoreError.contextNotFound(
-                    updatedContext.id
+                throw SettingsStoreError.workspaceNotFound(
+                    updatedWorkspace.id
                 )
             }
 
-            var replacement = updatedContext
-            replacement.isArchived = candidate.contexts[contextIndex].isArchived
-            candidate.contexts[contextIndex] = replacement
+            var replacement = updatedWorkspace
+            replacement.isArchived = candidate.workspaces[workspaceIndex].isArchived
+            candidate.workspaces[workspaceIndex] = replacement
         }
     }
 
-    func archiveContext(id: UUID) async throws {
+    func archiveWorkspace(id: UUID) async throws {
         try await setArchived(true, id: id)
     }
 
-    func unarchiveContext(id: UUID) async throws {
+    func unarchiveWorkspace(id: UUID) async throws {
         try await setArchived(false, id: id)
     }
 
-    func deleteContext(
+    func deleteWorkspace(
         id: UUID
     ) async throws {
         try await mutate { candidate in
             guard
-                let contextIndex = candidate.contexts.firstIndex(
+                let workspaceIndex = candidate.workspaces.firstIndex(
                     where: { $0.id == id }
                 )
             else {
-                throw SettingsStoreError.contextNotFound(
+                throw SettingsStoreError.workspaceNotFound(
                     id
                 )
             }
 
-            candidate.contexts.remove(at: contextIndex)
-            candidate.workspaceActivity.removeContext(id: id)
+            candidate.workspaces.remove(at: workspaceIndex)
+            candidate.workspaceActivity.removeWorkspace(id: id)
         }
     }
 
@@ -129,18 +129,18 @@ actor SettingsStore {
 
         try Task.checkCancellation()
 
-        guard let index = document.contexts.firstIndex(where: { $0.id == id }) else {
-            throw SettingsStoreError.contextNotFound(id)
+        guard let index = document.workspaces.firstIndex(where: { $0.id == id }) else {
+            throw SettingsStoreError.workspaceNotFound(id)
         }
 
-        guard document.contexts[index].isArchived != isArchived else {
+        guard document.workspaces[index].isArchived != isArchived else {
             return
         }
 
         var candidate = document
-        candidate.contexts[index].isArchived = isArchived
+        candidate.workspaces[index].isArchived = isArchived
 
-        if isArchived, candidate.workspaceActivity.activeContextID == id {
+        if isArchived, candidate.workspaceActivity.activeWorkspaceID == id {
             candidate.workspaceActivity.clearActiveSession(for: id)
         }
 
@@ -177,17 +177,17 @@ actor SettingsStore {
     }
 
     @discardableResult
-    func recordContextActivation(
-        contextID: UUID,
+    func recordWorkspaceActivation(
+        workspaceID: UUID,
         at date: Date
     ) async throws -> WorkspaceActivityState {
         try await mutate { candidate in
-            guard candidate.contexts.contains(where: { $0.id == contextID }) else {
-                throw SettingsStoreError.contextNotFound(contextID)
+            guard candidate.workspaces.contains(where: { $0.id == workspaceID }) else {
+                throw SettingsStoreError.workspaceNotFound(workspaceID)
             }
 
             candidate.workspaceActivity.activate(
-                contextID: contextID,
+                workspaceID: workspaceID,
                 at: date
             )
 
@@ -196,7 +196,7 @@ actor SettingsStore {
     }
 
     @discardableResult
-    func stopActiveContext(at date: Date) async throws -> WorkspaceActivityState {
+    func stopActiveWorkspace(at date: Date) async throws -> WorkspaceActivityState {
         try await mutate { candidate in
             candidate.workspaceActivity.stop(at: date)
             return candidate.workspaceActivity

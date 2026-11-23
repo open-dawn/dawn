@@ -4,7 +4,7 @@ import libdawn
 @MainActor
 @discardableResult
 func promptAccessibilityTrust(
-    using bus: any SettingsContextEventBus,
+    using bus: any SettingsWorkspaceEventBus,
     timeout: Duration = .seconds(5)
 ) async throws(AccessibilityPermissionError) -> Bool {
     let response: Event
@@ -26,7 +26,7 @@ func promptAccessibilityTrust(
 
 @MainActor
 func fetchAccessibilityTrustStatus(
-    using bus: any SettingsContextEventBus,
+    using bus: any SettingsWorkspaceEventBus,
     timeout: Duration = .seconds(5)
 ) async throws(AccessibilityPermissionError) -> Bool {
     let response: Event

@@ -10,9 +10,9 @@ import Foundation
 @MainActor
 final class MenuBarModalPresentationState {
     enum Presentation: Hashable {
-        case contextListError
+        case workspaceListError
         case deleteConfirmation
-        case contextCreationError
+        case workspaceCreationError
         case applicationImporter
     }
 

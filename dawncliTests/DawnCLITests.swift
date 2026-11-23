@@ -7,7 +7,7 @@ struct DawnCLITests {
     func registersRootCommands() {
         let help = DawnCLI.helpMessage(includeHidden: false, columns: 80)
         #expect(help.contains("status"))
-        #expect(help.contains("context"))
+        #expect(help.contains("workspace"))
     }
 
     @Test("help lists every command")
@@ -72,24 +72,24 @@ struct DawnCLITests {
         )
     }
 
-    @Test("context update accepts --clear-apps by itself")
-    func contextUpdateAcceptsClearApps() throws {
+    @Test("workspace update accepts --clear-apps by itself")
+    func workspaceUpdateAcceptsClearApps() throws {
         let command = try DawnCLI.parseAsRoot([
-            "context",
+            "workspace",
             "update",
             "AAAAAAAA-BBBB-CCCC-DDDD-EEEEEEEEEEEE",
             "--clear-apps"
         ])
-        let update = try #require(command as? ContextCommand.Update)
+        let update = try #require(command as? WorkspaceCommand.Update)
         #expect(update.clearApps)
         #expect(update.apps.isEmpty)
     }
 
-    @Test("context update rejects --app with --clear-apps")
-    func contextUpdateRejectsAppAndClearApps() {
+    @Test("workspace update rejects --app with --clear-apps")
+    func workspaceUpdateRejectsAppAndClearApps() {
         expectValidationFailure(
             [
-                "context",
+                "workspace",
                 "update",
                 "AAAAAAAA-BBBB-CCCC-DDDD-EEEEEEEEEEEE",
                 "--app",
@@ -98,10 +98,10 @@ struct DawnCLITests {
             ],
             """
             Error: Pass either --app or --clear-apps, not both.
-            Usage: dawncli context update <id> [--name <name>] [--symbol <symbol>] \
+            Usage: dawncli workspace update <id> [--name <name>] [--symbol <symbol>] \
             [--app <app> ...] [--clear-apps] [--activation <activation>] \
             [--terminal-command <terminal-command>] [--from <from>] [--json]
-              See 'dawncli context update --help' for more information.
+              See 'dawncli workspace update --help' for more information.
             """
         )
     }
@@ -116,7 +116,7 @@ struct DawnCLITests {
 
     SUBCOMMANDS:
       status                  Ask dawnAgent whether it is reachable.
-      context                 List and change workspace contexts.
+      workspace               List and change workspaces.
       settings                Read and change DAWN settings.
       accessibility           Check or prompt for accessibility trust.
 

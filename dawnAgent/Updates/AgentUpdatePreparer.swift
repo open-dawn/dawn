@@ -18,9 +18,9 @@ protocol AgentUpdatePreparing {
 
 @MainActor
 protocol WorkspaceUpdatePreparing: AnyObject {
-    var activeContextID: UUID? { get }
+    var activeWorkspaceID: UUID? { get }
 
-    func stopActiveContext() async throws
+    func stopActiveWorkspace() async throws
 }
 
 extension WorkspaceRuntime: WorkspaceUpdatePreparing {}
@@ -75,11 +75,11 @@ final class AgentUpdatePreparer: AgentUpdatePreparing {
         lifecycle.beginUpdatePreparation()
 
         let task: Task<Void, Error> = Task { @MainActor [workspace] in
-            guard workspace.activeContextID != nil else {
+            guard workspace.activeWorkspaceID != nil else {
                 return
             }
 
-            try await workspace.stopActiveContext()
+            try await workspace.stopActiveWorkspace()
         }
 
         preparationTask = task

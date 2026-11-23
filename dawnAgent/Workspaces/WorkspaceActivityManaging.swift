@@ -13,8 +13,8 @@ protocol WorkspaceActivityManaging {
     func getWorkspaceActivity() async -> WorkspaceActivityState
 
     @discardableResult
-    func recordContextActivation(contextID: UUID, at date: Date) async throws -> WorkspaceActivityState
+    func recordWorkspaceActivation(workspaceID: UUID, at date: Date) async throws -> WorkspaceActivityState
 
     @discardableResult
-    func stopActiveContext(at date: Date) async throws -> WorkspaceActivityState
+    func stopActiveWorkspace(at date: Date) async throws -> WorkspaceActivityState
 }

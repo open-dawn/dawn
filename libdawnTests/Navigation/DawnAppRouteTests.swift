@@ -12,12 +12,12 @@ import Testing
 
 @Suite("DAWN app route")
 struct DawnAppRouteTests {
-    @Test("encodes and decodes a context route")
-    func contextRouteRoundTrip() async throws {
-        let contextID = UUID()
-        let route = DawnAppRoute.context(contextID)
+    @Test("encodes and decodes a workspace route")
+    func workspaceRouteRoundTrip() async throws {
+        let workspaceID = UUID()
+        let route = DawnAppRoute.workspace(workspaceID)
 
-        #expect(route.url.absoluteString == "opendawn://context/\(contextID.uuidString)")
+        #expect(route.url.absoluteString == "opendawn://workspace/\(workspaceID.uuidString)")
         #expect(DawnAppRoute(url: route.url) == route)
     }
 
@@ -40,11 +40,11 @@ struct DawnAppRouteTests {
     @Test("rejects unsopported URLs")
     func rejectsUnsupportedURLs() throws {
         let invalidURLs = [
-            "https://context/\(UUID().uuidString)",
+            "https://workspace/\(UUID().uuidString)",
             "opendawn://unkown",
-            "opendawn://context",
-            "opendawn://context/not-a-uuid",
-            "opendawn://context/\(UUID().uuidString)/extra",
+            "opendawn://workspace",
+            "opendawn://workspace/not-a-uuid",
+            "opendawn://workspace/\(UUID().uuidString)/extra",
             "opendawn://settings/unexpected",
         ]
 

@@ -11,8 +11,8 @@ import libdawn
 
 @Suite("Shared Models Tests")
 struct SharedModelsTests {
-    @Test("Workspace context survives a Codable round trip")
-    func workspaceContextCodableRoundTrip() throws {
+    @Test("Workspace survives a Codable round trip")
+    func workspaceCodableRoundTrip() throws {
         let application = WorkspaceApplication(
             bundleIdentifier: "com.apple.Safari",
             displayName: "Safari",
@@ -27,7 +27,7 @@ struct SharedModelsTests {
             windowLayout: .minimized
         )
 
-        let context = WorkspaceContext(
+        let workspace = Workspace(
             name: "Study",
             symbol: "book",
             applications: [application],
@@ -38,17 +38,17 @@ struct SharedModelsTests {
             isArchived: true
         )
 
-        let data = try JSONEncoder().encode(context)
+        let data = try JSONEncoder().encode(workspace)
         let decoded = try JSONDecoder().decode(
-            WorkspaceContext.self,
+            Workspace.self,
             from: data
         )
 
-        #expect(decoded == context)
+        #expect(decoded == workspace)
     }
 
-    @Test("Workspace context defaults transition when decoding legacy payloads")
-    func workspaceContextDefaultsMissingTransition() throws {
+    @Test("Workspace defaults transition when decoding legacy payloads")
+    func workspaceDefaultsMissingTransition() throws {
         let legacyJSON = Data("""
         {
             "id": "00000000-0000-0000-0000-000000000001",
@@ -58,15 +58,15 @@ struct SharedModelsTests {
         }
         """.utf8)
 
-        let decoded = try JSONDecoder().decode(WorkspaceContext.self, from: legacyJSON)
+        let decoded = try JSONDecoder().decode(Workspace.self, from: legacyJSON)
 
         #expect(decoded.transition == .default)
         #expect(decoded.transition.activationPolicy == .hide)
         #expect(decoded.isArchived == false)
     }
 
-    @Test("Create context event defaults transition when decoding legacy payloads")
-    func createContextEventDefaultsMissingTransition() throws {
+    @Test("Create workspace event defaults transition when decoding legacy payloads")
+    func createWorkspaceEventDefaultsMissingTransition() throws {
         let legacyJSON = Data("""
         {
             "name": "Legacy",
@@ -76,7 +76,7 @@ struct SharedModelsTests {
         """.utf8)
 
         let decoded = try JSONDecoder().decode(
-            CreateContextEvent.self,
+            CreateWorkspaceEvent.self,
             from: legacyJSON
         )
 
@@ -84,11 +84,11 @@ struct SharedModelsTests {
         #expect(decoded.transition.activationPolicy == .hide)
     }
 
-    @Test("Workspace context is active by default")
-    func workspaceContextIsActiveByDefault() {
-        let context = WorkspaceContext(name: "Study", symbol: "book")
+    @Test("Workspace is active by default")
+    func workspaceIsActiveByDefault() {
+        let workspace = Workspace(name: "Study", symbol: "book")
 
-        #expect(context.isArchived == false)
+        #expect(workspace.isArchived == false)
     }
 
     @Test("General Settings survives a Codable round trip")

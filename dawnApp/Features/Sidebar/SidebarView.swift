@@ -5,7 +5,7 @@ struct SidebarView: View {
     private let content: SidebarContent
     private let availableUpdate: AvailableAppUpdate?
     @Binding private var selectedDestination: SidebarDestination?
-    private let onCreateContext: () -> Void
+    private let onCreateWorkspace: () -> Void
     private let onDismissError: () -> Void
 
     @State private var searchText: String
@@ -17,12 +17,12 @@ struct SidebarView: View {
         availableUpdate: AvailableAppUpdate? = nil,
         selectedDestination: Binding<SidebarDestination?>,
         initialSearch: SidebarSearchState = SidebarSearchState(),
-        onCreateContext: @escaping () -> Void,
+        onCreateWorkspace: @escaping () -> Void,
         onDismissError: @escaping () -> Void = {}
     ) {
         self.content = content
         self.availableUpdate = availableUpdate
-        self.onCreateContext = onCreateContext
+        self.onCreateWorkspace = onCreateWorkspace
         self.onDismissError = onDismissError
         _selectedDestination = selectedDestination
         _searchText = State(initialValue: initialSearch.text)
@@ -31,7 +31,7 @@ struct SidebarView: View {
     }
 
     var body: some View {
-        SidebarContextList(
+        SidebarWorkspaceList(
             content: content,
             selectedDestination: $selectedDestination,
             isArchivedSectionExpanded: $isArchivedSectionExpanded,
@@ -57,7 +57,7 @@ struct SidebarView: View {
                 searchText: $searchText,
                 isSearchPresented: $isSearchPresented,
                 interactionsDisabled: content.interactionsDisabled,
-                onCreateContext: onCreateContext
+                onCreateWorkspace: onCreateWorkspace
             )
         }
         .padding(.horizontal, SidebarMetrics.horizontalPadding)

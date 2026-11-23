@@ -8,88 +8,101 @@
 import SwiftUI
 
 public enum DawnTextStyle {
-    public static let primary: Font = DawnFont.gabarito(size: 16, relativeTo: .body)
-    public static let primaryBold: Font = DawnFont.gabarito(.bold, size: 16, relativeTo: .body)
-    public static let secondary: Font = DawnFont.gabarito(size: 16, relativeTo: .body)
+    /// Canonical type scale (max 4 sizes): title / body / secondary / meta.
+    public static let titleSize: CGFloat = 24
+    public static let bodySize: CGFloat = 16
+    public static let secondarySize: CGFloat = 12
+    public static let metaSize: CGFloat = 10
 
-    // MARK: - Context Cards
+    public static let primary: Font = DawnFont.gabarito(size: bodySize, relativeTo: .body)
+    public static let primaryBold: Font = DawnFont.gabarito(.bold, size: bodySize, relativeTo: .body)
+    public static let secondary: Font = DawnFont.gabarito(size: bodySize, relativeTo: .body)
 
-    public static let contextTitle: Font = DawnFont.zain(.bold, size: 18, relativeTo: .title)
-    public static let contextMetadata: Font = DawnFont.gabarito(size: 10, relativeTo: .body)
+    // MARK: - Workspace Cards
 
-    public static let noWorkspaceTitle: Font = DawnFont.zain(.bold, size: 28, relativeTo: .title)
-    public static let noWorkspaceBody: Font = DawnFont.gabarito(size: 16, relativeTo: .body)
-    public static let noWorkspaceBodyEmphasis: Font = DawnFont.gabarito(.bold, size: 16, relativeTo: .body)
+    public static let workspaceTitle: Font = DawnFont.zain(.bold, size: bodySize, relativeTo: .title)
+    public static let workspaceMetadata: Font = DawnFont.gabarito(size: metaSize, relativeTo: .body)
+
+    public static let noWorkspaceTitle: Font = DawnFont.zain(.bold, size: titleSize, relativeTo: .title)
+    public static let noWorkspaceBody: Font = DawnFont.gabarito(size: bodySize, relativeTo: .body)
+    public static let noWorkspaceBodyEmphasis: Font = DawnFont.gabarito(.bold, size: bodySize, relativeTo: .body)
 
     // MARK: Branding
-    public static let brandTitle: Font = DawnFont.zain(.regular, size: 24, relativeTo: .title)
-    public static let compactBrandTitle: Font = .system(size: 20)
+    public static let brandTitle: Font = DawnFont.zain(.regular, size: titleSize, relativeTo: .title)
+    public static let compactBrandTitle: Font = .system(size: titleSize)
 
     // MARK: Screen hierarchy
-    public static let screenTitle: Font = DawnFont.zain(.bold, size: 28, relativeTo: .title)
-    public static let compactScreenTitle: Font = .system(size: 18, weight: .bold)
-    public static let body: Font = DawnFont.gabarito(size: 16, relativeTo: .body)
-    public static let emphasizedBody: Font = DawnFont.gabarito(.bold, size: 16, relativeTo: .body)
-    public static let confirmationTitle: Font = DawnFont.zain(.bold, size: 24, relativeTo: .title2)
-    public static let confirmationWorkspaceTitle: Font = DawnFont.zain(.bold, size: 16, relativeTo: .headline)
-    public static let confirmationAction: Font = DawnFont.gabarito(size: 16, relativeTo: .body)
-    public static let fieldLabel: Font = .system(size: 14, weight: .light)
-    public static let sectionLabel: Font = DawnFont.zain(.bold, size: 22, relativeTo: .title)
+    public static let screenTitle: Font = DawnFont.zain(.bold, size: titleSize, relativeTo: .title)
+    public static let compactScreenTitle: Font = .system(size: bodySize, weight: .bold)
+    public static let body: Font = DawnFont.gabarito(size: bodySize, relativeTo: .body)
+    public static let emphasizedBody: Font = DawnFont.gabarito(.bold, size: bodySize, relativeTo: .body)
+    public static let confirmationTitle: Font = DawnFont.zain(.bold, size: titleSize, relativeTo: .title2)
+    public static let confirmationWorkspaceTitle: Font = DawnFont.zain(.bold, size: bodySize, relativeTo: .headline)
+    public static let confirmationAction: Font = DawnFont.gabarito(size: bodySize, relativeTo: .body)
+    public static let fieldLabel: Font = .system(size: secondarySize, weight: .light)
+    public static let sectionLabel: Font = DawnFont.zain(.bold, size: titleSize, relativeTo: .title)
     public static let settingsSectionTitle: Font = DawnFont.gabarito(
         .bold,
-        size: 16,
+        size: bodySize,
         relativeTo: .body
     )
-    public static let linkLabel: Font = .system(size: 12, weight: .light)
+    public static let linkLabel: Font = .system(size: secondarySize, weight: .light)
 
-    // MARK: - Context detail (Figma fixed sizes)
+    // MARK: - Workspace detail
 
-    /// Detail pane title (Figma: Zain Bold 16).
-    public static let detailTitle: Font = DawnFont.zain(.bold, size: 24, relativeTo: .headline)
-    /// Section labels in the detail pane (Figma: Gabarito Bold 12).
-    public static let detailSectionLabel: Font = DawnFont.gabarito(.bold, size: 12, relativeTo: .caption)
-    /// Field / chip body text in the detail pane (Figma: Gabarito Regular 12).
-    public static let detailField: Font = DawnFont.gabarito(size: 12, relativeTo: .caption)
-    /// Empty / supporting copy under detail controls (Figma: Gabarito Regular 12).
-    public static let detailSupporting: Font = DawnFont.gabarito(size: 12, relativeTo: .caption)
-    /// Compact action label on the detail header Start button (Figma: Zain Bold 10).
-    public static let detailAction: Font = DawnFont.zain(.bold, size: 10, relativeTo: .caption2)
+    /// Detail pane title.
+    public static let detailTitle: Font = DawnFont.zain(.bold, size: titleSize, relativeTo: .headline)
+    /// Section labels in the detail pane.
+    public static let detailSectionLabel: Font = DawnFont.gabarito(
+        .bold,
+        size: secondarySize,
+        relativeTo: .caption
+    )
+    /// Field / chip body text in the detail pane.
+    public static let detailField: Font = DawnFont.gabarito(size: secondarySize, relativeTo: .caption)
+    /// Empty / supporting copy under detail controls.
+    public static let detailSupporting: Font = DawnFont.gabarito(size: secondarySize, relativeTo: .caption)
+    /// Compact action label on the detail header Start button.
+    public static let detailAction: Font = DawnFont.zain(.bold, size: metaSize, relativeTo: .caption2)
 
     // MARK: Options and supporting information
 
-    public static let optionTitle: Font = .system(size: 18, weight: .light)
-    public static let caption: Font = DawnFont.gabarito(size: 12, relativeTo: .caption)
-    public static let captionBold: Font = DawnFont.gabarito(.bold, size: 12, relativeTo: .caption)
-    public static let secondaryCaption: Font = DawnFont.gabarito(size: 12, relativeTo: .caption)
+    public static let optionTitle: Font = .system(size: bodySize, weight: .light)
+    public static let caption: Font = DawnFont.gabarito(size: secondarySize, relativeTo: .caption)
+    public static let captionBold: Font = DawnFont.gabarito(.bold, size: secondarySize, relativeTo: .caption)
+    public static let secondaryCaption: Font = DawnFont.gabarito(size: secondarySize, relativeTo: .caption)
 
     // MARK: Icons presented as typography
 
-    public static let actionIcon: Font = .system(size: 20, weight: .light)
-    public static let selectionIcon: Font = .system(size: 18)
-    public static let symbolPickerIcon: Font = .system(size: 25)
+    public static let actionIcon: Font = .system(size: bodySize, weight: .light)
+    public static let selectionIcon: Font = .system(size: bodySize)
+    public static let symbolPickerIcon: Font = .system(size: titleSize)
 
     // MARK: - Button
 
-    public static let buttonLabel: Font = .system(size: 16, weight: .semibold)
-    public static let buttonIcon: Font = .system(size: 14, weight: .bold)
+    public static let buttonLabel: Font = .system(size: bodySize, weight: .semibold)
+    public static let buttonIcon: Font = .system(size: secondarySize, weight: .bold)
 
-    public static let detailButton: Font = DawnFont.zain(.bold ,size: 16, relativeTo: .body)
+    public static let detailButton: Font = DawnFont.zain(.bold, size: bodySize, relativeTo: .body)
 
-    public static let activationPolicyTitle: Font = DawnFont.gabarito(size: 12, relativeTo: .caption)
+    public static let activationPolicyTitle: Font = DawnFont.gabarito(size: secondarySize, relativeTo: .caption)
 
-    public static let activationPolicyDescription: Font = DawnFont.gabarito(size: 10, relativeTo: .caption2)
+    public static let activationPolicyDescription: Font = DawnFont.gabarito(
+        size: metaSize,
+        relativeTo: .caption2
+    )
 
-    public static let activationPolicyIcon: Font = .system(size: 16, weight: .medium)
+    public static let activationPolicyIcon: Font = .system(size: bodySize, weight: .medium)
 
     // MARK: - Sidebar
 
-    public static let sidebarTextSize: CGFloat = 12
-    public static let sidebarMetaSize: CGFloat = 8
+    public static let sidebarTextSize: CGFloat = secondarySize
+    public static let sidebarMetaSize: CGFloat = metaSize
 
     public static let sidebarLogo: Font = DawnFont.gabarito(size: sidebarTextSize, relativeTo: .body)
     public static let sidebarLogoSymbol: Font = .system(size: sidebarTextSize, weight: .regular)
 
-    public static let sidebarLogoStackedSymbol: Font = .system(size: 28, weight: .regular)
+    public static let sidebarLogoStackedSymbol: Font = .system(size: titleSize, weight: .regular)
     public static let sidebarLogoStackedTitle: Font = DawnFont.gabarito(
         .medium,
         size: sidebarTextSize,
@@ -104,9 +117,9 @@ public enum DawnTextStyle {
         relativeTo: .body
     )
     public static let sidebarRow: Font = DawnFont.gabarito(size: sidebarTextSize, relativeTo: .body)
-    public static let sidebarIcon: Font = .system(size: 14, weight: .regular)
-    public static let sidebarRowIcon: Font = .system(size: 20, weight: .regular)
-    public static let sidebarBannerIcon: Font = .system(size: 24, weight: .regular)
+    public static let sidebarIcon: Font = .system(size: secondarySize, weight: .regular)
+    public static let sidebarRowIcon: Font = .system(size: bodySize, weight: .regular)
+    public static let sidebarBannerIcon: Font = .system(size: titleSize, weight: .regular)
 
     public static let sidebarFooter: Font = DawnFont.gabarito(size: sidebarTextSize, relativeTo: .body)
     public static let sidebarMeta: Font = DawnFont.gabarito(size: sidebarMetaSize, relativeTo: .caption2)
@@ -130,9 +143,9 @@ public enum DawnTextStyle {
         size: sidebarTextSize,
         relativeTo: .body
     )
-    public static let sidebarChevron: Font = .system(size: 10, weight: .regular)
+    public static let sidebarChevron: Font = .system(size: metaSize, weight: .regular)
 
     // MARK: - Text Field
 
-    public static let textFieldSecondaryIcon: Font = .system(size: 12, weight: .bold)
+    public static let textFieldSecondaryIcon: Font = .system(size: secondarySize, weight: .bold)
 }

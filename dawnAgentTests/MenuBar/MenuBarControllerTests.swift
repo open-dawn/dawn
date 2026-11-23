@@ -18,7 +18,7 @@ struct MenuBarControllerTests {
         let statusBar = StatusBarSpy()
 
         let runtime = WorkspaceRuntime(
-            contextManager: FakeContextManager()
+            workspaceCatalog: FakeWorkspaceCatalog()
         )
 
         let sut = MenuBarController(
@@ -53,7 +53,7 @@ struct MenuBarControllerTests {
         let statusBar = StatusBarSpy()
 
         let runtime = WorkspaceRuntime(
-            contextManager: FakeContextManager()
+            workspaceCatalog: FakeWorkspaceCatalog()
         )
 
         let sut = MenuBarController(

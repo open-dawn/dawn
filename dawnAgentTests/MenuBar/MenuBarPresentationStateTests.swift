@@ -25,9 +25,9 @@ struct MenuBarModalPresentationStateTests {
     @Test(
         "Tracks every presentation type",
         arguments: [
-            Presentation.contextListError,
+            Presentation.workspaceListError,
             Presentation.deleteConfirmation,
-            Presentation.contextCreationError,
+            Presentation.workspaceCreationError,
             Presentation.applicationImporter,
         ]
     )
@@ -57,7 +57,7 @@ struct MenuBarModalPresentationStateTests {
 
         sut.setPresented(
             true,
-            for: .contextListError
+            for: .workspaceListError
         )
 
         sut.setPresented(
@@ -67,7 +67,7 @@ struct MenuBarModalPresentationStateTests {
 
         sut.setPresented(
             false,
-            for: .contextListError
+            for: .workspaceListError
         )
 
         #expect(sut.isPresentingModal)

@@ -3,39 +3,39 @@ import libdawn
 
 extension SettingsStore {
     static func validate(_ document: SettingsDocument) throws(SettingsStoreError) {
-        var contextIdentifiers = Set<UUID>()
+        var workspaceIdentifiers = Set<UUID>()
 
         try validate(document.generalSettings)
-        for context in document.contexts {
-            guard contextIdentifiers.insert(context.id).inserted else {
-                throw .duplicateContextIdentifier(context.id)
+        for workspace in document.workspaces {
+            guard workspaceIdentifiers.insert(workspace.id).inserted else {
+                throw .duplicateWorkspaceIdentifier(workspace.id)
             }
 
-            try validate(context)
+            try validate(workspace)
         }
     }
 
-    static func validate(_ context: WorkspaceContext) throws(SettingsStoreError) {
-        let trimmedName = context.name.trimmingCharacters(
+    static func validate(_ workspace: Workspace) throws(SettingsStoreError) {
+        let trimmedName = workspace.name.trimmingCharacters(
             in: .whitespacesAndNewlines
         )
 
         guard !trimmedName.isEmpty else {
-            throw .emptyContextName
+            throw .emptyWorkspaceName
         }
 
-        let trimmedSymbol = context.symbol.trimmingCharacters(
+        let trimmedSymbol = workspace.symbol.trimmingCharacters(
             in: .whitespacesAndNewlines
         )
 
         guard !trimmedSymbol.isEmpty else {
-            throw .emptyContextSymbol
+            throw .emptyWorkspaceSymbol
         }
 
         var applicationIdentifiers = Set<UUID>()
         var bundleIdentifiers = Set<String>()
 
-        for application in context.applications {
+        for application in workspace.applications {
             try validate(application)
 
             guard applicationIdentifiers.insert(application.id).inserted else {

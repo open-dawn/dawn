@@ -6,7 +6,7 @@ import Observation
 @Observable
 @MainActor
 final class AccessibilityPermissionService {
-    private let bus: any SettingsContextEventBus
+    private let bus: any SettingsWorkspaceEventBus
     private let trustPollDuration: Duration
     private let trustPollInterval: Duration
 
@@ -15,7 +15,7 @@ final class AccessibilityPermissionService {
     private(set) var isLoading = false
 
     init(
-        bus: any SettingsContextEventBus,
+        bus: any SettingsWorkspaceEventBus,
         trustPollDuration: Duration = .seconds(30),
         trustPollInterval: Duration = .milliseconds(500)
     ) {

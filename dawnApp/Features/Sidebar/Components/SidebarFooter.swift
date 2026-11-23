@@ -172,7 +172,7 @@ struct SidebarFooter: View {
                     if isTopMost {
                         Button(action: onDismissError) {
                             Image(systemName: "xmark")
-                                .font(.system(size: 8, weight: .semibold))
+                                .font(.system(size: DawnTextStyle.metaSize, weight: .semibold))
                                 .foregroundStyle(DawnColors.sidebarForeground)
                                 .padding(4)
                                 .contentShape(Rectangle())

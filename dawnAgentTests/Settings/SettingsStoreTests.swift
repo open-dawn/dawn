@@ -34,7 +34,7 @@ struct SettingsStoreTests {
             )
         )
 
-        let context = WorkspaceContext(
+        let workspace = Workspace(
             name: "Study",
             symbol: "book",
             applications: [application]
@@ -42,7 +42,7 @@ struct SettingsStoreTests {
 
         let storedDocument = SettingsDocument(
             schemaVersion: SettingsDocument.currentSchemaVersion,
-            contexts: [context],
+            workspaces: [workspace],
             generalSettings: Settings(launchAtLogin: true)
         )
 
@@ -75,13 +75,13 @@ struct SettingsStoreTests {
     func invalidDocumentsAreRejected() async throws {
         let duplicatedID = UUID()
 
-        let firstContext = WorkspaceContext(
+        let firstWorkspace = Workspace(
             id: duplicatedID,
             name: "Study",
             symbol: "book"
         )
 
-        let secondContext = WorkspaceContext(
+        let secondWorkspace = Workspace(
             id: duplicatedID,
             name: "Works",
             symbol: "briefcase"
@@ -89,7 +89,7 @@ struct SettingsStoreTests {
 
         let invalidDocument = SettingsDocument(
             schemaVersion: SettingsDocument.currentSchemaVersion,
-            contexts: [firstContext, secondContext],
+            workspaces: [firstWorkspace, secondWorkspace],
             generalSettings: Settings()
         )
 
@@ -101,7 +101,7 @@ struct SettingsStoreTests {
             _ = try await SettingsStore(repository: repository)
             Issue.record("Expected initialization to throw")
         } catch let error as SettingsStoreError {
-            #expect(error == .duplicateContextIdentifier(duplicatedID))
+            #expect(error == .duplicateWorkspaceIdentifier(duplicatedID))
         } catch {
             Issue.record("Unexpected error: \(error)")
         }
@@ -123,16 +123,16 @@ struct SettingsStoreTests {
         #expect(savedDocuments.isEmpty)
     }
 
-    @Test("Whitespace context name returns emptyContextName error")
-    func emptyContextNameIsRejected() async throws {
+    @Test("Whitespace workspace name returns emptyWorkspaceName error")
+    func emptyWorkspaceNameIsRejected() async throws {
         let application = makeApplication()
-        let context = WorkspaceContext(
+        let workspace = Workspace(
             name: "  \n   ",
             symbol: "book",
             applications: [application]
         )
         let document = makeDocument(
-            contexts: [context]
+            workspaces: [workspace]
         )
 
         let repository = SettingsRepositorySpy(
@@ -143,22 +143,22 @@ struct SettingsStoreTests {
             _ = try await SettingsStore(repository: repository)
             Issue.record("Expected initialization to throw")
         } catch let error as SettingsStoreError {
-            #expect(error == .emptyContextName)
+            #expect(error == .emptyWorkspaceName)
         } catch {
             Issue.record("Unexpected error: \(error)")
         }
     }
 
-    @Test("Whitespace symbol returns emptyContextSymbol error")
-    func emptyContextSymbolIsRejected() async throws {
+    @Test("Whitespace symbol returns emptyWorkspaceSymbol error")
+    func emptyWorkspaceSymbolIsRejected() async throws {
         let application = makeApplication()
-        let context = WorkspaceContext(
+        let workspace = Workspace(
             name: "Study",
             symbol: "   \n    ",
             applications: [application]
         )
         let document = makeDocument(
-            contexts: [context]
+            workspaces: [workspace]
         )
 
         let repository = SettingsRepositorySpy(
@@ -169,7 +169,7 @@ struct SettingsStoreTests {
             _ = try await SettingsStore(repository: repository)
             Issue.record("Expected initialization to throw")
         } catch let error as SettingsStoreError {
-            #expect(error == .emptyContextSymbol)
+            #expect(error == .emptyWorkspaceSymbol)
         } catch {
             Issue.record("Unexpected error: \(error)")
         }
@@ -178,13 +178,13 @@ struct SettingsStoreTests {
     @Test("Whitespace bundle identifier returns emptyApplicationBundleIdentifier error")
     func emptyBundleIdentifierIsRejected() async throws {
         let application = makeApplication(bundleIdentifier: "  \n   ")
-        let context = WorkspaceContext(
+        let workspace = Workspace(
             name: "Study",
             symbol: "book",
             applications: [application]
         )
         let document = makeDocument(
-            contexts: [context]
+            workspaces: [workspace]
         )
 
         let repository = SettingsRepositorySpy(
@@ -204,13 +204,13 @@ struct SettingsStoreTests {
     @Test("Whitespace display name returns emptyApplicationDisplayName error")
     func emptyDisplayNameIsRejected() async throws {
         let application = makeApplication(displayName: "   \n   ")
-        let context = WorkspaceContext(
+        let workspace = Workspace(
             name: "Study",
             symbol: "book",
             applications: [application]
         )
         let document = makeDocument(
-            contexts: [context]
+            workspaces: [workspace]
         )
 
         let repository = SettingsRepositorySpy(
@@ -232,13 +232,13 @@ struct SettingsStoreTests {
         let duplicateID = UUID()
         let firstApplication = makeApplication(id: duplicateID)
         let secondApplication = makeApplication(id: duplicateID)
-        let context = WorkspaceContext(
+        let workspace = Workspace(
             name: "Study",
             symbol: "book",
             applications: [firstApplication, secondApplication]
         )
         let document = makeDocument(
-            contexts: [context]
+            workspaces: [workspace]
         )
 
         let repository = SettingsRepositorySpy(
@@ -261,13 +261,13 @@ struct SettingsStoreTests {
         let duplicateBundleID = "   \(bundleID.uppercased())   \n"
         let firstApplication = makeApplication(bundleIdentifier: bundleID)
         let secondApplication = makeApplication(bundleIdentifier: duplicateBundleID)
-        let context = WorkspaceContext(
+        let workspace = Workspace(
             name: "Study",
             symbol: "book",
             applications: [firstApplication, secondApplication]
         )
         let document = makeDocument(
-            contexts: [context]
+            workspaces: [workspace]
         )
 
         let repository = SettingsRepositorySpy(
@@ -284,13 +284,13 @@ struct SettingsStoreTests {
         }
     }
 
-    @Test("Create context persists and caches the new context")
-    func createContextPersistsAndCaches() async throws {
+    @Test("Create workspace persists and caches the new workspace")
+    func createWorkspacePersistsAndCaches() async throws {
         let repository = SettingsRepositorySpy()
         let sut = try await SettingsStore(repository: repository)
         let applications = makeApplication()
 
-        let created = try await sut.createContext(
+        let created = try await sut.createWorkspace(
             name: "Study",
             symbol: "book",
             applications: [applications]
@@ -304,12 +304,12 @@ struct SettingsStoreTests {
         #expect(created.applications == [applications])
         #expect(created.transition == .default)
         #expect(created.isArchived == false)
-        #expect(snapshot.contexts == [created])
+        #expect(snapshot.workspaces == [created])
         #expect(savedDocuments == [snapshot])
     }
 
-    @Test("Create context persists the requested transition")
-    func createContextPersistsTransition() async throws {
+    @Test("Create workspace persists the requested transition")
+    func createWorkspacePersistsTransition() async throws {
         let repository = SettingsRepositorySpy()
         let sut = try await SettingsStore(repository: repository)
         let transition = WorkspaceTransition(
@@ -317,7 +317,7 @@ struct SettingsStoreTests {
             terminalCommand: "echo close"
         )
 
-        let created = try await sut.createContext(
+        let created = try await sut.createWorkspace(
             name: "Focus",
             symbol: "target",
             transition: transition
@@ -326,22 +326,22 @@ struct SettingsStoreTests {
         let snapshot = await sut.snapshot()
 
         #expect(created.transition == transition)
-        #expect(snapshot.contexts == [created])
+        #expect(snapshot.workspaces == [created])
     }
 
-    @Test("Create context does not save or modify cache when validation fails")
+    @Test("Create workspace does not save or modify cache when validation fails")
     func invalidCreateDoesNotMutate() async throws {
         let repository = SettingsRepositorySpy()
         let sut = try await SettingsStore(repository: repository)
 
         do {
-            _ = try await sut.createContext(
+            _ = try await sut.createWorkspace(
                 name: " \n ",
                 symbol: "book"
             )
             Issue.record("Expected creation to throw")
         } catch let error as SettingsStoreError {
-            #expect(error == .emptyContextName)
+            #expect(error == .emptyWorkspaceName)
         } catch {
             Issue.record("Unexpected error: \(error)")
         }
@@ -353,7 +353,7 @@ struct SettingsStoreTests {
         #expect(savedDocuments.isEmpty)
     }
 
-    @Test("Create context leaves cache unchanged when persistence fails")
+    @Test("Create workspace leaves cache unchanged when persistence fails")
     func failedCreateDoesNotMutate() async throws {
         let repository = SettingsRepositorySpy(
             saveError: TestError.saveFailed
@@ -361,7 +361,7 @@ struct SettingsStoreTests {
         let sut = try await SettingsStore(repository: repository)
 
         do {
-            _ = try await sut.createContext(
+            _ = try await sut.createWorkspace(
                 name: "Study",
                 symbol: "book"
             )
@@ -379,19 +379,19 @@ struct SettingsStoreTests {
         #expect(savedDocuments.isEmpty)
     }
 
-    @Test("Concurrent context creations preserve every context")
-    func concurrentCreatesPreserveAllContexts() async throws {
+    @Test("Concurrent workspace creations preserve every workspace")
+    func concurrentCreatesPreserveAllWorkspaces() async throws {
         let repository = SettingsRepositorySpy(
             yieldBeforeSaving: true
         )
         let sut = try await SettingsStore(repository: repository)
-        let contextCount = 50
+        let workspaceCount = 50
 
-        try await withThrowingTaskGroup(of: WorkspaceContext.self) { group in
-            for index in 0..<contextCount {
+        try await withThrowingTaskGroup(of: Workspace.self) { group in
+            for index in 0..<workspaceCount {
                 group.addTask {
-                    try await sut.createContext(
-                        name: "Context \(index)",
+                    try await sut.createWorkspace(
+                        name: "Workspace \(index)",
                         symbol: "square"
                     )
                 }
@@ -403,24 +403,24 @@ struct SettingsStoreTests {
         let snapshot = await sut.snapshot()
         let storedDocument = await repository.storedDocument
 
-        #expect(snapshot.contexts.count == contextCount)
-        #expect(Set(snapshot.contexts.map(\.id)).count == contextCount)
-        #expect(Set(snapshot.contexts.map(\.name)).count == contextCount)
+        #expect(snapshot.workspaces.count == workspaceCount)
+        #expect(Set(snapshot.workspaces.map(\.id)).count == workspaceCount)
+        #expect(Set(snapshot.workspaces.map(\.name)).count == workspaceCount)
         #expect(storedDocument == snapshot)
     }
 
-    @Test("Update context persists replacement while preserving order")
-    func updateContextPreservesOrder() async throws {
-        let study = WorkspaceContext(
+    @Test("Update workspace persists replacement while preserving order")
+    func updateWorkspacePreservesOrder() async throws {
+        let study = Workspace(
             name: "Study",
             symbol: "book"
         )
-        let games = WorkspaceContext(
+        let games = Workspace(
             name: "Games",
             symbol: "gamecontroller"
         )
         let initialDocument = makeDocument(
-            contexts: [study, games]
+            workspaces: [study, games]
         )
         let repository = SettingsRepositorySpy(
             storedDocument: initialDocument
@@ -428,44 +428,44 @@ struct SettingsStoreTests {
         let sut = try await SettingsStore(repository: repository)
 
         let application = makeApplication()
-        let updatedStudy = WorkspaceContext(
+        let updatedStudy = Workspace(
             id: study.id,
             name: "University",
             symbol: "graduationcap",
             applications: [application]
         )
 
-        try await sut.updateContext(updatedStudy)
+        try await sut.updateWorkspace(updatedStudy)
 
         let snapshot = await sut.snapshot()
         let savedDocuments = await repository.savedDocuments
 
-        #expect(snapshot.contexts == [updatedStudy, games])
+        #expect(snapshot.workspaces == [updatedStudy, games])
         #expect(savedDocuments == [snapshot])
     }
 
-    @Test("Update context rejects an unknown identifier without saving")
-    func unknownContextUpdateIsRejected() async throws {
-        let existing = WorkspaceContext(
+    @Test("Update workspace rejects an unknown identifier without saving")
+    func unknownWorkspaceUpdateIsRejected() async throws {
+        let existing = Workspace(
             name: "Study",
             symbol: "book"
         )
-        let initialDocument = makeDocument(contexts: [existing])
+        let initialDocument = makeDocument(workspaces: [existing])
         let repository = SettingsRepositorySpy(
             storedDocument: initialDocument
         )
         let sut = try await SettingsStore(repository: repository)
 
-        let unknown = WorkspaceContext(
+        let unknown = Workspace(
             name: "Work",
             symbol: "briefcase"
         )
 
         do {
-            try await sut.updateContext(unknown)
+            try await sut.updateWorkspace(unknown)
             Issue.record("Expected update to throw")
         } catch let error as SettingsStoreError {
-            #expect(error == .contextNotFound(unknown.id))
+            #expect(error == .workspaceNotFound(unknown.id))
         } catch {
             Issue.record("Unexpected error: \(error)")
         }
@@ -477,29 +477,29 @@ struct SettingsStoreTests {
         #expect(savedDocuments.isEmpty)
     }
 
-    @Test("Update context leaves original unchanged when validation fails")
+    @Test("Update workspace leaves original unchanged when validation fails")
     func invalidUpdateDoesNotMutate() async throws {
-        let existing = WorkspaceContext(
+        let existing = Workspace(
             name: "Study",
             symbol: "book"
         )
-        let initialDocument = makeDocument(contexts: [existing])
+        let initialDocument = makeDocument(workspaces: [existing])
         let repository = SettingsRepositorySpy(
             storedDocument: initialDocument
         )
         let sut = try await SettingsStore(repository: repository)
 
-        let invalidReplacement = WorkspaceContext(
+        let invalidReplacement = Workspace(
             id: existing.id,
             name: " \n ",
             symbol: "book"
         )
 
         do {
-            try await sut.updateContext(invalidReplacement)
+            try await sut.updateWorkspace(invalidReplacement)
             Issue.record("Expected update to throw")
         } catch let error as SettingsStoreError {
-            #expect(error == .emptyContextName)
+            #expect(error == .emptyWorkspaceName)
         } catch {
             Issue.record("Unexpected error: \(error)")
         }
@@ -508,27 +508,27 @@ struct SettingsStoreTests {
         #expect(await repository.savedDocuments.isEmpty)
     }
 
-    @Test("Update context leaves original unchanged when persistence fails")
+    @Test("Update workspace leaves original unchanged when persistence fails")
     func failedUpdateDoesNotMutate() async throws {
-        let existing = WorkspaceContext(
+        let existing = Workspace(
             name: "Study",
             symbol: "book"
         )
-        let initialDocument = makeDocument(contexts: [existing])
+        let initialDocument = makeDocument(workspaces: [existing])
         let repository = SettingsRepositorySpy(
             storedDocument: initialDocument,
             saveError: TestError.saveFailed
         )
         let sut = try await SettingsStore(repository: repository)
 
-        let replacement = WorkspaceContext(
+        let replacement = Workspace(
             id: existing.id,
             name: "University",
             symbol: "graduationcap"
         )
 
         do {
-            try await sut.updateContext(replacement)
+            try await sut.updateWorkspace(replacement)
             Issue.record("Expected update to throw")
         } catch let error as TestError {
             #expect(error == .saveFailed)
@@ -540,45 +540,45 @@ struct SettingsStoreTests {
         #expect(await repository.savedDocuments.isEmpty)
     }
 
-    @Test("Delete context persists removal while preserving remaining order")
-    func deleteContextPreservesOrder() async throws {
-        let study = WorkspaceContext(
+    @Test("Delete workspace persists removal while preserving remaining order")
+    func deleteWorkspacePreservesOrder() async throws {
+        let study = Workspace(
             name: "Study",
             symbol: "book"
         )
-        let games = WorkspaceContext(
+        let games = Workspace(
             name: "Games",
             symbol: "gamecontroller"
         )
-        let work = WorkspaceContext(
+        let work = Workspace(
             name: "Work",
             symbol: "briefcase"
         )
 
         let initialDocument = makeDocument(
-            contexts: [study, games, work]
+            workspaces: [study, games, work]
         )
         let repository = SettingsRepositorySpy(
             storedDocument: initialDocument
         )
         let sut = try await SettingsStore(repository: repository)
 
-        try await sut.deleteContext(id: games.id)
+        try await sut.deleteWorkspace(id: games.id)
 
         let snapshot = await sut.snapshot()
         let savedDocuments = await repository.savedDocuments
 
-        #expect(snapshot.contexts == [study, work])
+        #expect(snapshot.workspaces == [study, work])
         #expect(savedDocuments == [snapshot])
     }
 
-    @Test("Delete context rejects an unknown identifier without saving")
-    func unknownContextDeleteIsRejected() async throws {
-        let existing = WorkspaceContext(
+    @Test("Delete workspace rejects an unknown identifier without saving")
+    func unknownWorkspaceDeleteIsRejected() async throws {
+        let existing = Workspace(
             name: "Study",
             symbol: "book"
         )
-        let initialDocument = makeDocument(contexts: [existing])
+        let initialDocument = makeDocument(workspaces: [existing])
         let repository = SettingsRepositorySpy(
             storedDocument: initialDocument
         )
@@ -586,10 +586,10 @@ struct SettingsStoreTests {
         let unknownID = UUID()
 
         do {
-            try await sut.deleteContext(id: unknownID)
+            try await sut.deleteWorkspace(id: unknownID)
             Issue.record("Expected deletion to throw")
         } catch let error as SettingsStoreError {
-            #expect(error == .contextNotFound(unknownID))
+            #expect(error == .workspaceNotFound(unknownID))
         } catch {
             Issue.record("Unexpected error: \(error)")
         }
@@ -598,13 +598,13 @@ struct SettingsStoreTests {
         #expect(await repository.savedDocuments.isEmpty)
     }
 
-    @Test("Delete context leaves original unchanged when persistence fails")
+    @Test("Delete workspace leaves original unchanged when persistence fails")
     func failedDeleteDoesNotMutate() async throws {
-        let existing = WorkspaceContext(
+        let existing = Workspace(
             name: "Study",
             symbol: "book"
         )
-        let initialDocument = makeDocument(contexts: [existing])
+        let initialDocument = makeDocument(workspaces: [existing])
         let repository = SettingsRepositorySpy(
             storedDocument: initialDocument,
             saveError: TestError.saveFailed
@@ -612,7 +612,7 @@ struct SettingsStoreTests {
         let sut = try await SettingsStore(repository: repository)
 
         do {
-            try await sut.deleteContext(id: existing.id)
+            try await sut.deleteWorkspace(id: existing.id)
             Issue.record("Expected deletion to throw")
         } catch let error as TestError {
             #expect(error == .saveFailed)
@@ -624,13 +624,13 @@ struct SettingsStoreTests {
         #expect(await repository.savedDocuments.isEmpty)
     }
 
-    @Test("Update settings persists launch at login without changing contexts")
-    func updateSettingsPreservesContexts() async throws {
-        let context = WorkspaceContext(
+    @Test("Update settings persists launch at login without changing workspaces")
+    func updateSettingsPreservesWorkspaces() async throws {
+        let workspace = Workspace(
             name: "Study",
             symbol: "book"
         )
-        let initialDocument = makeDocument(contexts: [context])
+        let initialDocument = makeDocument(workspaces: [workspace])
         let repository = SettingsRepositorySpy(
             storedDocument: initialDocument
         )
@@ -642,7 +642,7 @@ struct SettingsStoreTests {
         let savedDocuments = await repository.savedDocuments
 
         #expect(snapshot.generalSettings.launchAtLogin)
-        #expect(snapshot.contexts == [context])
+        #expect(snapshot.workspaces == [workspace])
         #expect(savedDocuments == [snapshot])
     }
 
@@ -689,13 +689,13 @@ struct SettingsStoreTests {
         #expect(await repository.savedDocuments.isEmpty)
     }
 
-    @Test("Update settings persists general settings without changing contexts")
+    @Test("Update settings persists general settings without changing workspaces")
     func updateSettingsPersistsGeneralSettings() async throws {
-        let context = WorkspaceContext(
+        let workspace = Workspace(
             name: "Study",
             symbol: "book"
         )
-        let initialDocument = makeDocument(contexts: [context])
+        let initialDocument = makeDocument(workspaces: [workspace])
         let repository = SettingsRepositorySpy(
             storedDocument: initialDocument
         )
@@ -718,7 +718,7 @@ struct SettingsStoreTests {
         let snapshot = await sut.snapshot()
 
         #expect(snapshot.generalSettings == settings)
-        #expect(snapshot.contexts == [context])
+        #expect(snapshot.workspaces == [workspace])
         #expect(await repository.savedDocuments == [snapshot])
     }
 
@@ -824,14 +824,14 @@ struct SettingsStoreTests {
 
     @Test("recording activation persists activity")
     func activationPersists() async throws {
-        let context = WorkspaceContext(
+        let workspace = Workspace(
             name: "Work",
             symbol: "briefcase"
         )
 
         let repository = SettingsRepositorySpy(
             storedDocument: makeDocument(
-                contexts: [context]
+                workspaces: [workspace]
             )
         )
 
@@ -839,30 +839,30 @@ struct SettingsStoreTests {
 
         let activatedAt = Date(timeIntervalSince1970: 100)
 
-        try await store.recordContextActivation(
-            contextID: context.id,
+        try await store.recordWorkspaceActivation(
+            workspaceID: workspace.id,
             at: activatedAt
         )
 
         let snapshot = await store.snapshot()
 
-        #expect(snapshot.workspaceActivity.activeContextID == context.id)
+        #expect(snapshot.workspaceActivity.activeWorkspaceID == workspace.id)
         #expect(snapshot.workspaceActivity.activeSince == activatedAt)
         #expect(await repository.savedDocuments == [snapshot])
     }
 
-    @Test("stopping the active context persists its last-active time")
+    @Test("stopping the active workspace persists its last-active time")
     func stoppingPersists() async throws {
-        let context = WorkspaceContext(
+        let workspace = Workspace(
             name: "Work",
             symbol: "briefcase"
         )
         var document = makeDocument(
-            contexts: [context]
+            workspaces: [workspace]
         )
 
         document.workspaceActivity.activate(
-            contextID: context.id,
+            workspaceID: workspace.id,
             at: Date(timeIntervalSince1970: 100)
         )
 
@@ -874,32 +874,32 @@ struct SettingsStoreTests {
         )
         let stoppedAt = Date(timeIntervalSince1970: 200)
 
-        try await store.stopActiveContext(at: stoppedAt)
+        try await store.stopActiveWorkspace(at: stoppedAt)
 
         let snapshot = await store.snapshot()
 
         #expect(
-            snapshot.workspaceActivity.activeContextID == nil
+            snapshot.workspaceActivity.activeWorkspaceID == nil
         )
         #expect(
             snapshot.workspaceActivity.lastActiveAt(
-                for: context.id
+                for: workspace.id
             ) == stoppedAt
         )
     }
 
-    @Test("deleting a context removes its activity metadata")
+    @Test("deleting a workspace removes its activity metadata")
     func deletionRemovesActivity() async throws {
-        let context = WorkspaceContext(
+        let workspace = Workspace(
             name: "Work",
             symbol: "briefcase"
         )
         var document = makeDocument(
-            contexts: [context]
+            workspaces: [workspace]
         )
 
         document.workspaceActivity.activate(
-            contextID: context.id,
+            workspaceID: workspace.id,
             at: Date(timeIntervalSince1970: 100)
         )
 
@@ -910,25 +910,25 @@ struct SettingsStoreTests {
             repository: repository
         )
 
-        try await store.deleteContext(id: context.id)
+        try await store.deleteWorkspace(id: workspace.id)
 
         let snapshot = await store.snapshot()
 
-        #expect(snapshot.contexts.isEmpty)
+        #expect(snapshot.workspaces.isEmpty)
         #expect(snapshot.workspaceActivity == .empty)
     }
 
-    @Test("unknown active ID throws contextNotFound")
+    @Test("unknown active ID throws workspaceNotFound")
     func unknownActiveIDThrowsError() async throws {
         let unknownID = UUID()
-        let document = makeDocument(contexts: [])
+        let document = makeDocument(workspaces: [])
 
         let repository = SettingsRepositorySpy(storedDocument: document)
 
         let store = try await SettingsStore(repository: repository)
 
-        await #expect(throws: SettingsStoreError.contextNotFound(unknownID)) {
-            try await store.recordContextActivation(contextID: unknownID, at: Date(timeIntervalSince1970: 100))
+        await #expect(throws: SettingsStoreError.workspaceNotFound(unknownID)) {
+            try await store.recordWorkspaceActivation(workspaceID: unknownID, at: Date(timeIntervalSince1970: 100))
         }
 
         #expect(await store.snapshot() == document)
@@ -937,13 +937,13 @@ struct SettingsStoreTests {
 
     @Test("Failed persistence leaves cache unchanged")
     func failedPersistenceLeavesCacheUnchanged() async throws {
-        let context = WorkspaceContext(
+        let workspace = Workspace(
             name: "Work",
             symbol: "briefcase"
         )
 
         let initialDocument = makeDocument(
-            contexts: [context]
+            workspaces: [workspace]
         )
 
         let repository = SettingsRepositorySpy(
@@ -954,8 +954,8 @@ struct SettingsStoreTests {
         let store = try await SettingsStore(repository: repository)
 
         await #expect(throws: TestError.saveFailed) {
-            try await store.recordContextActivation(
-                contextID: context.id,
+            try await store.recordWorkspaceActivation(
+                workspaceID: workspace.id,
                 at: Date(timeIntervalSince1970: 100)
             )
         }
@@ -967,7 +967,7 @@ struct SettingsStoreTests {
 
     @Test("load retains active session for startup reconciliation")
     func loadRetainsActiveSessionForStartupReconciliation() async throws {
-        let context = WorkspaceContext(
+        let workspace = Workspace(
             name: "Work",
             symbol: "briefcase"
         )
@@ -976,10 +976,10 @@ struct SettingsStoreTests {
         )
 
         var document = makeDocument(
-            contexts: [context]
+            workspaces: [workspace]
         )
         document.workspaceActivity.activate(
-            contextID: context.id,
+            workspaceID: workspace.id,
             at: activeSince
         )
 
@@ -994,8 +994,8 @@ struct SettingsStoreTests {
 
         #expect(snapshot == document)
         #expect(
-            snapshot.workspaceActivity.activeContextID
-                == context.id
+            snapshot.workspaceActivity.activeWorkspaceID
+                == workspace.id
         )
         #expect(
             snapshot.workspaceActivity.activeSince
@@ -1009,11 +1009,11 @@ struct SettingsStoreTests {
 
     @Test("startup removes orphaned activity")
     func startupRemovesOrphanedActivity() async throws {
-        let retainedContext = WorkspaceContext(
+        let retainedWorkspace = Workspace(
             name: "Work",
             symbol: "briefcase"
         )
-        let orphanedContextID = UUID()
+        let orphanedWorkspaceID = UUID()
         let retainedLastActiveAt = Date(
             timeIntervalSince1970: 100
         )
@@ -1022,18 +1022,18 @@ struct SettingsStoreTests {
         )
 
         var document = makeDocument(
-            contexts: [retainedContext]
+            workspaces: [retainedWorkspace]
         )
         document.workspaceActivity = WorkspaceActivityState(
             activeSession: .init(
-                contextID: orphanedContextID,
+                workspaceID: orphanedWorkspaceID,
                 startedAt: Date(
                     timeIntervalSince1970: 300
                 )
             ),
-            lastActiveAtByContextID: [
-                retainedContext.id: retainedLastActiveAt,
-                orphanedContextID: orphanedLastActiveAt,
+            lastActiveAtByWorkspaceID: [
+                retainedWorkspace.id: retainedLastActiveAt,
+                orphanedWorkspaceID: orphanedLastActiveAt,
             ]
         )
 
@@ -1047,19 +1047,19 @@ struct SettingsStoreTests {
         let snapshot = await store.snapshot()
 
         #expect(
-            snapshot.workspaceActivity.activeContextID == nil
+            snapshot.workspaceActivity.activeWorkspaceID == nil
         )
         #expect(
             snapshot.workspaceActivity.activeSince == nil
         )
         #expect(
             snapshot.workspaceActivity.lastActiveAt(
-                for: retainedContext.id
+                for: retainedWorkspace.id
             ) == retainedLastActiveAt
         )
         #expect(
             snapshot.workspaceActivity.lastActiveAt(
-                for: orphanedContextID
+                for: orphanedWorkspaceID
             ) == nil
         )
 
@@ -1094,19 +1094,19 @@ struct SettingsStoreTests {
         #expect(settings.showInMenuBar)
     }
 
-    @Test("Archive context persists the flag and preserves order")
-    func archiveContextPreservesOrder() async throws {
-        let study = WorkspaceContext(name: "Study", symbol: "book")
-        let games = WorkspaceContext(name: "Games", symbol: "gamecontroller")
-        let work = WorkspaceContext(name: "Work", symbol: "briefcase")
+    @Test("Archive workspace persists the flag and preserves order")
+    func archiveWorkspacePreservesOrder() async throws {
+        let study = Workspace(name: "Study", symbol: "book")
+        let games = Workspace(name: "Games", symbol: "gamecontroller")
+        let work = Workspace(name: "Work", symbol: "briefcase")
         let repository = SettingsRepositorySpy(
-            storedDocument: makeDocument(contexts: [study, games, work])
+            storedDocument: makeDocument(workspaces: [study, games, work])
         )
         let sut = try await SettingsStore(repository: repository)
 
-        try await sut.archiveContext(id: games.id)
+        try await sut.archiveWorkspace(id: games.id)
 
-        let archivedGames = WorkspaceContext(
+        let archivedGames = Workspace(
             id: games.id,
             name: games.name,
             symbol: games.symbol,
@@ -1114,58 +1114,58 @@ struct SettingsStoreTests {
         )
         let snapshot = await sut.snapshot()
 
-        #expect(snapshot.contexts == [study, archivedGames, work])
+        #expect(snapshot.workspaces == [study, archivedGames, work])
         #expect(await repository.savedDocuments == [snapshot])
     }
 
-    @Test("Unarchive context clears the flag and preserves order")
-    func unarchiveContextPreservesOrder() async throws {
-        let study = WorkspaceContext(name: "Study", symbol: "book")
-        let games = WorkspaceContext(
+    @Test("Unarchive workspace clears the flag and preserves order")
+    func unarchiveWorkspacePreservesOrder() async throws {
+        let study = Workspace(name: "Study", symbol: "book")
+        let games = Workspace(
             name: "Games",
             symbol: "gamecontroller",
             isArchived: true
         )
         let repository = SettingsRepositorySpy(
-            storedDocument: makeDocument(contexts: [study, games])
+            storedDocument: makeDocument(workspaces: [study, games])
         )
         let sut = try await SettingsStore(repository: repository)
 
-        try await sut.unarchiveContext(id: games.id)
+        try await sut.unarchiveWorkspace(id: games.id)
 
-        let restoredGames = WorkspaceContext(
+        let restoredGames = Workspace(
             id: games.id,
             name: games.name,
             symbol: games.symbol
         )
         let snapshot = await sut.snapshot()
 
-        #expect(snapshot.contexts == [study, restoredGames])
+        #expect(snapshot.workspaces == [study, restoredGames])
         #expect(await repository.savedDocuments == [snapshot])
     }
 
     @Test("Archive and unarchive reject an unknown identifier without saving")
-    func unknownContextArchiveIsRejected() async throws {
-        let existing = WorkspaceContext(name: "Study", symbol: "book")
-        let initialDocument = makeDocument(contexts: [existing])
+    func unknownWorkspaceArchiveIsRejected() async throws {
+        let existing = Workspace(name: "Study", symbol: "book")
+        let initialDocument = makeDocument(workspaces: [existing])
         let repository = SettingsRepositorySpy(storedDocument: initialDocument)
         let sut = try await SettingsStore(repository: repository)
         let unknownID = UUID()
 
         do {
-            try await sut.archiveContext(id: unknownID)
+            try await sut.archiveWorkspace(id: unknownID)
             Issue.record("Expected archive to throw")
         } catch let error as SettingsStoreError {
-            #expect(error == .contextNotFound(unknownID))
+            #expect(error == .workspaceNotFound(unknownID))
         } catch {
             Issue.record("Unexpected error: \(error)")
         }
 
         do {
-            try await sut.unarchiveContext(id: unknownID)
+            try await sut.unarchiveWorkspace(id: unknownID)
             Issue.record("Expected unarchive to throw")
         } catch let error as SettingsStoreError {
-            #expect(error == .contextNotFound(unknownID))
+            #expect(error == .workspaceNotFound(unknownID))
         } catch {
             Issue.record("Unexpected error: \(error)")
         }
@@ -1176,84 +1176,84 @@ struct SettingsStoreTests {
 
     @Test("Repeating archive or unarchive does not save again")
     func repeatedArchiveDoesNotSave() async throws {
-        let study = WorkspaceContext(name: "Study", symbol: "book")
+        let study = Workspace(name: "Study", symbol: "book")
         let repository = SettingsRepositorySpy(
-            storedDocument: makeDocument(contexts: [study])
+            storedDocument: makeDocument(workspaces: [study])
         )
         let sut = try await SettingsStore(repository: repository)
 
-        try await sut.unarchiveContext(id: study.id)
-        try await sut.archiveContext(id: study.id)
-        try await sut.archiveContext(id: study.id)
+        try await sut.unarchiveWorkspace(id: study.id)
+        try await sut.archiveWorkspace(id: study.id)
+        try await sut.archiveWorkspace(id: study.id)
 
         let savedDocuments = await repository.savedDocuments
         #expect(savedDocuments.count == 1)
-        #expect(savedDocuments[0].contexts.map(\.isArchived) == [true])
+        #expect(savedDocuments[0].workspaces.map(\.isArchived) == [true])
 
-        try await sut.unarchiveContext(id: study.id)
-        try await sut.unarchiveContext(id: study.id)
+        try await sut.unarchiveWorkspace(id: study.id)
+        try await sut.unarchiveWorkspace(id: study.id)
 
         #expect(await repository.savedDocuments.count == 2)
-        #expect(await sut.snapshot().contexts.map(\.isArchived) == [false])
+        #expect(await sut.snapshot().workspaces.map(\.isArchived) == [false])
     }
 
-    @Test("Update context preserves archival state")
-    func updateContextPreservesArchivalState() async throws {
-        let study = WorkspaceContext(
+    @Test("Update workspace preserves archival state")
+    func updateWorkspacePreservesArchivalState() async throws {
+        let study = Workspace(
             name: "Study",
             symbol: "book",
             isArchived: true
         )
-        let games = WorkspaceContext(name: "Games", symbol: "gamecontroller")
+        let games = Workspace(name: "Games", symbol: "gamecontroller")
         let repository = SettingsRepositorySpy(
-            storedDocument: makeDocument(contexts: [study, games])
+            storedDocument: makeDocument(workspaces: [study, games])
         )
         let sut = try await SettingsStore(repository: repository)
 
-        let updatedStudy = WorkspaceContext(
+        let updatedStudy = Workspace(
             id: study.id,
             name: "University",
             symbol: "graduationcap"
         )
-        let archivedGames = WorkspaceContext(
+        let archivedGames = Workspace(
             id: games.id,
             name: "Play",
-            symbol: "gamecontroller.fill",
+            symbol: "briefcase.fill",
             isArchived: true
         )
 
-        try await sut.updateContext(updatedStudy)
-        try await sut.updateContext(archivedGames)
+        try await sut.updateWorkspace(updatedStudy)
+        try await sut.updateWorkspace(archivedGames)
 
         let snapshot = await sut.snapshot()
-        #expect(snapshot.contexts.map(\.name) == ["University", "Play"])
-        #expect(snapshot.contexts.map(\.isArchived) == [true, false])
+        #expect(snapshot.workspaces.map(\.name) == ["University", "Play"])
+        #expect(snapshot.workspaces.map(\.isArchived) == [true, false])
     }
 
-    @Test("Delete context removes an archived context")
-    func deleteArchivedContext() async throws {
-        let study = WorkspaceContext(name: "Study", symbol: "book")
-        let archived = WorkspaceContext(
+    @Test("Delete workspace removes an archived workspace")
+    func deleteArchivedWorkspace() async throws {
+        let study = Workspace(name: "Study", symbol: "book")
+        let archived = Workspace(
             name: "Old",
             symbol: "archivebox",
             isArchived: true
         )
         let repository = SettingsRepositorySpy(
-            storedDocument: makeDocument(contexts: [study, archived])
+            storedDocument: makeDocument(workspaces: [study, archived])
         )
         let sut = try await SettingsStore(repository: repository)
 
-        try await sut.deleteContext(id: archived.id)
+        try await sut.deleteWorkspace(id: archived.id)
 
         let snapshot = await sut.snapshot()
-        #expect(snapshot.contexts == [study])
+        #expect(snapshot.workspaces == [study])
         #expect(await repository.savedDocuments == [snapshot])
     }
 
-    @Test("Archive context leaves the cache unchanged when persistence fails")
+    @Test("Archive workspace leaves the cache unchanged when persistence fails")
     func failedArchiveDoesNotMutate() async throws {
-        let existing = WorkspaceContext(name: "Study", symbol: "book")
-        let initialDocument = makeDocument(contexts: [existing])
+        let existing = Workspace(name: "Study", symbol: "book")
+        let initialDocument = makeDocument(workspaces: [existing])
         let repository = SettingsRepositorySpy(
             storedDocument: initialDocument,
             saveError: TestError.saveFailed
@@ -1261,7 +1261,7 @@ struct SettingsStoreTests {
         let sut = try await SettingsStore(repository: repository)
 
         do {
-            try await sut.archiveContext(id: existing.id)
+            try await sut.archiveWorkspace(id: existing.id)
             Issue.record("Expected archive to throw")
         } catch let error as TestError {
             #expect(error == .saveFailed)
@@ -1273,30 +1273,30 @@ struct SettingsStoreTests {
         #expect(await repository.savedDocuments.isEmpty)
     }
 
-    @Test("Archiving the active context clears the active session")
+    @Test("Archiving the active workspace clears the active session")
     func archiveClearsActiveSession() async throws {
-        let study = WorkspaceContext(name: "Study", symbol: "book")
-        var document = makeDocument(contexts: [study])
+        let study = Workspace(name: "Study", symbol: "book")
+        var document = makeDocument(workspaces: [study])
         document.workspaceActivity.activate(
-            contextID: study.id,
+            workspaceID: study.id,
             at: Date(timeIntervalSince1970: 100)
         )
         let repository = SettingsRepositorySpy(storedDocument: document)
         let sut = try await SettingsStore(repository: repository)
 
-        try await sut.archiveContext(id: study.id)
+        try await sut.archiveWorkspace(id: study.id)
 
         let snapshot = await sut.snapshot()
-        #expect(snapshot.workspaceActivity.activeContextID == nil)
-        #expect(snapshot.contexts.map(\.isArchived) == [true])
+        #expect(snapshot.workspaceActivity.activeWorkspaceID == nil)
+        #expect(snapshot.workspaces.map(\.isArchived) == [true])
     }
 
     private func makeDocument(
-        contexts: [WorkspaceContext]
+        workspaces: [Workspace]
     ) -> SettingsDocument {
         SettingsDocument(
             schemaVersion: SettingsDocument.currentSchemaVersion,
-            contexts: contexts,
+            workspaces: workspaces,
             generalSettings: Settings()
         )
     }
