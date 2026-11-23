@@ -20,5 +20,13 @@ public enum WorkspaceSymbols: String, CaseIterable {
     case `calendar`
     case `cup.and.saucer.fill`
     case `moon.stars.fill`
+    case `gamecontroller.fill`
+    case `music.note`
+    case `figure.run`
+    case `heart.fill`
+    case `lightbulb.fill`
+    case `hammer.fill`
+    case `globe`
+    case `tray.full.fill`
 }
 // swiftlint:enable identifier_name

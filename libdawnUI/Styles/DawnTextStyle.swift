@@ -49,17 +49,19 @@ public enum DawnTextStyle {
     public static let linkLabel: Font = .system(size: secondarySize, weight: .light)
 
     // MARK: - Workspace detail
+    // Content panes (detail + settings) share body (16) for labels/fields.
+    // Sidebar stays on secondary (12) for dense chrome.
 
     /// Detail pane title.
     public static let detailTitle: Font = DawnFont.zain(.bold, size: titleSize, relativeTo: .headline)
-    /// Section labels in the detail pane.
+    /// Section labels in the detail pane (same size as settings section titles).
     public static let detailSectionLabel: Font = DawnFont.gabarito(
         .bold,
-        size: secondarySize,
-        relativeTo: .caption
+        size: bodySize,
+        relativeTo: .body
     )
-    /// Field / chip body text in the detail pane.
-    public static let detailField: Font = DawnFont.gabarito(size: secondarySize, relativeTo: .caption)
+    /// Field / chip body text in the detail pane (same size as settings body).
+    public static let detailField: Font = DawnFont.gabarito(size: bodySize, relativeTo: .body)
     /// Empty / supporting copy under detail controls.
     public static let detailSupporting: Font = DawnFont.gabarito(size: secondarySize, relativeTo: .caption)
     /// Compact action label on the detail header Start button.
@@ -85,11 +87,11 @@ public enum DawnTextStyle {
 
     public static let detailButton: Font = DawnFont.zain(.bold, size: bodySize, relativeTo: .body)
 
-    public static let activationPolicyTitle: Font = DawnFont.gabarito(size: secondarySize, relativeTo: .caption)
+    public static let activationPolicyTitle: Font = DawnFont.gabarito(size: bodySize, relativeTo: .body)
 
     public static let activationPolicyDescription: Font = DawnFont.gabarito(
-        size: metaSize,
-        relativeTo: .caption2
+        size: secondarySize,
+        relativeTo: .caption
     )
 
     public static let activationPolicyIcon: Font = .system(size: bodySize, weight: .medium)

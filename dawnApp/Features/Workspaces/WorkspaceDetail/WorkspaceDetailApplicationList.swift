@@ -18,11 +18,15 @@ struct WorkspaceDetailApplicationList: View {
     @State private var isDropTargeted = false
 
     private var rowFont: Font {
-        fillsAvailableWidth ? DawnTextStyle.primary : DawnTextStyle.detailField
+        DawnTextStyle.detailField
     }
 
     private var iconSize: CGFloat {
-        fillsAvailableWidth ? 28 : 22
+        DawnTextStyle.bodySize + 8
+    }
+
+    private var rowMinHeight: CGFloat {
+        iconSize + 16
     }
 
     var body: some View {
@@ -65,7 +69,7 @@ struct WorkspaceDetailApplicationList: View {
                 .frame(maxWidth: .infinity, alignment: .leading)
             } else {
                 ForEach(Array(gridRows.enumerated()), id: \.offset) { _, row in
-                    HStack(spacing: 8) {
+                    HStack(alignment: .center, spacing: 8) {
                         ForEach(row) { item in
                             switch item {
                             case .application:
@@ -76,7 +80,7 @@ struct WorkspaceDetailApplicationList: View {
                             }
                         }
                     }
-                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .frame(maxWidth: .infinity, minHeight: rowMinHeight, alignment: .leading)
                 }
             }
         }
@@ -144,7 +148,7 @@ struct WorkspaceDetailApplicationList: View {
     }
 
     private func applicationRow(_ app: WorkspaceApplication) -> some View {
-        HStack(spacing: 8) {
+        HStack(alignment: .center, spacing: 8) {
             applicationIcon(for: app)
                 .frame(width: iconSize, height: iconSize)
 
@@ -155,20 +159,22 @@ struct WorkspaceDetailApplicationList: View {
 
             Spacer(minLength: 8)
 
-            DButton(style: .plain) {
+            Button {
                 onRemoveApplication(app)
-            } content: {
+            } label: {
                 Image(systemName: "xmark")
-                    .font(rowFont)
+                    .font(DawnTextStyle.buttonIcon)
                     .foregroundStyle(DawnColors.primaryForeground)
-                    .frame(width: 24, height: 24)
+                    .frame(width: iconSize, height: iconSize)
+                    .contentShape(Rectangle())
             }
+            .buttonStyle(.plain)
             .disabled(interactionsDisabled)
             .accessibilityLabel("Remove \(app.displayName)")
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 8)
-        .frame(maxWidth: .infinity, alignment: .leading)
+        .frame(maxWidth: .infinity, minHeight: rowMinHeight, alignment: .leading)
         .background {
             fillsAvailableWidth
                 ? DawnColors.workspaceCardBackground
@@ -178,24 +184,22 @@ struct WorkspaceDetailApplicationList: View {
     }
 
     private var addApplicationButton: some View {
-        DButton(style: .plain) {
+        Button {
             onAddApplications()
-        } content: {
+        } label: {
             Image(systemName: "plus")
-                .font(fillsAvailableWidth ? DawnTextStyle.primaryBold : DawnTextStyle.captionBold)
+                .font(DawnTextStyle.primaryBold)
                 .foregroundStyle(DawnColors.primaryForeground)
-                .frame(
-                    width: fillsAvailableWidth ? 44 : 30,
-                    height: fillsAvailableWidth ? 44 : nil
-                )
-                .padding(.vertical, fillsAvailableWidth ? 0 : 8)
+                .frame(width: rowMinHeight, height: rowMinHeight)
                 .background {
                     fillsAvailableWidth
                         ? DawnColors.workspaceCardBackground
                         : DawnColors.activationPolicyBackground
                 }
                 .clipShape(RoundedRectangle(cornerRadius: 4))
+                .contentShape(Rectangle())
         }
+        .buttonStyle(.plain)
         .disabled(interactionsDisabled)
         .accessibilityLabel("Add application")
     }
