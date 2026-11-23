@@ -12,7 +12,7 @@
         var terminalCommand = ""
         var applications: [WorkspaceApplication] = []
         var cleanupAfterRun = true
-        var selectedExistingContextID: UUID?
+        var selectedExistingWorkspaceID: UUID?
         var selectedApplicationID: UUID?
 
         var allowsRunningApplicationSubstitution = true
@@ -108,7 +108,7 @@
             appendLog("Applied application options to \(applications.count) app(s)")
         }
 
-        func runEphemeralTransition(using store: SettingsContextStore) async {
+        func runEphemeralTransition(using store: SettingsWorkspaceStore) async {
             guard !isRunning else { return }
             isRunning = true
             defer { isRunning = false }
@@ -120,24 +120,24 @@
             appendLog("Starting ephemeral transition (\(transition.activationPolicy.rawValue))…")
 
             do {
-                let contextID = try await store.createContext(
+                let workspaceID = try await store.createWorkspace(
                     name: name,
                     symbol: symbol,
                     applications: applications,
                     transition: transition
                 )
                 appendLog(
-                    "Created context \(contextID.uuidString) — terminal: \(transition.terminalCommand ?? "nil")"
+                    "Created workspace \(workspaceID.uuidString) — terminal: \(transition.terminalCommand ?? "nil")"
                 )
 
-                try await store.switchContext(id: contextID)
+                try await store.switchWorkspace(id: workspaceID)
                 appendLog("Switch acknowledged — agent should be applying the transition")
 
                 if cleanupAfterRun {
-                    try await store.deleteContext(id: contextID)
-                    appendLog("Cleaned up ephemeral context")
+                    try await store.deleteWorkspace(id: workspaceID)
+                    appendLog("Cleaned up ephemeral workspace")
                 } else {
-                    appendLog("Left context in store: \(name)")
+                    appendLog("Left workspace in store: \(name)")
                 }
 
                 await store.refresh()
@@ -147,47 +147,47 @@
             }
         }
 
-        func runExistingContext(using store: SettingsContextStore) async {
+        func runExistingWorkspace(using store: SettingsWorkspaceStore) async {
             guard !isRunning else { return }
-            guard let selectedExistingContextID else {
-                appendLog("Pick an existing context first")
+            guard let selectedExistingWorkspaceID else {
+                appendLog("Pick an existing workspace first")
                 return
             }
 
             isRunning = true
             defer { isRunning = false }
 
-            let name = store.contexts.first { $0.id == selectedExistingContextID }?.name
-                ?? selectedExistingContextID.uuidString
-            appendLog("Switching existing context “\(name)”…")
+            let name = store.workspaces.first { $0.id == selectedExistingWorkspaceID }?.name
+                ?? selectedExistingWorkspaceID.uuidString
+            appendLog("Switching existing workspace “\(name)”…")
 
             do {
-                try await store.switchContext(id: selectedExistingContextID)
+                try await store.switchWorkspace(id: selectedExistingWorkspaceID)
                 appendLog("Switch acknowledged")
             } catch {
                 appendLog("FAILED: \(error.localizedDescription)")
             }
         }
 
-        func applyTransitionToExistingContext(using store: SettingsContextStore) async {
+        func applyTransitionToExistingWorkspace(using store: SettingsWorkspaceStore) async {
             guard !isRunning else { return }
-            guard let selectedExistingContextID,
-                  var context = store.contexts.first(where: { $0.id == selectedExistingContextID })
+            guard let selectedExistingWorkspaceID,
+                  var workspace = store.workspaces.first(where: { $0.id == selectedExistingWorkspaceID })
             else {
-                appendLog("Pick an existing context first")
+                appendLog("Pick an existing workspace first")
                 return
             }
 
             isRunning = true
             defer { isRunning = false }
 
-            context.applications = applications
-            context.transition = transitionPreview
-            appendLog("Updating “\(context.name)” with current debug transition…")
+            workspace.applications = applications
+            workspace.transition = transitionPreview
+            appendLog("Updating “\(workspace.name)” with current debug transition…")
 
             do {
-                try await store.updateContext(context)
-                appendLog("Context updated")
+                try await store.updateWorkspace(workspace)
+                appendLog("Workspace updated")
                 await store.refresh()
             } catch {
                 appendLog("FAILED: \(error.localizedDescription)")
@@ -217,10 +217,10 @@
             }
         }
 
-        func refreshContexts(using store: SettingsContextStore) async {
-            appendLog("Refreshing contexts…")
+        func refreshWorkspaces(using store: SettingsWorkspaceStore) async {
+            appendLog("Refreshing workspaces…")
             await store.refresh()
-            appendLog("Contexts loaded: \(store.contexts.count)")
+            appendLog("Workspaces loaded: \(store.workspaces.count)")
         }
 
         private func applyCurrentOptions(to application: inout WorkspaceApplication) {

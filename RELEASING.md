@@ -102,10 +102,11 @@ Every published release tag must point to the exact commit released from `stable
 15. Download the draft release DMG, install it on a clean Mac and complete the release requirements.
 16. Publish the GitHub release.
 17. For stable releases, the update-feed workflow publishes the appcast and release notes to `open-dawn/open-dawn.github.io`.
-18. Verify `https://update.opendawn.app/appcast.xml` and the release-notes URL over HTTPS.
-19. Launch an older signed DAWN build and confirm it discovers the newly published build.
-20. Verify that DAWN downloads and validates the published update.
-21. Merge any release-only fixes back into `main`.
+18. For stable releases, the Homebrew cask workflow opens a pull request on `open-dawn/homebrew-dawn` that bumps `version` and `sha256` in `Casks/dawn.rb`. Review and merge that PR.
+19. Verify `https://update.opendawn.app/appcast.xml` and the release-notes URL over HTTPS.
+20. Launch an older signed DAWN build and confirm it discovers the newly published build.
+21. Verify that DAWN downloads and validates the published update.
+22. Merge any release-only fixes back into `main`.
 
 ## Release Requirements
 
@@ -151,7 +152,7 @@ Stable updates are published through Sparkle.
 
 The release workflow generates the signed appcast and attaches it to a draft GitHub release. Publishing a stable GitHub release triggers the update-feed workflow, which copies the appcast and release notes to GitHub Pages.
 
-Prereleases do not update the stable feed. Sparkle channels must be implemented before alpha, beta or release-candidate builds can be offered through the updater.
+Publishing a stable GitHub release also triggers the Homebrew cask workflow, which opens a pull request on `open-dawn/homebrew-dawn` to bump `version` and `sha256` in `Casks/dawn.rb`. Prereleases do not update the stable feed or the Homebrew cask. Sparkle channels must be implemented before alpha, beta or release-candidate builds can be offered through the updater.
 
 ## Update Validation
 

@@ -1,6 +1,6 @@
 <div align="center">
   <a href="https://github.com/open-dawn/dawn">
-    <img src="docs/media/icon.png" alt="DAWN" width="128" height="128">
+    <img src=".github/media/icon.png" alt="DAWN" width="128" height="128">
     <h1>DAWN</h1>
   </a>
 
@@ -35,7 +35,7 @@
 
 ## 1. About The Project
 
-DAWN is an open-source macOS application designed by OpenDawn. It manages workspace contexts: the apps and windows that belong to a workspace, and the switch from one workspace to another.
+DAWN is an open-source macOS application designed by OpenDawn. It manages workspaces: the apps and windows that belong to a workspace, and the switch from one workspace to another.
 
 The first release supports macOS 15 or later on Apple Silicon.
 
@@ -43,15 +43,15 @@ The first release supports macOS 15 or later on Apple Silicon.
 
 A demo video or GIF will be added here.
 
-Place the file at `docs/media/demo.gif`, then replace this note with:
+Place the file at `.github/media/demo.gif`, then replace this note with:
 
 ```markdown
-![DAWN demo](docs/media/demo.gif)
+![DAWN demo](.github/media/demo.gif)
 ```
 
 ## 3. Installation
 
-DAWN runs on macOS 15 or later on Apple Silicon. Install a published build. Building from source is covered in [Development](#04-development).
+DAWN runs on macOS 15 or later on Apple Silicon. Install a published build. Building from source is covered in [Development](#4-development).
 
 ### 3.1. GitHub Release
 
@@ -59,7 +59,13 @@ Download the latest disk image from [GitHub Releases](https://github.com/open-da
 
 ### 3.2. Homebrew
 
-Homebrew is not available yet.
+```sh
+brew tap open-dawn/dawn
+brew trust open-dawn/dawn
+brew install --cask dawn
+```
+
+Newer Homebrew requires trusting third-party taps before install. The tap is [`open-dawn/homebrew-dawn`](https://github.com/open-dawn/homebrew-dawn).
 
 ## 4. Development
 

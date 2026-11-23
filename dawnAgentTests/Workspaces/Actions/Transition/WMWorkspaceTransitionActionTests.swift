@@ -17,7 +17,7 @@ struct WMWorkspaceTransitionActionTests {
             displayName: "Notes",
             applicationURL: URL(fileURLWithPath: "/Applications/Notes.app")
         )
-        let context = WorkspaceContext(
+        let workspace = Workspace(
             name: "Work",
             symbol: "briefcase",
             applications: [safari, notes],
@@ -32,7 +32,7 @@ struct WMWorkspaceTransitionActionTests {
         let trust = FakeAccessibilityTrustChecker()
         trust.isTrusted = true
         let action = WMWorkspaceTransitionAction(
-            context: context,
+            workspace: workspace,
             provider: provider,
             performer: performer,
             trustChecker: trust
@@ -68,7 +68,7 @@ struct WMWorkspaceTransitionActionTests {
             displayName: "Notes",
             applicationURL: URL(fileURLWithPath: "/Applications/Notes.app")
         )
-        let context = WorkspaceContext(
+        let workspace = Workspace(
             name: "Merge",
             symbol: "square.on.square",
             applications: [safari, notes],
@@ -83,7 +83,7 @@ struct WMWorkspaceTransitionActionTests {
         let trust = FakeAccessibilityTrustChecker()
         trust.isTrusted = true
         let action = WMWorkspaceTransitionAction(
-            context: context,
+            workspace: workspace,
             provider: provider,
             performer: performer,
             trustChecker: trust
@@ -118,7 +118,7 @@ struct WMWorkspaceTransitionActionTests {
             displayName: "Notes",
             applicationURL: URL(fileURLWithPath: "/Applications/Notes.app")
         )
-        let context = WorkspaceContext(
+        let workspace = Workspace(
             name: "MergeNewInstance",
             symbol: "square.on.square",
             applications: [terminal, notes],
@@ -137,7 +137,7 @@ struct WMWorkspaceTransitionActionTests {
         let trust = FakeAccessibilityTrustChecker()
         trust.isTrusted = true
         let action = WMWorkspaceTransitionAction(
-            context: context,
+            workspace: workspace,
             provider: provider,
             performer: performer,
             trustChecker: trust
@@ -166,7 +166,7 @@ struct WMWorkspaceTransitionActionTests {
             applicationURL: URL(fileURLWithPath: "/System/Applications/Utilities/Terminal.app"),
             createsNewApplicationInstance: true
         )
-        let context = WorkspaceContext(
+        let workspace = Workspace(
             name: "NewInstancePID",
             symbol: "terminal",
             applications: [terminal],
@@ -179,8 +179,8 @@ struct WMWorkspaceTransitionActionTests {
         let provider = FakeAppProvider()
         provider.appsByBundleIdentifier = [terminal.bundleIdentifier: [existing]]
 
-        let workspace = FakeWorkspace()
-        workspace.applicationToReturn = launched
+        let opener = FakeWorkspace()
+        opener.applicationToReturn = launched
 
         let windows = FakeAccessibilityWindowService()
         windows.windowsByPID[100] = [
@@ -195,14 +195,14 @@ struct WMWorkspaceTransitionActionTests {
 
         let performer = DefaultWorkspaceTransitionPerformer(
             provider: provider,
-            workspace: workspace,
+            workspace: opener,
             windows: windows,
             trustChecker: trust,
             windowWaitTimeout: .milliseconds(50),
             windowPollInterval: .milliseconds(10)
         )
         let action = WMWorkspaceTransitionAction(
-            context: context,
+            workspace: workspace,
             provider: provider,
             performer: performer,
             trustChecker: trust
@@ -210,7 +210,7 @@ struct WMWorkspaceTransitionActionTests {
 
         try await action.execute()
 
-        #expect(workspace.didCallOpenApplication)
+        #expect(opener.didCallOpenApplication)
         #expect(Set(windows.requestedProcessIDs) == Set([pid_t(200)]))
         #expect(windows.raised.map(\.processID) == [200])
     }
@@ -222,7 +222,7 @@ struct WMWorkspaceTransitionActionTests {
             displayName: "Safari",
             applicationURL: URL(fileURLWithPath: "/Applications/Safari.app")
         )
-        let context = WorkspaceContext(
+        let workspace = Workspace(
             name: "NoAX",
             symbol: "lock",
             applications: [safari],
@@ -233,7 +233,7 @@ struct WMWorkspaceTransitionActionTests {
         let trust = FakeAccessibilityTrustChecker()
         trust.isTrusted = false
         let action = WMWorkspaceTransitionAction(
-            context: context,
+            workspace: workspace,
             provider: FakeAppProvider(),
             performer: performer,
             trustChecker: trust
@@ -248,7 +248,7 @@ struct WMWorkspaceTransitionActionTests {
 
     @Test("continues when optional terminal step fails")
     func softFailsOptionalTerminalStep() async throws {
-        let context = WorkspaceContext(
+        let workspace = Workspace(
             name: "Soft",
             symbol: "circle",
             applications: [],
@@ -262,7 +262,7 @@ struct WMWorkspaceTransitionActionTests {
         performer.terminalError = WMActionError.unknown(reason: "failed")
 
         let action = WMWorkspaceTransitionAction(
-            context: context,
+            workspace: workspace,
             provider: FakeAppProvider(),
             performer: performer,
             trustChecker: FakeAccessibilityTrustChecker()

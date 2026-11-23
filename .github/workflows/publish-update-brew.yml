@@ -1,0 +1,256 @@
+name: Publish Homebrew cask
+
+on:
+  release:
+    types:
+      - published
+  workflow_dispatch:
+    inputs:
+      release_tag:
+        description: Stable release tag to publish (for example v1.0.0)
+        required: true
+        type: string
+      dry_run:
+        description: Patch the cask locally but do not open a pull request
+        required: false
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
+
+concurrency:
+  group: publish-update-brew
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    name: Publish stable Homebrew cask
+    if: github.event_name == 'workflow_dispatch' || github.event.release.prerelease == false
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment: release
+
+    env:
+      RELEASE_TAG: ${{ github.event.release.tag_name || inputs.release_tag }}
+      SOURCE_REPOSITORY: ${{ github.repository }}
+      TAP_REPOSITORY: open-dawn/homebrew-dawn
+      TAP_REF: main
+      CASK_PATH: Casks/dawn.rb
+      DRY_RUN: ${{ github.event_name == 'workflow_dispatch' && inputs.dry_run || false }}
+
+    steps:
+      - name: Initialize publication
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          if [[ ! "$RELEASE_TAG" =~ ^v([0-9]+\.[0-9]+\.[0-9]+)$ ]]; then
+            echo "error: only stable releases can update the Homebrew cask: $RELEASE_TAG" >&2
+            exit 1
+          fi
+
+          RELEASE_VERSION="${BASH_REMATCH[1]}"
+          DMG_FILENAME="DAWN-${RELEASE_VERSION}.dmg"
+          CHECKSUM_FILENAME="${DMG_FILENAME}.sha256"
+          ARTIFACT_DIRECTORY="$RUNNER_TEMP/homebrew-cask"
+          TAP_DIRECTORY="$GITHUB_WORKSPACE/tap"
+          BRANCH_NAME="bump-dawn-${RELEASE_VERSION}"
+
+          mkdir -p "$ARTIFACT_DIRECTORY"
+
+          {
+            echo "RELEASE_VERSION=$RELEASE_VERSION"
+            echo "DMG_FILENAME=$DMG_FILENAME"
+            echo "CHECKSUM_FILENAME=$CHECKSUM_FILENAME"
+            echo "ARTIFACT_DIRECTORY=$ARTIFACT_DIRECTORY"
+            echo "TAP_DIRECTORY=$TAP_DIRECTORY"
+            echo "BRANCH_NAME=$BRANCH_NAME"
+          } >> "$GITHUB_ENV"
+
+      - name: Require tap token
+        shell: bash
+        env:
+          HOMEBREW_TAP_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+        run: |
+          set -euo pipefail
+
+          if [[ -z "${HOMEBREW_TAP_TOKEN:-}" ]]; then
+            echo "error: secret HOMEBREW_TAP_TOKEN is not configured on the release environment" >&2
+            exit 1
+          fi
+
+      - name: Verify release assets and read checksum
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+
+          ASSET_NAMES="$(
+            gh release view \
+              "$RELEASE_TAG" \
+              --repo "$SOURCE_REPOSITORY" \
+              --json assets \
+              --jq '.assets[].name'
+          )"
+
+          if ! grep -Fxq "$DMG_FILENAME" <<<"$ASSET_NAMES"; then
+            echo "error: release is missing $DMG_FILENAME" >&2
+            exit 1
+          fi
+
+          if ! grep -Fxq "$CHECKSUM_FILENAME" <<<"$ASSET_NAMES"; then
+            echo "error: release is missing $CHECKSUM_FILENAME" >&2
+            exit 1
+          fi
+
+          gh release download \
+            "$RELEASE_TAG" \
+            --repo "$SOURCE_REPOSITORY" \
+            --dir "$ARTIFACT_DIRECTORY" \
+            --pattern "$CHECKSUM_FILENAME"
+
+          CHECKSUM_PATH="$ARTIFACT_DIRECTORY/$CHECKSUM_FILENAME"
+          if [[ ! -s "$CHECKSUM_PATH" ]]; then
+            echo "error: failed to download $CHECKSUM_FILENAME" >&2
+            exit 1
+          fi
+
+          RELEASE_SHA256="$(awk '{print $1}' "$CHECKSUM_PATH")"
+          if [[ ! "$RELEASE_SHA256" =~ ^[a-f0-9]{64}$ ]]; then
+            echo "error: invalid sha256 in $CHECKSUM_FILENAME: $RELEASE_SHA256" >&2
+            exit 1
+          fi
+
+          echo "RELEASE_SHA256=$RELEASE_SHA256" >> "$GITHUB_ENV"
+          echo "Using sha256 $RELEASE_SHA256 for $DMG_FILENAME"
+
+      - name: Check out Homebrew tap
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          repository: ${{ env.TAP_REPOSITORY }}
+          ref: ${{ env.TAP_REF }}
+          path: tap
+          token: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+          persist-credentials: true
+          fetch-depth: 0
+
+      - name: Update cask version and checksum
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          CASK_FILE="$TAP_DIRECTORY/$CASK_PATH"
+          if [[ ! -f "$CASK_FILE" ]]; then
+            echo "error: cask not found: $CASK_FILE" >&2
+            exit 1
+          fi
+
+          python3 - "$CASK_FILE" "$RELEASE_VERSION" "$RELEASE_SHA256" <<'PY'
+          import pathlib
+          import re
+          import sys
+
+          cask_path = pathlib.Path(sys.argv[1])
+          version = sys.argv[2]
+          sha256 = sys.argv[3]
+          text = cask_path.read_text()
+
+          updated, version_count = re.subn(
+              r'^(\s*version\s+")[^"]+(")',
+              rf'\g<1>{version}\2',
+              text,
+              count=1,
+              flags=re.MULTILINE,
+          )
+          updated, sha_count = re.subn(
+              r'^(\s*sha256\s+")[a-f0-9]{64}(")',
+              rf'\g<1>{sha256}\2',
+              updated,
+              count=1,
+              flags=re.MULTILINE,
+          )
+
+          if version_count != 1:
+              raise SystemExit("error: failed to update version stanza")
+          if sha_count != 1:
+              raise SystemExit("error: failed to update sha256 stanza")
+
+          cask_path.write_text(updated)
+          PY
+
+          if ! grep -Eq "^[[:space:]]*version[[:space:]]+\"${RELEASE_VERSION}\"" "$CASK_FILE"; then
+            echo "error: cask version was not updated to $RELEASE_VERSION" >&2
+            exit 1
+          fi
+
+          if ! grep -Eq "^[[:space:]]*sha256[[:space:]]+\"${RELEASE_SHA256}\"" "$CASK_FILE"; then
+            echo "error: cask sha256 was not updated to $RELEASE_SHA256" >&2
+            exit 1
+          fi
+
+          echo "Updated $CASK_PATH:"
+          grep -E '^[[:space:]]*(version|sha256)[[:space:]]+' "$CASK_FILE"
+
+      - name: Open tap pull request
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+        run: |
+          set -euo pipefail
+
+          git -C "$TAP_DIRECTORY" config user.name "github-actions[bot]"
+          git -C "$TAP_DIRECTORY" config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          git -C "$TAP_DIRECTORY" add "$CASK_PATH"
+
+          if git -C "$TAP_DIRECTORY" diff --cached --quiet; then
+            echo "Homebrew cask is already at DAWN $RELEASE_VERSION"
+            exit 0
+          fi
+
+          git -C "$TAP_DIRECTORY" diff --cached --check
+          git -C "$TAP_DIRECTORY" diff --cached
+
+          if [[ "$DRY_RUN" == "true" ]]; then
+            echo "Dry run enabled; skipping branch push and pull request"
+            exit 0
+          fi
+
+          git -C "$TAP_DIRECTORY" checkout -B "$BRANCH_NAME"
+          git -C "$TAP_DIRECTORY" commit -m "dawn $RELEASE_VERSION"
+          git -C "$TAP_DIRECTORY" push --force-with-lease origin "HEAD:$BRANCH_NAME"
+
+          EXISTING_PR="$(
+            gh pr list \
+              --repo "$TAP_REPOSITORY" \
+              --head "$BRANCH_NAME" \
+              --base "$TAP_REF" \
+              --state open \
+              --json number \
+              --jq '.[0].number // empty'
+          )"
+
+          if [[ -n "$EXISTING_PR" ]]; then
+            echo "Updated existing pull request #$EXISTING_PR"
+            gh pr view "$EXISTING_PR" --repo "$TAP_REPOSITORY" --json url --jq .url
+            exit 0
+          fi
+
+          PR_BODY_PATH="$RUNNER_TEMP/homebrew-cask-pr-body.md"
+          {
+            echo "## Summary"
+            echo "- Bump \`dawn\` cask to \`${RELEASE_VERSION}\`"
+            echo "- Update \`sha256\` from GitHub Release asset \`${CHECKSUM_FILENAME}\`"
+            echo "- Download URL remains the canonical GitHub Releases DMG"
+            echo
+            echo "Source release: https://github.com/${SOURCE_REPOSITORY}/releases/tag/${RELEASE_TAG}"
+          } > "$PR_BODY_PATH"
+
+          gh pr create \
+            --repo "$TAP_REPOSITORY" \
+            --base "$TAP_REF" \
+            --head "$BRANCH_NAME" \
+            --title "dawn $RELEASE_VERSION" \
+            --body-file "$PR_BODY_PATH"

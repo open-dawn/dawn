@@ -10,6 +10,7 @@ import SwiftUI
 public enum DButtonStyle: CaseIterable {
     case primary
     case secondary
+    case accent
     case danger
     case warning
     case success
@@ -19,30 +20,50 @@ public enum DButtonStyle: CaseIterable {
     case icon
     case compactIcon
     case compactLink
+    case detailPrimary
 
     var fgStyle: Color {
         switch self {
-        case .primary: return DawnColors.secondaryBackground
+        case .primary: return DawnColors.primaryBackground
         case .secondary: return DawnColors.primaryForeground
+        case .accent: return DawnColors.workspaceCardContentActive
         case .danger: return DawnColors.dangerForeground
         case .warning: return DawnColors.warningForeground
         case .success: return DawnColors.successForeground
         case .link: return DawnColors.primaryForeground
         case .linkSecondary: return DawnColors.secondaryForeground
         case .plain, .icon, .compactIcon, .compactLink: return DawnColors.primaryForeground
+        case .detailPrimary: return DawnColors.selectionForeground
         }
     }
 
     var bgStyle: Color {
         switch self {
-        case .primary: return DawnColors.primaryForeground
+        case .primary: return DawnColors.primaryButtonBackground
         case .secondary: return DawnColors.secondaryBackground
+        case .accent: return DawnColors.selectedWorkspaceCardBackground
         case .danger: return DawnColors.dangerBackground
         case .warning: return DawnColors.warningBackground
         case .success: return DawnColors.successBackground
         case .link: return .clear
         case .linkSecondary: return .clear
         case .plain, .icon, .compactIcon, .compactLink: return .clear
+        case .detailPrimary: return DawnColors.primaryButtonBackground
+        }
+    }
+
+    var bgStyleDisabled: Color {
+        switch self {
+        case .primary: return DawnColors.primaryButtonBackgroundDisabled
+        case .secondary: return DawnColors.secondaryBackground
+        case .accent: return DawnColors.selectedWorkspaceCardBackground
+        case .danger: return DawnColors.dangerBackground
+        case .warning: return DawnColors.warningBackground
+        case .success: return DawnColors.successBackground
+        case .link: return .clear
+        case .linkSecondary: return .clear
+        case .plain, .icon, .compactIcon, .compactLink: return .clear
+        case .detailPrimary: return DawnColors.primaryButtonBackgroundDisabled
         }
     }
 
@@ -50,6 +71,7 @@ public enum DButtonStyle: CaseIterable {
         switch self {
         case .primary: return 8
         case .secondary: return 8
+        case .accent: return 8
         case .danger: return 8
         case .warning: return 8
         case .success: return 8
@@ -58,13 +80,15 @@ public enum DButtonStyle: CaseIterable {
         case .plain: return 8
         case .icon, .compactIcon: return 0
         case .compactLink: return 4
+        case .detailPrimary: return 4
         }
     }
 
     var verticalPadding: CGFloat {
         switch self {
-        case .primary: return 12
+        case .primary: return 8
         case .secondary: return 12
+        case .accent: return 12
         case .danger: return 12
         case .warning: return 12
         case .success: return 12
@@ -73,6 +97,7 @@ public enum DButtonStyle: CaseIterable {
         case .icon: return 4
         case .compactIcon: return 2
         case .plain, .compactLink: return 0
+        case .detailPrimary: return 8
         }
     }
 
@@ -80,6 +105,7 @@ public enum DButtonStyle: CaseIterable {
         switch self {
         case .primary: return 16
         case .secondary: return 16
+        case .accent: return 16
         case .danger: return 16
         case .warning: return 16
         case .success: return 16
@@ -88,6 +114,7 @@ public enum DButtonStyle: CaseIterable {
         case .icon: return 4
         case .compactIcon: return 2
         case .plain, .compactLink: return 0
+        case .detailPrimary: return 12
         }
     }
 
@@ -95,6 +122,7 @@ public enum DButtonStyle: CaseIterable {
         switch self {
         case .primary: return 8
         case .secondary: return 8
+        case .accent: return 8
         case .danger: return 8
         case .warning: return 8
         case .success: return 8
@@ -102,6 +130,7 @@ public enum DButtonStyle: CaseIterable {
         case .linkSecondary: return 8
         case .plain, .compactLink: return 0
         case .icon, .compactIcon: return 4
+        case .detailPrimary: return 8
         }
     }
 
@@ -109,6 +138,7 @@ public enum DButtonStyle: CaseIterable {
         switch self {
         case .primary: return false
         case .secondary: return false
+        case .accent: return false
         case .danger: return false
         case .warning: return false
         case .success: return false
@@ -118,6 +148,7 @@ public enum DButtonStyle: CaseIterable {
         case .icon: return false
         case .compactIcon: return false
         case .compactLink: return true
+        case .detailPrimary: return false
         }
     }
 
@@ -125,6 +156,7 @@ public enum DButtonStyle: CaseIterable {
         switch self {
         case .primary: return DawnTextStyle.buttonLabel
         case .secondary: return DawnTextStyle.buttonLabel
+        case .accent: return DawnTextStyle.buttonLabel
         case .danger: return DawnTextStyle.buttonLabel
         case .warning: return DawnTextStyle.buttonLabel
         case .success: return DawnTextStyle.buttonLabel
@@ -134,6 +166,18 @@ public enum DButtonStyle: CaseIterable {
         case .icon: return DawnTextStyle.actionIcon
         case .compactIcon: return DawnTextStyle.buttonIcon
         case .compactLink: return DawnTextStyle.linkLabel
+        case .detailPrimary: return DawnTextStyle.detailButton
+        }
+    }
+
+    /// Zain label styles need optical top padding; icon-only styles do not.
+    var usesZainOpticalAlignment: Bool {
+        switch self {
+        case .primary, .secondary, .accent, .danger, .warning, .success,
+            .link, .linkSecondary, .detailPrimary:
+            true
+        case .plain, .icon, .compactIcon, .compactLink:
+            false
         }
     }
 
@@ -141,6 +185,7 @@ public enum DButtonStyle: CaseIterable {
         switch self {
         case .primary: return DawnTextStyle.buttonIcon
         case .secondary: return DawnTextStyle.buttonIcon
+        case .accent: return DawnTextStyle.buttonIcon
         case .danger: return DawnTextStyle.buttonIcon
         case .warning: return DawnTextStyle.buttonIcon
         case .success: return DawnTextStyle.buttonIcon
@@ -150,6 +195,7 @@ public enum DButtonStyle: CaseIterable {
         case .icon: return DawnTextStyle.actionIcon
         case .compactLink: return DawnTextStyle.buttonIcon
         case .compactIcon: return DawnTextStyle.actionIcon
+        case .detailPrimary: return DawnTextStyle.detailButton
         }
     }
 
@@ -157,6 +203,7 @@ public enum DButtonStyle: CaseIterable {
         switch self {
         case .primary: return 1
         case .secondary: return 1
+        case .accent: return 1
         case .danger: return 1
         case .warning: return 1
         case .success: return 1
@@ -166,6 +213,7 @@ public enum DButtonStyle: CaseIterable {
         case .icon: return 1
         case .compactIcon: return 1
         case .compactLink: return 1
+        case .detailPrimary: return 1
         }
     }
 }

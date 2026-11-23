@@ -53,14 +53,27 @@ actor UserDefaultsSettingsRepository: SettingsRepository {
             )
         }
 
-        guard header.schemaVersion == SettingsDocument.currentSchemaVersion else {
+        let documentData: Data
+
+        switch header.schemaVersion {
+        case SettingsDocumentMigration.legacyContextSchemaVersion:
+            do {
+                documentData = try SettingsDocumentMigration.migrateV2ToV3(data)
+            } catch {
+                throw SettingsRepositoryError.corruptedData(
+                    description: String(describing: error)
+                )
+            }
+        case SettingsDocument.currentSchemaVersion:
+            documentData = data
+        default:
             throw SettingsRepositoryError.unsupportedSchemaVersion(
                 header.schemaVersion
             )
         }
 
         do {
-            return try decoder.decode(SettingsDocument.self, from: data)
+            return try decoder.decode(SettingsDocument.self, from: documentData)
         } catch {
             throw SettingsRepositoryError.corruptedData(
                 description: String(describing: error)

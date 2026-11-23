@@ -15,18 +15,18 @@ private struct MenuBarRootPreview: View {
     @State private var workspace: WorkspaceRuntime
 
     init(
-        contexts: [WorkspaceContext],
+        workspaces: [Workspace],
         activity: WorkspaceActivityState = .empty
     ) {
-        let contextProvider = PreviewContextProvider(
-            contexts: contexts,
+        let workspaceProvider = PreviewWorkspaceProvider(
+            workspaces: workspaces,
             workspaceActivity: activity
         )
 
         _workspace = State(
             initialValue: WorkspaceRuntime(
-                contextManager: contextProvider,
-                contextSwitching: PreviewContextSwitcher()
+                workspaceCatalog: workspaceProvider,
+                workspaceSwitching: PreviewWorkspaceSwitcher()
             )
         )
     }
@@ -46,20 +46,20 @@ private struct MenuBarRootPreview: View {
 }
 
 @MainActor
-private final class PreviewContextProvider: WorkspaceManaging {
-    private var contexts: [WorkspaceContext]
+private final class PreviewWorkspaceProvider: WorkspaceManaging {
+    private var workspaces: [Workspace]
     var workspaceActivity: WorkspaceActivityState
 
     init(
-        contexts: [WorkspaceContext],
+        workspaces: [Workspace],
         workspaceActivity: WorkspaceActivityState = .empty
     ) {
-        self.contexts = contexts
+        self.workspaces = workspaces
         self.workspaceActivity = workspaceActivity
     }
 
-    func getAvailableContexts() async -> [WorkspaceContext] {
-        contexts
+    func getAvailableWorkspaces() async -> [Workspace] {
+        workspaces
     }
 
     func getWorkspaceActivity() async -> libdawn.WorkspaceActivityState {
@@ -68,101 +68,101 @@ private final class PreviewContextProvider: WorkspaceManaging {
 
     func getWorkspaceSnapshot() async -> WorkspaceSnapshot {
         return WorkspaceSnapshot(
-            contexts: contexts,
+            workspaces: workspaces,
             activity: workspaceActivity
         )
     }
 
-    func recordContextActivation(contextID: UUID, at date: Date) async throws -> WorkspaceActivityState {
-        guard contexts.contains(where: { $0.id == contextID }) else {
-            throw SettingsStoreError.contextNotFound(contextID)
+    func recordWorkspaceActivation(workspaceID: UUID, at date: Date) async throws -> WorkspaceActivityState {
+        guard workspaces.contains(where: { $0.id == workspaceID }) else {
+            throw SettingsStoreError.workspaceNotFound(workspaceID)
         }
 
         workspaceActivity.activate(
-            contextID: contextID,
+            workspaceID: workspaceID,
             at: date
         )
 
         return workspaceActivity
     }
 
-    func stopActiveContext(at date: Date) async throws -> WorkspaceActivityState {
+    func stopActiveWorkspace(at date: Date) async throws -> WorkspaceActivityState {
         workspaceActivity.stop(at: date)
         return workspaceActivity
     }
 
-    func getContext(id: UUID) async -> WorkspaceContext? {
-        contexts.first {
+    func getWorkspace(id: UUID) async -> Workspace? {
+        workspaces.first {
             $0.id == id
         }
     }
 
-    func createContext(
+    func createWorkspace(
         name: String,
         symbol: String,
         applications: [WorkspaceApplication],
         transition: WorkspaceTransition
-    ) async throws -> WorkspaceContext {
-        let context = WorkspaceContext(
+    ) async throws -> Workspace {
+        let workspace = Workspace(
             name: name,
             symbol: symbol,
             applications: applications,
             transition: transition
         )
 
-        contexts.append(context)
-        return context
+        workspaces.append(workspace)
+        return workspace
     }
 
-    func updateContext(
-        _ context: WorkspaceContext
+    func updateWorkspace(
+        _ workspace: Workspace
     ) async throws {
-        guard let index = contexts.firstIndex(
-            where: { $0.id == context.id }
+        guard let index = workspaces.firstIndex(
+            where: { $0.id == workspace.id }
         ) else {
             return
         }
 
-        contexts[index] = context
+        workspaces[index] = workspace
     }
 
-    func deleteContext(id: UUID) async throws {
-        workspaceActivity.removeContext(id: id)
+    func deleteWorkspace(id: UUID) async throws {
+        workspaceActivity.removeWorkspace(id: id)
 
-        contexts.removeAll {
+        workspaces.removeAll {
             $0.id == id
         }
     }
 
-    func archiveContext(id: UUID) async throws {
-        guard let index = contexts.firstIndex(where: { $0.id == id }) else {
+    func archiveWorkspace(id: UUID) async throws {
+        guard let index = workspaces.firstIndex(where: { $0.id == id }) else {
             return
         }
 
-        contexts[index].isArchived = true
+        workspaces[index].isArchived = true
         workspaceActivity.clearActiveSession(for: id)
     }
 
-    func unarchiveContext(id: UUID) async throws {
-        guard let index = contexts.firstIndex(where: { $0.id == id }) else {
+    func unarchiveWorkspace(id: UUID) async throws {
+        guard let index = workspaces.firstIndex(where: { $0.id == id }) else {
             return
         }
 
-        contexts[index].isArchived = false
+        workspaces[index].isArchived = false
     }
 }
 
 @MainActor
-private struct PreviewContextSwitcher: ContextSwitching {
-    func switchToContext(
-        to context: WorkspaceContext
+private struct PreviewWorkspaceSwitcher: WorkspaceSwitching {
+    func switchToWorkspace(
+        to workspace: Workspace
     ) async throws {
     }
 }
 
 private enum MenuBarRootPreviewFixtures {
-    static let contexts = [
-        WorkspaceContext(
+    static let workspaces = [
+        Workspace(
             name: "Work",
             symbol: "briefcase.fill",
             applications: [
@@ -180,7 +180,7 @@ private enum MenuBarRootPreviewFixtures {
                 ),
             ]
         ),
-        WorkspaceContext(
+        Workspace(
             name: "Personal",
             symbol: "person.fill",
             applications: [
@@ -194,9 +194,9 @@ private enum MenuBarRootPreviewFixtures {
                 ),
             ]
         ),
-        WorkspaceContext(
+        Workspace(
             name: "Gaming",
-            symbol: "gamecontroller.fill",
+            symbol: "briefcase.fill",
             applications: [
                 WorkspaceApplication(
                     bundleIdentifier: "com.apple.Music",
@@ -211,11 +211,11 @@ private enum MenuBarRootPreviewFixtures {
     ) -> WorkspaceActivityState {
         var activity = WorkspaceActivityState.empty
 
-        let work = contexts[0]
-        let personal = contexts[1]
+        let work = workspaces[0]
+        let personal = workspaces[1]
 
         activity.activate(
-            contextID: personal.id,
+            workspaceID: personal.id,
             at: now.addingTimeInterval(-2 * 24 * 60 * 60)
         )
 
@@ -224,7 +224,7 @@ private enum MenuBarRootPreviewFixtures {
         )
 
         activity.activate(
-            contextID: work.id,
+            workspaceID: work.id,
             at: now.addingTimeInterval(
                 -(5 * 60 + 12) * 60
             )
@@ -238,21 +238,21 @@ private enum MenuBarRootPreviewFixtures {
     let now = Date.now
 
     MenuBarRootPreview(
-        contexts: MenuBarRootPreviewFixtures.contexts,
+        workspaces: MenuBarRootPreviewFixtures.workspaces,
         activity: MenuBarRootPreviewFixtures.activity(
             relativeTo: now
         )
     )
 }
 
-#Preview("Root — Inactive Contexts") {
+#Preview("Root — Inactive Workspaces") {
     MenuBarRootPreview(
-        contexts: MenuBarRootPreviewFixtures.contexts
+        workspaces: MenuBarRootPreviewFixtures.workspaces
     )
 }
 
 #Preview("Root — Empty") {
-    MenuBarRootPreview(contexts: [])
+    MenuBarRootPreview(workspaces: [])
 }
 
 #endif

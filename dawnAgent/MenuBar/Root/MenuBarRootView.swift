@@ -13,35 +13,35 @@ import libdawnUI
 
 struct MenuBarRootView: View {
     private enum MenuBarRoute {
-        case contextList
-        case contextCreation
+        case workspaceList
+        case workspaceCreation
     }
 
     let workspace: WorkspaceRuntime
     let openApp: (DawnAppRoute) async throws -> Void
     let modalPresentationState: MenuBarModalPresentationState
 
-    @State private var route: MenuBarRoute = .contextList
+    @State private var route: MenuBarRoute = .workspaceList
 
     var body: some View {
         Group {
             switch route {
-            case .contextList:
-                MenuBarContextListView(
+            case .workspaceList:
+                MenuBarWorkspaceListView(
                     workspace: workspace,
                     openApp: openApp,
                     modalPresentationState: modalPresentationState,
-                    onCreateContext: {
-                        route = .contextCreation
+                    onCreateWorkspace: {
+                        route = .workspaceCreation
                     }
                 )
 
-            case .contextCreation:
-                MenuBarContextCreationView(
+            case .workspaceCreation:
+                MenuBarWorkspaceCreationView(
                     workspace: workspace,
                     modalPresentationState: modalPresentationState,
                     onExit: {
-                        route = .contextList
+                        route = .workspaceList
                     }
                 )
             }
@@ -53,6 +53,13 @@ struct MenuBarRootView: View {
         )
         .background {
             DawnColors.primaryBackground
+                .overlay(alignment: .bottom) {
+                    DuskMenuBarBackground()
+                        .frame(
+                            maxWidth: .infinity,
+                            alignment: .bottom
+                        )
+                }
                 .ignoresSafeArea()
         }
     }

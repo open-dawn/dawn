@@ -2,16 +2,20 @@ import Foundation
 import libdawn
 
 struct SidebarContent {
-    var contexts: [WorkspaceContext] = []
-    var archivedContexts: [WorkspaceContext] = []
-    var activeContextID: UUID?
-    var busyContextID: UUID?
+    var workspaces: [Workspace] = []
+    var archivedWorkspaces: [Workspace] = []
+    var activity: WorkspaceActivityState = .empty
+    var busyWorkspaceID: UUID?
     var isLoading = false
     var isAgentRunning = true
     var needsAccessibilityPermission = false
     var interactionsDisabled = false
     /// Newest error first (FILO). Cap enforced by the shell when pushing.
     var errorMessages: [SidebarErrorMessage] = []
+
+    var activeWorkspaceID: UUID? {
+        activity.activeWorkspaceID
+    }
 }
 
 struct SidebarErrorMessage: Identifiable, Equatable {
@@ -35,4 +39,5 @@ struct SidebarRowState: Equatable {
     var isActive = false
     var isLoading = false
     var isEnabled = true
+    var activityText = "Never activated"
 }

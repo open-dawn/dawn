@@ -10,33 +10,33 @@ import Observation
 import libdawn
 
 @MainActor
-protocol WorkspaceCoordinating: ContextProviding {
-    var contexts: [WorkspaceContext] { get }
+protocol WorkspaceCoordinating: WorkspaceProviding {
+    var workspaces: [Workspace] { get }
     var workspaceActivity: WorkspaceActivityState { get }
-    var activeContextID: UUID? { get }
+    var activeWorkspaceID: UUID? { get }
     var activeSince: Date? { get }
 
     func refresh() async
-    func activateContext(id: UUID) async throws
-    func stopActiveContext() async throws
+    func activateWorkspace(id: UUID) async throws
+    func stopActiveWorkspace() async throws
 }
 
 @Observable
 @MainActor
 final class WorkspaceRuntime: WorkspaceCoordinating {
-    private let contextManager: any WorkspaceManaging
-    private let contextSwitching: any ContextSwitching
+    private let workspaceCatalog: any WorkspaceManaging
+    private let workspaceSwitching: any WorkspaceSwitching
     private let clock: any WorkspaceClock
-    private let snapshotPublisher: (any ContextSnapshotPublishing)?
+    private let snapshotPublisher: (any WorkspaceSnapshotPublishing)?
 
     @ObservationIgnored
     private var refreshGeneration: UInt = 0
 
-    private(set) var contexts: [WorkspaceContext] = []
+    private(set) var workspaces: [Workspace] = []
     private(set) var workspaceActivity: WorkspaceActivityState = .empty
 
-    var activeContextID: UUID? {
-        workspaceActivity.activeContextID
+    var activeWorkspaceID: UUID? {
+        workspaceActivity.activeWorkspaceID
     }
 
     var activeSince: Date? {
@@ -44,13 +44,13 @@ final class WorkspaceRuntime: WorkspaceCoordinating {
     }
 
     init(
-        contextManager: any WorkspaceManaging,
-        contextSwitching: any ContextSwitching = DefaultContextSwitching(),
+        workspaceCatalog: any WorkspaceManaging,
+        workspaceSwitching: any WorkspaceSwitching = DefaultWorkspaceSwitching(),
         clock: any WorkspaceClock = SystemWorkspaceClock(),
-        snapshotPublisher: (any ContextSnapshotPublishing)? = nil
+        snapshotPublisher: (any WorkspaceSnapshotPublishing)? = nil
     ) {
-        self.contextManager = contextManager
-        self.contextSwitching = contextSwitching
+        self.workspaceCatalog = workspaceCatalog
+        self.workspaceSwitching = workspaceSwitching
         self.clock = clock
         self.snapshotPublisher = snapshotPublisher
     }
@@ -59,32 +59,32 @@ final class WorkspaceRuntime: WorkspaceCoordinating {
         refreshGeneration &+= 1
         let generation = refreshGeneration
 
-        let snapshot = await contextManager.getWorkspaceSnapshot()
+        let snapshot = await workspaceCatalog.getWorkspaceSnapshot()
 
         guard generation == refreshGeneration else {
             return
         }
 
-        contexts = snapshot.contexts
+        workspaces = snapshot.workspaces
         workspaceActivity = snapshot.activity
     }
 
-    func getAvailableContexts() async -> [WorkspaceContext] {
+    func getAvailableWorkspaces() async -> [Workspace] {
         await refresh()
-        return contexts
+        return workspaces
     }
 
-    func getContext(id: UUID) async -> WorkspaceContext? {
-        await contextManager.getContext(id: id)
+    func getWorkspace(id: UUID) async -> Workspace? {
+        await workspaceCatalog.getWorkspace(id: id)
     }
 
-    func createContext(
+    func createWorkspace(
         name: String,
         symbol: String,
         applications: [WorkspaceApplication],
         transition: WorkspaceTransition = .default
-    ) async throws -> WorkspaceContext {
-        let context = try await contextManager.createContext(
+    ) async throws -> Workspace {
+        let workspace = try await workspaceCatalog.createWorkspace(
             name: name,
             symbol: symbol,
             applications: applications,
@@ -92,59 +92,59 @@ final class WorkspaceRuntime: WorkspaceCoordinating {
         )
 
         await refresh()
-        return context
+        return workspace
     }
 
-    func updateContext(_ context: WorkspaceContext) async throws {
-        try await contextManager.updateContext(context)
+    func updateWorkspace(_ workspace: Workspace) async throws {
+        try await workspaceCatalog.updateWorkspace(workspace)
         await refresh()
     }
 
-    func deleteContext(id: UUID) async throws {
-        try await contextManager.deleteContext(id: id)
+    func deleteWorkspace(id: UUID) async throws {
+        try await workspaceCatalog.deleteWorkspace(id: id)
         await refresh()
     }
 
-    func archiveContext(id: UUID) async throws {
-        try await contextManager.archiveContext(id: id)
+    func archiveWorkspace(id: UUID) async throws {
+        try await workspaceCatalog.archiveWorkspace(id: id)
         await refresh()
     }
 
-    func unarchiveContext(id: UUID) async throws {
-        try await contextManager.unarchiveContext(id: id)
+    func unarchiveWorkspace(id: UUID) async throws {
+        try await workspaceCatalog.unarchiveWorkspace(id: id)
         await refresh()
     }
 
-    func activateContext(id: UUID) async throws {
-        guard let context = await contextManager.getContext(id: id) else {
-            throw SettingsStoreError.contextNotFound(id)
+    func activateWorkspace(id: UUID) async throws {
+        guard let workspace = await workspaceCatalog.getWorkspace(id: id) else {
+            throw SettingsStoreError.workspaceNotFound(id)
         }
 
-        guard !context.isArchived else {
-            throw SettingsStoreError.contextArchived(id)
+        guard !workspace.isArchived else {
+            throw SettingsStoreError.workspaceArchived(id)
         }
 
-        try await contextSwitching.switchToContext(to: context)
+        try await workspaceSwitching.switchToWorkspace(to: workspace)
 
-        workspaceActivity = try await contextManager.recordContextActivation(
-            contextID: context.id,
+        workspaceActivity = try await workspaceCatalog.recordWorkspaceActivation(
+            workspaceID: workspace.id,
             at: clock.now
         )
         publishSnapshot()
     }
 
-    func stopActiveContext() async throws {
-        workspaceActivity = try await contextManager.stopActiveContext(at: clock.now)
+    func stopActiveWorkspace() async throws {
+        workspaceActivity = try await workspaceCatalog.stopActiveWorkspace(at: clock.now)
         publishSnapshot()
     }
 
-    func lastActiveAt(for contextID: UUID) -> Date? {
-        workspaceActivity.lastActiveAt(for: contextID)
+    func lastActiveAt(for workspaceID: UUID) -> Date? {
+        workspaceActivity.lastActiveAt(for: workspaceID)
     }
 
     private func publishSnapshot() {
-        snapshotPublisher?.publishAvailableContexts(
-            contexts,
+        snapshotPublisher?.publishAvailableWorkspaces(
+            workspaces,
             activity: workspaceActivity
         )
     }

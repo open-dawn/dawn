@@ -32,12 +32,12 @@ struct SettingsStorageIntegrationTests {
             repository: firstRepository
         )
 
-        let study = try await firstStore.createContext(
+        let study = try await firstStore.createWorkspace(
             name: "Study",
             symbol: "book"
         )
 
-        let games = try await firstStore.createContext(
+        let games = try await firstStore.createWorkspace(
             name: "Games",
             symbol: "gamecontroller"
         )
@@ -50,15 +50,15 @@ struct SettingsStorageIntegrationTests {
             )
         )
 
-        let updatedStudy = WorkspaceContext(
+        let updatedStudy = Workspace(
             id: study.id,
             name: "Deep work",
             symbol: "brain",
             applications: [safari]
         )
 
-        try await firstStore.updateContext(updatedStudy)
-        try await firstStore.deleteContext(id: games.id)
+        try await firstStore.updateWorkspace(updatedStudy)
+        try await firstStore.deleteWorkspace(id: games.id)
         try await firstStore.updateSettings(Settings(launchAtLogin: true))
 
         let expectedDocument = await firstStore.snapshot()
@@ -76,7 +76,7 @@ struct SettingsStorageIntegrationTests {
         let reloadedDocument = await secondStore.snapshot()
 
         #expect(reloadedDocument == expectedDocument)
-        #expect(reloadedDocument.contexts == [updatedStudy])
+        #expect(reloadedDocument.workspaces == [updatedStudy])
         #expect(reloadedDocument.generalSettings.launchAtLogin)
         #expect(
             reloadedDocument.schemaVersion == SettingsDocument.currentSchemaVersion

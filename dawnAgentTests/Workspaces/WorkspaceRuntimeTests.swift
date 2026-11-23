@@ -14,165 +14,165 @@ import libdawn
 @MainActor
 @Suite("WorkspaceRuntime")
 struct WorkspaceRuntimeTests {
-    @Test("Refresh exposes the authoritative context snapshot")
-    func refreshLoadsContexts() async throws {
-        let expectedContexts = [
-            WorkspaceContext(
+    @Test("Refresh exposes the authoritative workspace snapshot")
+    func refreshLoadsWorkspaces() async throws {
+        let expectedWorkspaces = [
+            Workspace(
                 name: "Work",
                 symbol: "briefcase"
             ),
-            WorkspaceContext(
+            Workspace(
                 name: "Personal",
                 symbol: "person"
             ),
         ]
 
-        let contextManager = FakeContextManager()
-        contextManager.contexts = expectedContexts
+        let workspaceCatalog = FakeWorkspaceCatalog()
+        workspaceCatalog.workspaces = expectedWorkspaces
 
         let runtime = WorkspaceRuntime(
-            contextManager: contextManager,
-            contextSwitching: ContextSwitchingSpy()
+            workspaceCatalog: workspaceCatalog,
+            workspaceSwitching: WorkspaceSwitchingSpy()
         )
 
         await runtime.refresh()
 
-        #expect(runtime.contexts == expectedContexts)
+        #expect(runtime.workspaces == expectedWorkspaces)
     }
 
-    @Test("Creating a context refreshes observable contexts")
-    func createRefreshesContexts() async throws {
-        let contextManager = FakeContextManager()
+    @Test("Creating a workspace refreshes observable workspaces")
+    func createRefreshesWorkspaces() async throws {
+        let workspaceCatalog = FakeWorkspaceCatalog()
         let runtime = WorkspaceRuntime(
-            contextManager: contextManager,
-            contextSwitching: ContextSwitchingSpy()
+            workspaceCatalog: workspaceCatalog,
+            workspaceSwitching: WorkspaceSwitchingSpy()
         )
 
-        let createdContext = try await runtime.createContext(
+        let createdWorkspace = try await runtime.createWorkspace(
             name: "Work",
             symbol: "briefcase",
             applications: []
         )
 
-        #expect(runtime.contexts == [createdContext])
-        #expect(contextManager.contexts == [createdContext])
+        #expect(runtime.workspaces == [createdWorkspace])
+        #expect(workspaceCatalog.workspaces == [createdWorkspace])
     }
 
-    @Test("Activating a context delegates to the switcher")
+    @Test("Activating a workspace delegates to the switcher")
     func activateDelegatesToSwitcher() async throws {
-        let context = WorkspaceContext(
+        let workspace = Workspace(
             name: "Work",
             symbol: "briefcase"
         )
 
-        let contextManager = FakeContextManager()
-        contextManager.contexts = [context]
+        let workspaceCatalog = FakeWorkspaceCatalog()
+        workspaceCatalog.workspaces = [workspace]
 
-        let switcher = ContextSwitchingSpy()
+        let switcher = WorkspaceSwitchingSpy()
 
         let runtime = WorkspaceRuntime(
-            contextManager: contextManager,
-            contextSwitching: switcher
+            workspaceCatalog: workspaceCatalog,
+            workspaceSwitching: switcher
         )
 
-        try await runtime.activateContext(id: context.id)
+        try await runtime.activateWorkspace(id: workspace.id)
 
-        #expect(switcher.switchedContexts == [context])
-        #expect(runtime.activeContextID == context.id)
+        #expect(switcher.switchedWorkspaces == [workspace])
+        #expect(runtime.activeWorkspaceID == workspace.id)
     }
 
-    @Test("Activating a missing context fails")
-    func activatingMissingContextFails() async {
+    @Test("Activating a missing workspace fails")
+    func activatingMissingWorkspaceFails() async {
         let missingID = UUID()
 
         let runtime = WorkspaceRuntime(
-            contextManager: FakeContextManager(),
-            contextSwitching: ContextSwitchingSpy()
+            workspaceCatalog: FakeWorkspaceCatalog(),
+            workspaceSwitching: WorkspaceSwitchingSpy()
         )
 
         await #expect(
-            throws: SettingsStoreError.contextNotFound(missingID)
+            throws: SettingsStoreError.workspaceNotFound(missingID)
         ) {
-            try await runtime.activateContext(id: missingID)
+            try await runtime.activateWorkspace(id: missingID)
         }
 
-        #expect(runtime.activeContextID == nil)
+        #expect(runtime.activeWorkspaceID == nil)
     }
 
-    @Test("Deleting the active context clears its active state")
-    func deletingActiveContextClearsSelection() async throws {
-        let context = WorkspaceContext(
+    @Test("Deleting the active workspace clears its active state")
+    func deletingActiveWorkspaceClearsSelection() async throws {
+        let workspace = Workspace(
             name: "Work",
             symbol: "briefcase"
         )
 
-        let contextManager = FakeContextManager()
-        contextManager.contexts = [context]
+        let workspaceCatalog = FakeWorkspaceCatalog()
+        workspaceCatalog.workspaces = [workspace]
 
         let runtime = WorkspaceRuntime(
-            contextManager: contextManager,
-            contextSwitching: ContextSwitchingSpy()
+            workspaceCatalog: workspaceCatalog,
+            workspaceSwitching: WorkspaceSwitchingSpy()
         )
 
-        try await runtime.activateContext(id: context.id)
-        try await runtime.deleteContext(id: context.id)
+        try await runtime.activateWorkspace(id: workspace.id)
+        try await runtime.deleteWorkspace(id: workspace.id)
 
-        #expect(runtime.contexts.isEmpty)
-        #expect(runtime.activeContextID == nil)
+        #expect(runtime.workspaces.isEmpty)
+        #expect(runtime.activeWorkspaceID == nil)
     }
 
-    @Test("Activating an archived context fails without switching")
-    func activatingArchivedContextFails() async {
-        let context = WorkspaceContext(
+    @Test("Activating an archived workspace fails without switching")
+    func activatingArchivedWorkspaceFails() async {
+        let workspace = Workspace(
             name: "Old",
             symbol: "archivebox",
             isArchived: true
         )
 
-        let contextManager = FakeContextManager()
-        contextManager.contexts = [context]
-        let switcher = ContextSwitchingSpy()
+        let workspaceCatalog = FakeWorkspaceCatalog()
+        workspaceCatalog.workspaces = [workspace]
+        let switcher = WorkspaceSwitchingSpy()
 
         let runtime = WorkspaceRuntime(
-            contextManager: contextManager,
-            contextSwitching: switcher
+            workspaceCatalog: workspaceCatalog,
+            workspaceSwitching: switcher
         )
 
         await #expect(
-            throws: SettingsStoreError.contextArchived(context.id)
+            throws: SettingsStoreError.workspaceArchived(workspace.id)
         ) {
-            try await runtime.activateContext(id: context.id)
+            try await runtime.activateWorkspace(id: workspace.id)
         }
 
-        #expect(switcher.switchedContexts.isEmpty)
-        #expect(runtime.activeContextID == nil)
+        #expect(switcher.switchedWorkspaces.isEmpty)
+        #expect(runtime.activeWorkspaceID == nil)
     }
 
-    @Test("Archiving the requested context clears it on refresh")
-    func archivingRequestedContextClearsSelection() async throws {
-        let context = WorkspaceContext(
+    @Test("Archiving the requested workspace clears it on refresh")
+    func archivingRequestedWorkspaceClearsSelection() async throws {
+        let workspace = Workspace(
             name: "Work",
             symbol: "briefcase"
         )
 
-        let contextManager = FakeContextManager()
-        contextManager.contexts = [context]
+        let workspaceCatalog = FakeWorkspaceCatalog()
+        workspaceCatalog.workspaces = [workspace]
 
         let runtime = WorkspaceRuntime(
-            contextManager: contextManager,
-            contextSwitching: ContextSwitchingSpy()
+            workspaceCatalog: workspaceCatalog,
+            workspaceSwitching: WorkspaceSwitchingSpy()
         )
 
-        try await runtime.activateContext(id: context.id)
-        try await runtime.archiveContext(id: context.id)
+        try await runtime.activateWorkspace(id: workspace.id)
+        try await runtime.archiveWorkspace(id: workspace.id)
 
-        #expect(runtime.contexts.map(\.isArchived) == [true])
-        #expect(runtime.activeContextID == nil)
-        #expect(contextManager.contexts == [
-            WorkspaceContext(
-                id: context.id,
-                name: context.name,
-                symbol: context.symbol,
+        #expect(runtime.workspaces.map(\.isArchived) == [true])
+        #expect(runtime.activeWorkspaceID == nil)
+        #expect(workspaceCatalog.workspaces == [
+            Workspace(
+                id: workspace.id,
+                name: workspace.name,
+                symbol: workspace.symbol,
                 isArchived: true
             )
         ])
@@ -180,186 +180,186 @@ struct WorkspaceRuntimeTests {
 
     @Test("Older refresh cannot overwrite a newer snapshot")
     func olderRefreshCannotOverwriteNewerSnapshot() async throws {
-        let oldContexts = [
-            WorkspaceContext(
+        let oldWorkspaces = [
+            Workspace(
                 name: "Old",
                 symbol: "clock"
             )
         ]
 
-        let newContexts = [
-            WorkspaceContext(
+        let newWorkspaces = [
+            Workspace(
                 name: "New",
                 symbol: "sparkles"
             )
         ]
 
-        let contextManager = OutOfOrderContextProvider(contexts: oldContexts)
+        let workspaceCatalog = OutOfOrderWorkspaceProvider(workspaces: oldWorkspaces)
 
         let runtime = WorkspaceRuntime(
-            contextManager: contextManager,
-            contextSwitching: ContextSwitchingSpy()
+            workspaceCatalog: workspaceCatalog,
+            workspaceSwitching: WorkspaceSwitchingSpy()
         )
 
         let olderRefresh = Task { @MainActor in
             await runtime.refresh()
         }
 
-        await contextManager.waitUntilFirstRequest()
+        await workspaceCatalog.waitUntilFirstRequest()
 
-        contextManager.contexts = newContexts
+        workspaceCatalog.workspaces = newWorkspaces
         await runtime.refresh()
 
-        #expect(runtime.contexts == newContexts)
+        #expect(runtime.workspaces == newWorkspaces)
 
-        contextManager.resumeFirstRequest()
+        workspaceCatalog.resumeFirstRequest()
         await olderRefresh.value
 
-        #expect(runtime.contexts == newContexts)
+        #expect(runtime.workspaces == newWorkspaces)
     }
 
-    @Test("Failed activation preserves the previously active context")
+    @Test("Failed activation preserves the previously active workspace")
     func failedActivationPreservesSelection() async throws {
-        let initiallyActiveContext = WorkspaceContext(
+        let initiallyActiveWorkspace = Workspace(
             name: "Work",
             symbol: "briefcase"
         )
 
-        let failingContext = WorkspaceContext(
+        let failingWorkspace = Workspace(
             name: "Personal",
             symbol: "person"
         )
 
-        let contextManager = FakeContextManager()
-        contextManager.contexts = [
-            initiallyActiveContext,
-            failingContext
+        let workspaceCatalog = FakeWorkspaceCatalog()
+        workspaceCatalog.workspaces = [
+            initiallyActiveWorkspace,
+            failingWorkspace
         ]
 
-        let switcher = ContextSwitchingSpy()
+        let switcher = WorkspaceSwitchingSpy()
 
         let runtime = WorkspaceRuntime(
-            contextManager: contextManager,
-            contextSwitching: switcher
+            workspaceCatalog: workspaceCatalog,
+            workspaceSwitching: switcher
         )
 
-        try await runtime.activateContext(
-            id: initiallyActiveContext.id
+        try await runtime.activateWorkspace(
+            id: initiallyActiveWorkspace.id
         )
 
-        switcher.error = ContextSwitchingTestError.failed
+        switcher.error = WorkspaceSwitchingTestError.failed
 
-        await #expect(throws: ContextSwitchingTestError.failed) {
-            try await runtime.activateContext(id: failingContext.id)
+        await #expect(throws: WorkspaceSwitchingTestError.failed) {
+            try await runtime.activateWorkspace(id: failingWorkspace.id)
         }
 
-        #expect(runtime.activeContextID == initiallyActiveContext.id)
+        #expect(runtime.activeWorkspaceID == initiallyActiveWorkspace.id)
 
-        #expect(switcher.switchedContexts == [initiallyActiveContext])
+        #expect(switcher.switchedWorkspaces == [initiallyActiveWorkspace])
     }
 
-    @Test("Switch context replies with unexpected failure when activation fails")
-    func switchContextRepliesWithActivationFailure() async throws {
-        let context = WorkspaceContext(
+    @Test("Switch workspace replies with unexpected failure when activation fails")
+    func switchWorkspaceRepliesWithActivationFailure() async throws {
+        let workspace = Workspace(
             name: "Work",
             symbol: "briefcase"
         )
 
-        let contextManager = FakeContextManager()
-        contextManager.contexts = [context]
+        let workspaceCatalog = FakeWorkspaceCatalog()
+        workspaceCatalog.workspaces = [workspace]
 
-        let switcher = ContextSwitchingSpy()
-        switcher.error = ContextSwitchingTestError.failed
+        let switcher = WorkspaceSwitchingSpy()
+        switcher.error = WorkspaceSwitchingTestError.failed
 
-        let workspace = WorkspaceRuntime(
-            contextManager: contextManager,
-            contextSwitching: switcher
+        let runtime = WorkspaceRuntime(
+            workspaceCatalog: workspaceCatalog,
+            workspaceSwitching: switcher
         )
 
         let bus = EventBus()
         let listener = WindowManagerListener(
             bus: bus,
-            workspace: workspace,
+            workspace: runtime,
             lifecycle: AgentLifecycleState()
         )
 
         let response = try await bus.ask(
-            .switchContext(
-                SwitchContextEvent(contextID: context.id)
+            .switchWorkspace(
+                SwitchWorkspaceEvent(workspaceID: workspace.id)
             )
         )
 
         #expect(
-            response == .contextMutationAcknowledged(
+            response == .workspaceMutationAcknowledged(
                 .failure(failure: .unexpected)
             )
         )
-        #expect(workspace.activeContextID == nil)
+        #expect(runtime.activeWorkspaceID == nil)
 
         _ = listener
     }
 
-    @Test("Activating a context records persisted activity")
+    @Test("Activating a workspace records persisted activity")
     func activateRecordsActivity() async throws {
-        let context = WorkspaceContext(
+        let workspace = Workspace(
             name: "Work",
             symbol: "briefcase"
         )
 
         let activatedAt = Date(timeIntervalSince1970: 100)
 
-        let contextManager = FakeContextManager()
-        contextManager.contexts = [context]
+        let workspaceCatalog = FakeWorkspaceCatalog()
+        workspaceCatalog.workspaces = [workspace]
 
-        let switcher = ContextSwitchingSpy()
+        let switcher = WorkspaceSwitchingSpy()
         let clock = TestWorkspaceClock(
             now: activatedAt
         )
 
         let runtime = WorkspaceRuntime(
-            contextManager: contextManager,
-            contextSwitching: switcher,
+            workspaceCatalog: workspaceCatalog,
+            workspaceSwitching: switcher,
             clock: clock
         )
 
-        try await runtime.activateContext(id: context.id)
+        try await runtime.activateWorkspace(id: workspace.id)
 
-        #expect(switcher.switchedContexts == [context])
-        #expect(runtime.activeContextID == context.id)
+        #expect(switcher.switchedWorkspaces == [workspace])
+        #expect(runtime.activeWorkspaceID == workspace.id)
         #expect(runtime.activeSince == activatedAt)
-        #expect(contextManager.workspaceActivity == runtime.workspaceActivity)
+        #expect(workspaceCatalog.workspaceActivity == runtime.workspaceActivity)
     }
 
     @Test("Refresh loads persisted workspace activity")
     func refreshLoadsActivity() async {
-        let context = WorkspaceContext(
+        let workspace = Workspace(
             name: "Work",
             symbol: "briefcase"
         )
 
         let activeSince = Date(timeIntervalSince1970: 100)
 
-        let contextManager = FakeContextManager()
-        contextManager.contexts = [context]
-        contextManager.workspaceActivity.activate(
-            contextID: context.id,
+        let workspaceCatalog = FakeWorkspaceCatalog()
+        workspaceCatalog.workspaces = [workspace]
+        workspaceCatalog.workspaceActivity.activate(
+            workspaceID: workspace.id,
             at: activeSince
         )
 
         let runtime = WorkspaceRuntime(
-            contextManager: contextManager,
-            contextSwitching: ContextSwitchingSpy()
+            workspaceCatalog: workspaceCatalog,
+            workspaceSwitching: WorkspaceSwitchingSpy()
         )
 
         await runtime.refresh()
 
-        #expect(runtime.activeContextID == context.id)
+        #expect(runtime.activeWorkspaceID == workspace.id)
         #expect(runtime.activeSince == activeSince)
     }
 
     @Test("Stopping clears active state using the injected clock")
     func stopClearsActiveState() async throws {
-        let context = WorkspaceContext(
+        let workspace = Workspace(
             name: "Work",
             symbol: "briefcase"
         )
@@ -367,53 +367,53 @@ struct WorkspaceRuntimeTests {
             now: Date(timeIntervalSince1970: 100)
         )
 
-        let contextManager = FakeContextManager()
-        contextManager.contexts = [context]
+        let workspaceCatalog = FakeWorkspaceCatalog()
+        workspaceCatalog.workspaces = [workspace]
         let publisher = RuntimeSnapshotPublisherSpy()
 
         let runtime = WorkspaceRuntime(
-            contextManager: contextManager,
-            contextSwitching: ContextSwitchingSpy(),
+            workspaceCatalog: workspaceCatalog,
+            workspaceSwitching: WorkspaceSwitchingSpy(),
             clock: clock,
             snapshotPublisher: publisher
         )
 
         await runtime.refresh()
-        try await runtime.activateContext(id: context.id)
+        try await runtime.activateWorkspace(id: workspace.id)
 
         let stoppedAt = Date(timeIntervalSince1970: 200)
         clock.now = stoppedAt
 
-        try await runtime.stopActiveContext()
+        try await runtime.stopActiveWorkspace()
 
-        #expect(runtime.activeContextID == nil)
+        #expect(runtime.activeWorkspaceID == nil)
         #expect(runtime.activeSince == nil)
-        #expect(runtime.lastActiveAt(for: context.id) == stoppedAt)
-        #expect(publisher.contextSnapshots == [[context], [context]])
+        #expect(runtime.lastActiveAt(for: workspace.id) == stoppedAt)
+        #expect(publisher.workspaceSnapshots == [[workspace], [workspace]])
         #expect(
-            publisher.activitySnapshots.map(\.activeContextID)
-                == [context.id, nil]
+            publisher.activitySnapshots.map(\.activeWorkspaceID)
+                == [workspace.id, nil]
         )
     }
 }
 
 @MainActor
-private final class RuntimeSnapshotPublisherSpy: ContextSnapshotPublishing {
-    private(set) var contextSnapshots: [[WorkspaceContext]] = []
+private final class RuntimeSnapshotPublisherSpy: WorkspaceSnapshotPublishing {
+    private(set) var workspaceSnapshots: [[Workspace]] = []
     private(set) var activitySnapshots: [WorkspaceActivityState] = []
 
-    func publishAvailableContexts(
-        _ contexts: [WorkspaceContext],
+    func publishAvailableWorkspaces(
+        _ workspaces: [Workspace],
         activity: WorkspaceActivityState
     ) {
-        contextSnapshots.append(contexts)
+        workspaceSnapshots.append(workspaces)
         activitySnapshots.append(activity)
     }
 }
 
 @MainActor
-private final class OutOfOrderContextProvider: WorkspaceManaging {
-    var contexts: [WorkspaceContext]
+private final class OutOfOrderWorkspaceProvider: WorkspaceManaging {
+    var workspaces: [Workspace]
     var workspaceActivity: WorkspaceActivityState = .empty
 
     private var requestCount = 0
@@ -425,12 +425,12 @@ private final class OutOfOrderContextProvider: WorkspaceManaging {
     private var firstRequestWaiter:
         CheckedContinuation<Void, Never>?
 
-    init(contexts: [WorkspaceContext]) {
-        self.contexts = contexts
+    init(workspaces: [Workspace]) {
+        self.workspaces = workspaces
     }
 
-    func getAvailableContexts() async -> [WorkspaceContext] {
-        contexts
+    func getAvailableWorkspaces() async -> [Workspace] {
+        workspaces
     }
 
     func waitUntilFirstRequest() async {
@@ -457,32 +457,32 @@ private final class OutOfOrderContextProvider: WorkspaceManaging {
         continuation.resume(returning: snapshot)
     }
 
-    func getContext(id: UUID) async -> WorkspaceContext? {
-        contexts.first { $0.id == id }
+    func getWorkspace(id: UUID) async -> Workspace? {
+        workspaces.first { $0.id == id }
     }
 
-    func archiveContext(id: UUID) async throws {
+    func archiveWorkspace(id: UUID) async throws {
         fatalError("Not used by this test")
     }
 
-    func unarchiveContext(id: UUID) async throws {
+    func unarchiveWorkspace(id: UUID) async throws {
         fatalError("Not used by this test")
     }
 
-    func createContext(
+    func createWorkspace(
         name: String,
         symbol: String,
         applications: [WorkspaceApplication],
         transition: WorkspaceTransition
-    ) async throws -> WorkspaceContext {
+    ) async throws -> Workspace {
         fatalError("Not used by this test")
     }
 
-    func updateContext(_ context: WorkspaceContext) async throws {
+    func updateWorkspace(_ workspace: Workspace) async throws {
         fatalError("Not used by this test")
     }
 
-    func deleteContext(id: UUID) async throws {
+    func deleteWorkspace(id: UUID) async throws {
         fatalError("Not used by this test")
     }
 
@@ -490,20 +490,20 @@ private final class OutOfOrderContextProvider: WorkspaceManaging {
         workspaceActivity
     }
 
-    func recordContextActivation(contextID: UUID, at date: Date) async throws -> WorkspaceActivityState {
-        guard contexts.contains(where: { $0.id == contextID }) else {
-            throw SettingsStoreError.contextNotFound(contextID)
+    func recordWorkspaceActivation(workspaceID: UUID, at date: Date) async throws -> WorkspaceActivityState {
+        guard workspaces.contains(where: { $0.id == workspaceID }) else {
+            throw SettingsStoreError.workspaceNotFound(workspaceID)
         }
 
         workspaceActivity.activate(
-            contextID: contextID,
+            workspaceID: workspaceID,
             at: date
         )
 
         return workspaceActivity
     }
 
-    func stopActiveContext(at date: Date) async throws -> WorkspaceActivityState {
+    func stopActiveWorkspace(at date: Date) async throws -> WorkspaceActivityState {
         workspaceActivity.stop(at: date)
         return workspaceActivity
     }
@@ -512,7 +512,7 @@ private final class OutOfOrderContextProvider: WorkspaceManaging {
         requestCount += 1
 
         let snapshot = WorkspaceSnapshot(
-            contexts: contexts,
+            workspaces: workspaces,
             activity: workspaceActivity
         )
 
@@ -540,6 +540,6 @@ private final class TestWorkspaceClock: WorkspaceClock {
     }
 }
 
-private enum ContextSwitchingTestError: Error, Equatable {
+private enum WorkspaceSwitchingTestError: Error, Equatable {
     case failed
 }

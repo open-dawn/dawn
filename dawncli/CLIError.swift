@@ -1,8 +1,8 @@
 import Foundation
 
 enum CLIError: Error, Equatable, LocalizedError {
-    case contextNotFound(UUID)
-    case contextIdentifierMismatch(expected: UUID, received: UUID)
+    case workspaceNotFound(UUID)
+    case workspaceIdentifierMismatch(expected: UUID, received: UUID)
     case applicationNotFound(String)
     case protectedAppExists(String)
     case protectedAppMissing(String)
@@ -11,10 +11,10 @@ enum CLIError: Error, Equatable, LocalizedError {
 
     var errorDescription: String? {
         switch self {
-        case let .contextNotFound(id):
-            "No context with id \(id.uuidString)."
-        case let .contextIdentifierMismatch(expected, received):
-            "Expected context \(expected.uuidString) but received \(received.uuidString)."
+        case let .workspaceNotFound(id):
+            "No workspace with id \(id.uuidString)."
+        case let .workspaceIdentifierMismatch(expected, received):
+            "Expected workspace \(expected.uuidString) but received \(received.uuidString)."
         case let .applicationNotFound(bundleIdentifier):
             "No installed application with bundle identifier \(bundleIdentifier)."
         case let .protectedAppExists(bundleIdentifier):

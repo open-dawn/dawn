@@ -17,8 +17,8 @@ import libdawn
 struct DawnAppOpenerTests {
     @Test("opens the encoded route in the located host app")
     func opensRouteInHostApp() async throws {
-        let contextID = UUID()
-        let route = DawnAppRoute.context(contextID)
+        let workspaceID = UUID()
+        let route = DawnAppRoute.workspace(workspaceID)
         let hostAppURL = URL(filePath: "/Applications/DAWN.app")
         let workspace = DawnAppWorkspaceSpy()
         let opener = DawnAppOpener(workspace: workspace, hostAppURL: { hostAppURL })

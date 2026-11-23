@@ -7,14 +7,14 @@
     #Preview("Sidebar / Populated") {
         SidebarPreview(
             content: SidebarPreviewData.populated,
-            selection: .context(SidebarPreviewData.academy.id)
+            selection: .workspace(SidebarPreviewData.academy.id)
         )
     }
 
     #Preview("Sidebar / Full") {
         SidebarPreview(
             content: SidebarPreviewData.full,
-            selection: .context(SidebarPreviewData.academy.id),
+            selection: .workspace(SidebarPreviewData.academy.id),
             search: SidebarSearchState(isArchivedSectionExpanded: true)
         )
     }
@@ -22,7 +22,7 @@
     #Preview("Sidebar / Search") {
         SidebarPreview(
             content: SidebarPreviewData.populated,
-            selection: .context(SidebarPreviewData.academy.id),
+            selection: .workspace(SidebarPreviewData.academy.id),
             search: SidebarSearchState(text: "App", isPresented: true)
         )
     }
@@ -35,38 +35,38 @@
         SidebarPreview(content: SidebarPreviewData.loading)
     }
 
-    #Preview("Sidebar / Busy context") {
+    #Preview("Sidebar / Busy workspace") {
         SidebarPreview(
             content: SidebarPreviewData.busy,
-            selection: .context(SidebarPreviewData.gaming.id)
+            selection: .workspace(SidebarPreviewData.gaming.id)
         )
     }
 
     #Preview("Sidebar / Agent stopped") {
         SidebarPreview(
             content: SidebarPreviewData.disconnected,
-            selection: .context(SidebarPreviewData.academy.id)
+            selection: .workspace(SidebarPreviewData.academy.id)
         )
     }
 
     #Preview("Sidebar / Accessibility required") {
         SidebarPreview(
             content: SidebarPreviewData.accessibilityRequired,
-            selection: .context(SidebarPreviewData.academy.id)
+            selection: .workspace(SidebarPreviewData.academy.id)
         )
     }
 
     #Preview("Sidebar / Long names") {
         SidebarPreview(
             content: SidebarPreviewData.longNames,
-            selection: .context(SidebarPreviewData.longName.id)
+            selection: .workspace(SidebarPreviewData.longName.id)
         )
     }
 
     #Preview("Sidebar / Archived") {
         SidebarPreview(
             content: SidebarPreviewData.populated,
-            selection: .context(SidebarPreviewData.archived.id),
+            selection: .workspace(SidebarPreviewData.archived.id),
             search: SidebarSearchState(isArchivedSectionExpanded: true)
         )
     }
@@ -74,7 +74,7 @@
     #Preview("Sidebar / No update") {
         SidebarPreview(
             content: SidebarPreviewData.populated,
-            selection: .context(SidebarPreviewData.study.id)
+            selection: .workspace(SidebarPreviewData.study.id)
         )
     }
 
@@ -101,15 +101,11 @@
             .frame(width: 300)
     }
 
-    #Preview("Sidebar / No context") {
-        SidebarPreview(content: SidebarPreviewData.empty)
-    }
-
     #Preview("Sidebar / Update available") {
         SidebarPreview(
             content: SidebarPreviewData.populated,
             availableUpdate: SidebarPreviewData.availableUpdate,
-            selection: .context(SidebarPreviewData.academy.id),
+            selection: .workspace(SidebarPreviewData.academy.id),
         )
     }
 
@@ -133,24 +129,21 @@
         }
 
         var body: some View {
-            HSplitView {
+            HStack(spacing: 0) {
                 SidebarView(
                     content: content,
                     availableUpdate: availableUpdate,
                     selectedDestination: $selectedDestination,
                     initialSearch: search,
-                    onCreateContext: {},
+                    onCreateWorkspace: {},
                     onDismissError: {}
                 )
-                .background {
-                    SplitViewDividerFix()
-                }
 
                 previewDetail
             }
             .ignoresSafeArea()
             .preferredColorScheme(.dark)
-            .frame(width: 980, height: 640)
+            .frame(width: SidebarMetrics.windowWidth, height: SidebarMetrics.windowHeight)
         }
 
         private var previewDetail: some View {
@@ -162,11 +155,8 @@
                     .font(DawnTextStyle.sidebarFooter)
                     .foregroundStyle(DawnColors.sidebarSecondaryForeground)
             }
-            .frame(
-                minWidth: SidebarMetrics.minimumDetailWidth,
-                maxWidth: .infinity,
-                maxHeight: .infinity
-            )
+            .frame(width: SidebarMetrics.detailWidth)
+            .frame(maxHeight: .infinity)
         }
 
         private var detailTitle: String {
@@ -175,18 +165,18 @@
                 "Settings"
             case .about:
                 "About"
-            case .context(let identifier):
-                contextName(identifier) ?? "Context"
+            case .workspace(let identifier):
+                workspaceName(identifier) ?? "Workspace"
             case .debug:
                 "Debug"
             case nil:
-                "No context selected"
+                "No workspace selected"
             }
         }
 
-        private func contextName(_ identifier: UUID) -> String? {
-            let contexts = content.contexts + content.archivedContexts
-            return contexts.first { $0.id == identifier }?.name
+        private func workspaceName(_ identifier: UUID) -> String? {
+            let workspaces = content.workspaces + content.archivedWorkspaces
+            return workspaces.first { $0.id == identifier }?.name
         }
     }
 
@@ -197,17 +187,21 @@
             specimen(
                 "Selected",
                 name: "Study",
-                state: SidebarRowState(isSelected: true)
+                state: SidebarRowState(isSelected: true, activityText: "Last use Yesterday")
             )
             specimen(
                 "Active",
                 name: "Apple Developer Academy",
-                state: SidebarRowState(isActive: true)
+                state: SidebarRowState(isActive: true, activityText: "5h 12min in use")
             )
             specimen(
                 "Selected and active",
                 name: "Apple Developer Academy",
-                state: SidebarRowState(isSelected: true, isActive: true)
+                state: SidebarRowState(
+                    isSelected: true,
+                    isActive: true,
+                    activityText: "5h 12min in use"
+                )
             )
             specimen(
                 "Disabled",
@@ -243,39 +237,40 @@
                 .font(DawnTextStyle.sidebarSectionHeader)
                 .foregroundStyle(DawnColors.sidebarSecondaryForeground)
 
-            SidebarContextRow(name: name, symbol: "book.fill", state: state)
+            SidebarWorkspaceRow(name: name, symbol: "book.fill", state: state)
         }
     }
 
     private enum SidebarPreviewData {
-        static let academy = makeContext(
+        static let academy = makeWorkspace(
             "10000000-0000-0000-0000-000000000001",
             name: "Apple Developer Academy",
             symbol: "apple.terminal.on.rectangle.fill"
         )
 
-        static let gaming = makeContext(
+        static let gaming = makeWorkspace(
             "10000000-0000-0000-0000-000000000002",
             name: "Gaming",
             symbol: "logo.playstation"
         )
 
-        static let study = makeContext(
+        static let study = makeWorkspace(
             "10000000-0000-0000-0000-000000000003",
             name: "Study",
             symbol: "book.fill"
         )
 
-        static let archived = makeContext(
+        static let archived = makeWorkspace(
             "10000000-0000-0000-0000-000000000004",
             name: "Appppppple IPHONE 2 DUO!!!",
-            symbol: "book.fill"
+            symbol: "book.fill",
+            isArchived: true
         )
 
-        static let longName = makeContext(
+        static let longName = makeWorkspace(
             "10000000-0000-0000-0000-000000000005",
             name: "Apple Developer Academy International Design and Technology Studio",
-            symbol: "apple.logo"
+            symbol: "house.fill"
         )
 
         static let availableUpdate = AvailableAppUpdate(
@@ -287,34 +282,42 @@
 
         static var populated: SidebarContent {
             SidebarContent(
-                contexts: [academy, gaming, study],
-                archivedContexts: [archived],
-                activeContextID: academy.id,
+                workspaces: [academy, gaming, study],
+                archivedWorkspaces: [archived],
+                activity: WorkspaceActivityState(
+                    activeSession: .init(
+                        workspaceID: academy.id,
+                        startedAt: Date().addingTimeInterval(-5 * 3600 - 12 * 60)
+                    ),
+                    lastActiveAtByWorkspaceID: [
+                        gaming.id: Date().addingTimeInterval(-86_400),
+                        study.id: Date().addingTimeInterval(-86_400),
+                    ]
+                )
             )
         }
 
         static var empty: SidebarContent {
-            SidebarContent(
-                contexts: [],
-                archivedContexts: [],
-                activeContextID: nil,
-            )
+            SidebarContent()
         }
 
         static var full: SidebarContent {
             SidebarContent(
-                contexts: [academy, gaming, study],
-                archivedContexts: [oldContext],
-                activeContextID: academy.id,
+                workspaces: [academy, gaming, study],
+                archivedWorkspaces: [oldWorkspace],
+                activity: WorkspaceActivityState(
+                    activeSession: .init(workspaceID: academy.id, startedAt: Date().addingTimeInterval(-3600))
+                ),
                 isAgentRunning: false,
                 interactionsDisabled: true,
             )
         }
 
-        static let oldContext = makeContext(
+        static let oldWorkspace = makeWorkspace(
             "10000000-0000-0000-0000-000000000006",
             name: "Personal (2024)",
-            symbol: "archivebox"
+            symbol: "archivebox",
+            isArchived: true
         )
 
         static var loading: SidebarContent {
@@ -323,7 +326,7 @@
 
         static var busy: SidebarContent {
             var content = populated
-            content.busyContextID = gaming.id
+            content.busyWorkspaceID = gaming.id
             content.interactionsDisabled = true
             return content
         }
@@ -343,29 +346,34 @@
 
         static var longNames: SidebarContent {
             SidebarContent(
-                contexts: [longName, gaming, study],
-                archivedContexts: [archived],
-                activeContextID: longName.id,
+                workspaces: [longName, gaming, study],
+                archivedWorkspaces: [archived],
+                activity: WorkspaceActivityState(
+                    activeSession: .init(workspaceID: longName.id, startedAt: Date().addingTimeInterval(-600))
+                )
             )
         }
 
         static var failed: SidebarContent {
             var content = populated
             content.errorMessages = [
-                SidebarErrorMessage(text: "The workspace manager could not switch contexts.")
+                SidebarErrorMessage(text: "The workspace manager could not switch workspaces.")
             ]
+            content.isAgentRunning = false
             return content
         }
 
-        private static func makeContext(
+        private static func makeWorkspace(
             _ identifier: String,
             name: String,
-            symbol: String
-        ) -> WorkspaceContext {
-            WorkspaceContext(
+            symbol: String,
+            isArchived: Bool = false
+        ) -> Workspace {
+            Workspace(
                 id: UUID(uuidString: identifier) ?? UUID(),
                 name: name,
-                symbol: symbol
+                symbol: symbol,
+                isArchived: isArchived
             )
         }
     }

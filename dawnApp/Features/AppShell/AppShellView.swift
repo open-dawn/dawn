@@ -3,23 +3,21 @@ import libdawnUI
 import SwiftUI
 
 struct AppShellView: View {
-    @Environment(SettingsContextStore.self)
-    private var contextStore
+    @Environment(SettingsWorkspaceStore.self)
+    private var workspaceStore
 
     var body: some View {
         AppShellContent(
-            store: contextStore,
+            store: workspaceStore,
         )
         .frame(
-            minWidth: SidebarMetrics.width + SidebarMetrics.minimumDetailWidth,
-            maxWidth: .infinity,
-            minHeight: SidebarMetrics.minimumWindowHeight,
-            maxHeight: .infinity
+            width: SidebarMetrics.windowWidth,
+            height: SidebarMetrics.windowHeight
         )
     }
 
     fileprivate struct AppShellContent: View {
-        let store: SettingsContextStore
+        let store: SettingsWorkspaceStore
 
         @Environment(SettingsEventBusService.self)
         private var eventBusService
@@ -33,7 +31,7 @@ struct AppShellView: View {
         @Environment(SettingsViewStore.self)
         private var settingsStore
 
-        @State private var viewModel: ContextDetailViewModel
+        @State private var viewModel: WorkspaceDetailViewModel
         @State private var navigation: AppNavigationModel
         @State private var sidebarErrors: [SidebarErrorMessage] = []
 
@@ -62,31 +60,31 @@ struct AppShellView: View {
             return update
         }
 
-        private var activeContexts: [WorkspaceContext] {
-            store.contexts.filter { !$0.isArchived }
+        private var activeWorkspaces: [Workspace] {
+            store.workspaces.filter { !$0.isArchived }
         }
 
-        private var archivedContexts: [WorkspaceContext] {
-            store.contexts.filter(\.isArchived)
+        private var archivedWorkspaces: [Workspace] {
+            store.workspaces.filter(\.isArchived)
         }
 
-        init(store: SettingsContextStore) {
+        init(store: SettingsWorkspaceStore) {
             self.store = store
 
             _viewModel = State(
-                initialValue: ContextDetailViewModel(contextManager: store)
+                initialValue: WorkspaceDetailViewModel(workspaceCatalog: store)
             )
             _navigation = State(initialValue: AppNavigationModel())
         }
 
         var body: some View {
-            HSplitView {
+            HStack(spacing: 0) {
                 SidebarView(
                     content: SidebarContent(
-                        contexts: activeContexts,
-                        archivedContexts: archivedContexts,
-                        activeContextID: store.activity.activeContextID,
-                        busyContextID: viewModel.operationInProgress,
+                        workspaces: activeWorkspaces,
+                        archivedWorkspaces: archivedWorkspaces,
+                        activity: store.activity,
+                        busyWorkspaceID: viewModel.operationInProgress,
                         isLoading: store.isLoading,
                         isAgentRunning: eventBusService.isConnected,
                         needsAccessibilityPermission: accessibilityPermissionService.isTrusted == false,
@@ -95,35 +93,38 @@ struct AppShellView: View {
                     ),
                     availableUpdate: availableUpdate,
                     selectedDestination: $navigation.selectedDestination,
-                    onCreateContext: { viewModel.presentContextCreator() },
+                    onCreateWorkspace: { viewModel.presentWorkspaceCreator() },
                     onDismissError: dismissSidebarError
                 )
-                .background {
-                    SplitViewDividerFix()
-                }
+                .frame(maxHeight: .infinity)
 
                 detail(for: navigation.selectedDestination)
-                    .frame(
-                        minWidth: SidebarMetrics.minimumDetailWidth,
-                        maxWidth: .infinity,
-                        maxHeight: .infinity
-                    )
+                    .frame(width: SidebarMetrics.detailWidth)
+                    .frame(maxHeight: .infinity)
                     .background {
                         DawnColors.primaryBackground
-                            .ignoresSafeArea()
                     }
             }
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .ignoresSafeArea()
+            .frame(
+                minWidth: SidebarMetrics.windowWidth,
+                idealWidth: SidebarMetrics.windowWidth,
+                maxWidth: SidebarMetrics.windowWidth,
+                minHeight: SidebarMetrics.windowHeight,
+                idealHeight: SidebarMetrics.windowHeight,
+                maxHeight: SidebarMetrics.windowHeight
+            )
+            .background {
+                shellBackground
+            }
             .background {
                 WindowTranslucency()
             }
-            .onChange(of: store.contexts) { _, contexts in
-                navigation.contextsDidChange(contexts)
-                viewModel.reconcileActiveContext(with: contexts.filter { !$0.isArchived })
+            .onChange(of: store.workspaces) { _, workspaces in
+                navigation.workspacesDidChange(workspaces)
+                viewModel.reconcileActiveWorkspace(with: workspaces.filter { !$0.isArchived })
             }
-            .onChange(of: store.activity.activeContextID, initial: true) { _, activeContextID in
-                viewModel.synchronizeActiveContext(activeContextID)
+            .onChange(of: store.activity.activeWorkspaceID, initial: true) { _, activeWorkspaceID in
+                viewModel.synchronizeActiveWorkspace(activeWorkspaceID)
             }
             .onChange(of: viewModel.error) { previous, error in
                 presentSidebarError(previous, error)
@@ -147,29 +148,30 @@ struct AppShellView: View {
                     return
                 }
 
-                await refreshContextsAndResolvePendingRoute()
+                await refreshWorkspacesAndResolvePendingRoute()
+                navigation.selectInitialWorkspaceIfNeeded(from: store.workspaces)
             }
             .sheet(
                 isPresented: Binding<Bool>(
                     get: { viewModel.isCreatingOrEditing },
                     set: { isPresented in
                         if !isPresented {
-                            viewModel.dismissContextCreator()
+                            viewModel.dismissWorkspaceCreator()
                         }
                     }
                 ),
                 onDismiss: {
-                    viewModel.dismissContextCreator()
+                    viewModel.dismissWorkspaceCreator()
 
                     Task {
                         await store.refresh()
                     }
                 },
                 content: {
-                    ContextCreatorView()
+                    WorkspaceCreatorView()
                 }
             )
-            .alert("Couldn't Open Context", isPresented: isShowingNavigationError) {
+            .alert("Couldn't Open Workspace", isPresented: isShowingNavigationError) {
                 Button("OK") {
                     navigation.dismissError()
                 }
@@ -178,13 +180,23 @@ struct AppShellView: View {
             }
         }
 
+        private var shellBackground: some View {
+            HStack(spacing: 0) {
+                SidebarBackground()
+                    .frame(width: SidebarMetrics.width)
+
+                DawnColors.primaryBackground
+            }
+            .ignoresSafeArea()
+        }
+
         private func pushSidebarError(_ message: String?) {
             guard let message, !message.isEmpty else {
                 return
             }
 
             if message == SettingsViewStoreError.notConnected.errorDescription
-                || message == SettingsContextStoreError.notConnected.errorDescription
+                || message == SettingsWorkspaceStoreError.notConnected.errorDescription
             {
                 return
             }
@@ -201,16 +213,16 @@ struct AppShellView: View {
         }
 
         private func presentSidebarError(
-            _ previous: SettingsContextStoreError?,
-            _ error: SettingsContextStoreError?,
+            _ previous: SettingsWorkspaceStoreError?,
+            _ error: SettingsWorkspaceStoreError?,
             allowsDisconnected: Bool = true
         ) {
-            if previous?.isEmptyContextName == true {
+            if previous?.isEmptyWorkspaceName == true {
                 sidebarErrors.removeAll { $0.text == previous?.localizedDescription }
             }
 
             // An empty name is shown beside the name field, not in the sidebar.
-            guard error?.isEmptyContextName != true else { return }
+            guard error?.isEmptyWorkspaceName != true else { return }
             guard allowsDisconnected || error != .notConnected else { return }
 
             pushSidebarError(error?.localizedDescription)
@@ -221,7 +233,7 @@ struct AppShellView: View {
                 sidebarErrors.removeFirst()
             }
 
-            if viewModel.error?.isEmptyContextName != true {
+            if viewModel.error?.isEmptyWorkspaceName != true {
                 viewModel.dismissError()
             }
             store.dismissError()
@@ -235,23 +247,25 @@ extension AppShellView.AppShellContent {
     @ViewBuilder
     fileprivate func detail(for destination: SidebarDestination?) -> some View {
         switch destination {
-        case let .context(contextID):
-            if let context = store.contexts.first(where: { $0.id == contextID }) {
-                ContextDetailView(
-                    context: context,
+        case let .workspace(workspaceID):
+            if !eventBusService.isConnected {
+                AgentWaitingView()
+            } else if let workspace = store.workspaces.first(where: { $0.id == workspaceID }) {
+                WorkspaceDetailView(
+                    workspace: workspace,
                     viewModel: viewModel,
                     interactionsDisabled: interactionsDisabled,
                     onDelete: { deleted in
-                        if navigation.selectedDestination == .context(deleted.id) {
+                        if navigation.selectedDestination == .workspace(deleted.id) {
                             navigation.selectedDestination = nil
+                            navigation.selectInitialWorkspaceIfNeeded(from: store.workspaces)
                         }
                     }
                 )
             } else {
-                ContentUnavailableView(
-                    "Context not available",
-                    systemImage: "rectangle.stack.slash",
-                    description: Text("This context is no longer available.")
+                EmptyWorkspacesView(
+                    onCreateWorkspace: { viewModel.presentWorkspaceCreator() },
+                    interactionsDisabled: interactionsDisabled
                 )
             }
 
@@ -270,11 +284,14 @@ extension AppShellView.AppShellContent {
             )
 
         case nil:
-            ContentUnavailableView(
-                "No context selected",
-                systemImage: "sidebar.leading",
-                description: Text("Select a context in the sidebar, or create a new one.")
-            )
+            if !eventBusService.isConnected {
+                AgentWaitingView()
+            } else {
+                EmptyWorkspacesView(
+                    onCreateWorkspace: { viewModel.presentWorkspaceCreator() },
+                    interactionsDisabled: interactionsDisabled
+                )
+            }
         }
     }
 
@@ -283,7 +300,7 @@ extension AppShellView.AppShellContent {
 
         let requiresRefresh = navigation.receive(
             route,
-            availableContexts: store.contexts
+            availableWorkspaces: store.workspaces
         )
 
         guard requiresRefresh, eventBusService.isConnected else {
@@ -291,18 +308,18 @@ extension AppShellView.AppShellContent {
         }
 
         Task {
-            await refreshContextsAndResolvePendingRoute()
+            await refreshWorkspacesAndResolvePendingRoute()
         }
     }
 
-    fileprivate func refreshContextsAndResolvePendingRoute() async {
+    fileprivate func refreshWorkspacesAndResolvePendingRoute() async {
         await store.refresh()
         guard navigation.pendingRoute != nil else { return }
 
         if store.error == nil {
-            navigation.contextRefreshSucceeded(with: store.contexts)
+            navigation.workspaceRefreshSucceeded(with: store.workspaces)
         } else {
-            navigation.contextRefreshFailed()
+            navigation.workspaceRefreshFailed()
         }
     }
 }

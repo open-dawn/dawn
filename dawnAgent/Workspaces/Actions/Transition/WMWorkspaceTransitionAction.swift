@@ -96,26 +96,26 @@ struct DefaultWorkspaceTransitionPerformer: WorkspaceTransitionPerforming {
 }
 
 struct WMWorkspaceTransitionAction: WMAction {
-    let context: WorkspaceContext
+    let workspace: Workspace
     private let provider: ApplicationProvider
     private let performer: WorkspaceTransitionPerforming
     private let trustChecker: any AccessibilityTrustChecking
 
     init(
-        context: WorkspaceContext,
+        workspace: Workspace,
         provider: ApplicationProvider = SystemApplicationProvider(),
         performer: WorkspaceTransitionPerforming = DefaultWorkspaceTransitionPerformer(),
         trustChecker: any AccessibilityTrustChecking = SystemAccessibilityTrustChecker()
     ) {
-        self.context = context
+        self.workspace = workspace
         self.provider = provider
         self.performer = performer
         self.trustChecker = trustChecker
     }
 
     func execute() async throws(WMActionError) {
-        let transition = context.transition
-        let applications = context.applications
+        let transition = workspace.transition
+        let applications = workspace.applications
         let canApplyLayout = trustChecker.isProcessTrusted()
 
         do {
