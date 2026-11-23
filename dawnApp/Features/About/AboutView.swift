@@ -79,7 +79,7 @@ extension AboutView {
 
     private var descriptionLabel: some View {
         VStack(spacing: 0) {
-            Text("dawn is a window navigator to macOS.")
+            Text("Dawn is a workspace navigator for macOS")
                 .font(DawnTextStyle.primary)
 
             (
