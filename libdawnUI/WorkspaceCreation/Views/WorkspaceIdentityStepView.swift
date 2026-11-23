@@ -20,36 +20,17 @@ struct WorkspaceIdentityStepView: View {
     }
 
     var body: some View {
-        VStack(spacing: 32) {
-            VStack(spacing: 6) {
-                Text("Name your workspace")
-                    .font(DawnTextStyle.screenTitle)
-                    .dawnZainOpticalAlignment()
+        VStack(spacing: 24) {
+            title
 
-                (Text("Choose a ")
-
-                    + Text("name")
-                    .font(DawnTextStyle.emphasizedBody)
-                    .foregroundColor(DawnColors.emphasizedBody)
-
-                    + Text(" and ")
-
-                    + Text("symbol")
-                    .font(DawnTextStyle.emphasizedBody)
-                    .foregroundColor(DawnColors.emphasizedBody)
-
-                    + Text(" for your workspace"))
-                    .font(DawnTextStyle.body)
-                    .foregroundColor(DawnColors.menuItemSecondaryForeground)
+            ScrollView {
+                VStack(alignment: .leading, spacing: 20) {
+                    nameField
+                    symbolPicker
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
             }
-            .multilineTextAlignment(.center)
-
-            VStack(alignment: .leading, spacing: 20) {
-                nameField
-                symbolPicker
-            }
-
-            Spacer()
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
 
             DButton(action: onNext) {
                 Text("Next")
@@ -57,6 +38,33 @@ struct WorkspaceIdentityStepView: View {
             }
             .disabled(!canContinue)
         }
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+    }
+
+    private var title: some View {
+        VStack(spacing: 6) {
+            Text("Name your workspace")
+                .font(DawnTextStyle.screenTitle)
+                .dawnZainOpticalAlignment()
+
+            (Text("Choose a ")
+
+                + Text("name")
+                .font(DawnTextStyle.emphasizedBody)
+                .foregroundColor(DawnColors.emphasizedBody)
+
+                + Text(" and ")
+
+                + Text("symbol")
+                .font(DawnTextStyle.emphasizedBody)
+                .foregroundColor(DawnColors.emphasizedBody)
+
+                + Text(" for your workspace"))
+                .font(DawnTextStyle.body)
+                .foregroundColor(DawnColors.menuItemSecondaryForeground)
+        }
+        .multilineTextAlignment(.center)
+        .frame(maxWidth: .infinity)
     }
 
     private var nameField: some View {
@@ -77,7 +85,10 @@ struct WorkspaceIdentityStepView: View {
             Text("Symbol")
                 .font(DawnTextStyle.fieldLabel)
 
-            LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 4), count: 5)) {
+            LazyVGrid(
+                columns: Array(repeating: GridItem(.flexible(), spacing: 4), count: 5),
+                spacing: 4
+            ) {
                 ForEach(WorkspaceSymbols.allCases, id: \.self) { symbolName in
                     symbolButton(symbolName.rawValue)
                 }
@@ -88,28 +99,27 @@ struct WorkspaceIdentityStepView: View {
     private func symbolButton(_ symbolName: String) -> some View {
         let isSelected = selectedSymbolName == symbolName
 
-        return DButton(
-            style: .plain,
-            action: {
-                selectedSymbolName = symbolName
-            },
-            content: {
-                Image(systemName: symbolName)
-                    .font(DawnTextStyle.symbolPickerIcon)
-                    .foregroundStyle(
-                        isSelected
-                            ? DawnColors.selectionForeground
-                            : DawnColors.primaryForeground
-                    )
-                    .frame(maxWidth: .infinity, minHeight: 53)
-                    .background(
-                        isSelected
-                            ? DawnColors.selectionBackground
-                            : Color.clear
-                    )
-                    .clipShape(RoundedRectangle(cornerRadius: 7))
-            }
-        )
+        return Button {
+            selectedSymbolName = symbolName
+        } label: {
+            Image(systemName: symbolName)
+                .font(DawnTextStyle.symbolPickerIcon)
+                .foregroundStyle(
+                    isSelected
+                        ? DawnColors.selectionForeground
+                        : DawnColors.primaryForeground
+                )
+                .frame(maxWidth: .infinity)
+                .frame(height: 48)
+                .background(
+                    isSelected
+                        ? DawnColors.selectionBackground
+                        : Color.clear
+                )
+                .clipShape(RoundedRectangle(cornerRadius: 7))
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
         .accessibilityLabel(symbolName)
         .accessibilityAddTraits(isSelected ? .isSelected : [])
     }

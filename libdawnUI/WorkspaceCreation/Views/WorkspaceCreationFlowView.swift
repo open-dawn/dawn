@@ -121,15 +121,13 @@ public struct WorkspaceCreationFlowView: View {
     private var stepContent: some View {
         switch step {
         case .identity:
-            VStack {
-                WorkspaceIdentityStepView(
-                    name: $draft.name,
-                    selectedSymbolName: $draft.symbolName,
-                    onNext: {
-                        step = .applications
-                    }
-                )
-            }
+            WorkspaceIdentityStepView(
+                name: $draft.name,
+                selectedSymbolName: $draft.symbolName,
+                onNext: {
+                    step = .applications
+                }
+            )
         case .applications:
             WorkspaceApplicationPicker(
                 loadApplications: loadApplications,

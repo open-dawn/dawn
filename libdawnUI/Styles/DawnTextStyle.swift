@@ -20,8 +20,8 @@ public enum DawnTextStyle {
 
     // MARK: - Workspace Cards
 
-    public static let workspaceTitle: Font = DawnFont.zain(.bold, size: bodySize, relativeTo: .title)
-    public static let workspaceMetadata: Font = DawnFont.gabarito(size: metaSize, relativeTo: .body)
+    public static let workspaceTitle: Font = DawnFont.zain(.bold, size: secondarySize, relativeTo: .caption)
+    public static let workspaceMetadata: Font = DawnFont.gabarito(size: metaSize, relativeTo: .caption2)
 
     public static let noWorkspaceTitle: Font = DawnFont.zain(.bold, size: titleSize, relativeTo: .title)
     public static let noWorkspaceBody: Font = DawnFont.gabarito(size: bodySize, relativeTo: .body)
