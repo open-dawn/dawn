@@ -100,12 +100,14 @@ struct WorkspaceDetailView: View {
                     viewModel.setActivationPolicy(policy)
                 }
 
+                #if DEBUG
                 WorkspaceDetailTerminalCommandField(
                     command: editedWorkspace.transition.terminalCommand ?? "",
                     interactionsDisabled: interactionsDisabled
                 ) { command in
                     viewModel.setTerminalCommand(command)
                 }
+                #endif
 
                 Spacer(minLength: 0)
             }

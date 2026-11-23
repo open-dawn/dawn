@@ -13,7 +13,7 @@ struct SidebarWorkspaceRow: View {
     }
 
     var body: some View {
-        HStack(alignment: .center, spacing: 6) {
+        HStack(alignment: .center, spacing: 12) {
             icon
 
             VStack(alignment: .leading, spacing: 0) {
@@ -45,6 +45,7 @@ struct SidebarWorkspaceRow: View {
             }
         }
         .padding(8)
+        .padding(.top, 2)
         .background {
             RoundedRectangle(cornerRadius: SidebarMetrics.rowCornerRadius, style: .continuous)
                 .fill(rowFill)

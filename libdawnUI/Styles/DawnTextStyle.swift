@@ -98,8 +98,8 @@ public enum DawnTextStyle {
 
     // MARK: - Sidebar
 
-    public static let sidebarTextSize: CGFloat = secondarySize
-    public static let sidebarMetaSize: CGFloat = metaSize
+    public static let sidebarTextSize: CGFloat = 15
+    public static let sidebarMetaSize: CGFloat = 12
 
     public static let sidebarLogo: Font = DawnFont.gabarito(size: sidebarTextSize, relativeTo: .body)
     public static let sidebarLogoSymbol: Font = .system(size: sidebarTextSize, weight: .regular)
@@ -114,13 +114,12 @@ public enum DawnTextStyle {
     public static let sidebarAction: Font = DawnFont.gabarito(size: sidebarTextSize, relativeTo: .body)
 
     public static let sidebarSectionHeader: Font = DawnFont.zain(
-        .regular,
-        size: sidebarTextSize,
+        size: 18,
         relativeTo: .body
     )
     public static let sidebarRow: Font = DawnFont.gabarito(size: sidebarTextSize, relativeTo: .body)
-    public static let sidebarIcon: Font = .system(size: secondarySize, weight: .regular)
-    public static let sidebarRowIcon: Font = .system(size: bodySize, weight: .regular)
+    public static let sidebarIcon: Font = .system(size: 15, weight: .regular)
+    public static let sidebarRowIcon: Font = .system(size: 18, weight: .regular)
     public static let sidebarBannerIcon: Font = .system(size: titleSize, weight: .regular)
 
     public static let sidebarFooter: Font = DawnFont.gabarito(size: sidebarTextSize, relativeTo: .body)
@@ -128,11 +127,11 @@ public enum DawnTextStyle {
 
     public static let sidebarBannerTitle: Font = DawnFont.gabarito(
         .bold,
-        size: sidebarTextSize,
+        size: 14,
         relativeTo: .body
     )
     public static let sidebarBannerBody: Font = DawnFont.gabarito(
-        size: sidebarTextSize,
+        size: 12,
         relativeTo: .body
     )
     public static let sidebarWarning: Font = DawnFont.gabarito(
