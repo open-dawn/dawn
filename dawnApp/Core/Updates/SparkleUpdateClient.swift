@@ -18,11 +18,18 @@ final class SparkleUpdateClient: NSObject, AppUpdateClient {
         case installation
     }
 
+    private enum CheckTrigger: String {
+        case manual
+        case scheduled
+    }
+
     private var diagnosticStage: DiagnosticStage = .check
+    private var nextCheckTrigger: CheckTrigger = .scheduled
 
     weak var delegate: (any AppUpdateClientDelegate)?
 
-    private let hostBundle: Bundle
+    let hostBundle: Bundle
+    let userDefaults: UserDefaults
     private var canCheckObservation: NSKeyValueObservation?
 
     private var currentUpdate: AvailableAppUpdate?
@@ -40,16 +47,26 @@ final class SparkleUpdateClient: NSObject, AppUpdateClient {
         hostBundle: hostBundle,
         applicationBundle: hostBundle,
         userDriver: self,
-        delegate: nil
+        delegate: self
     )
 
     var canCheckForUpdates: Bool {
         updater.canCheckForUpdates
     }
 
-    init(hostBundle: Bundle = .main) {
+    init(
+        hostBundle: Bundle = .main,
+        userDefaults: UserDefaults = .standard
+    ) {
         self.hostBundle = hostBundle
+        self.userDefaults = userDefaults
         super.init()
+    }
+
+    func consumeNextCheckTrigger() -> String {
+        let trigger = nextCheckTrigger
+        nextCheckTrigger = .scheduled
+        return trigger.rawValue
     }
 
     func start() throws {
@@ -72,6 +89,7 @@ final class SparkleUpdateClient: NSObject, AppUpdateClient {
 
     func checkForUpdates() {
         diagnosticStage = .check
+        nextCheckTrigger = .manual
         updater.checkForUpdates()
     }
 
@@ -210,7 +228,7 @@ final class SparkleUpdateClient: NSObject, AppUpdateClient {
 
 extension SparkleUpdateClient: SPUUserDriver {
     func show(_ request: SPUUpdatePermissionRequest) async -> SUUpdatePermissionResponse {
-        SUUpdatePermissionResponse(automaticUpdateChecks: false, sendSystemProfile: false)
+        SUUpdatePermissionResponse(automaticUpdateChecks: true, sendSystemProfile: false)
     }
 
     func showUserInitiatedUpdateCheck(cancellation: @escaping () -> Void) {
