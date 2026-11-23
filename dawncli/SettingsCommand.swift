@@ -59,7 +59,7 @@ extension SettingsCommand {
     struct Protect: AsyncParsableCommand {
         static let configuration = CommandConfiguration(
             commandName: "protect",
-            abstract: "Change apps that stay open across context switches.",
+            abstract: "Change apps that stay open across workspace switches.",
             subcommands: [
                 Add.self,
                 Remove.self

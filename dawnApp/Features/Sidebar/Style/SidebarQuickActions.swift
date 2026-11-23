@@ -5,7 +5,7 @@ struct SidebarQuickActions: View {
     @Binding var searchText: String
     @Binding var isSearchPresented: Bool
     let interactionsDisabled: Bool
-    let onCreateContext: () -> Void
+    let onCreateWorkspace: () -> Void
 
     @FocusState private var isSearchFieldFocused: Bool
 
@@ -15,7 +15,7 @@ struct SidebarQuickActions: View {
                 title: "New Workspace",
                 systemImage: "plus",
                 expands: true,
-                action: onCreateContext
+                action: onCreateWorkspace
             )
             .disabled(interactionsDisabled)
 

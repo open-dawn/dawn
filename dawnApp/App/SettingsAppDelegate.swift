@@ -4,7 +4,7 @@ import dawnLogging
 @MainActor
 final class SettingsAppDelegate: NSObject, NSApplicationDelegate {
     let eventBusService: SettingsEventBusService
-    let contextStore: SettingsContextStore
+    let workspaceStore: SettingsWorkspaceStore
     let settingsStore: SettingsViewStore
     let updaterService: AppUpdaterService
     let accessibilityPermissionService: AccessibilityPermissionService
@@ -41,7 +41,7 @@ final class SettingsAppDelegate: NSObject, NSApplicationDelegate {
         self.eventBusService = eventBusService
         self.componentCoordinator = componentCoordinator
 
-        contextStore = SettingsContextStore(bus: eventBusService.bus)
+        workspaceStore = SettingsWorkspaceStore(bus: eventBusService.bus)
 
         settingsStore = SettingsViewStore(bus: eventBusService.bus)
 
@@ -57,7 +57,7 @@ final class SettingsAppDelegate: NSObject, NSApplicationDelegate {
             return
         }
 
-        contextStore.start()
+        workspaceStore.start()
         settingsStore.start()
         eventBusService.start()
         updaterService.start()
@@ -87,7 +87,7 @@ final class SettingsAppDelegate: NSObject, NSApplicationDelegate {
         startupReconciliationTask?.cancel()
         startupReconciliationTask = nil
 
-        contextStore.stop()
+        workspaceStore.stop()
         settingsStore.stop()
         eventBusService.stop()
     }

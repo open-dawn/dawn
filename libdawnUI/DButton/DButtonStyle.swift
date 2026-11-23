@@ -26,7 +26,7 @@ public enum DButtonStyle: CaseIterable {
         switch self {
         case .primary: return DawnColors.primaryBackground
         case .secondary: return DawnColors.primaryForeground
-        case .accent: return DawnColors.contextCardContentActive
+        case .accent: return DawnColors.workspaceCardContentActive
         case .danger: return DawnColors.dangerForeground
         case .warning: return DawnColors.warningForeground
         case .success: return DawnColors.successForeground
@@ -41,7 +41,7 @@ public enum DButtonStyle: CaseIterable {
         switch self {
         case .primary: return DawnColors.primaryButtonBackground
         case .secondary: return DawnColors.secondaryBackground
-        case .accent: return DawnColors.selectedContextCardBackground
+        case .accent: return DawnColors.selectedWorkspaceCardBackground
         case .danger: return DawnColors.dangerBackground
         case .warning: return DawnColors.warningBackground
         case .success: return DawnColors.successBackground
@@ -56,7 +56,7 @@ public enum DButtonStyle: CaseIterable {
         switch self {
         case .primary: return DawnColors.primaryButtonBackgroundDisabled
         case .secondary: return DawnColors.secondaryBackground
-        case .accent: return DawnColors.selectedContextCardBackground
+        case .accent: return DawnColors.selectedWorkspaceCardBackground
         case .danger: return DawnColors.dangerBackground
         case .warning: return DawnColors.warningBackground
         case .success: return DawnColors.successBackground
@@ -167,6 +167,17 @@ public enum DButtonStyle: CaseIterable {
         case .compactIcon: return DawnTextStyle.buttonIcon
         case .compactLink: return DawnTextStyle.linkLabel
         case .detailPrimary: return DawnTextStyle.detailButton
+        }
+    }
+
+    /// Zain label styles need optical top padding; icon-only styles do not.
+    var usesZainOpticalAlignment: Bool {
+        switch self {
+        case .primary, .secondary, .accent, .danger, .warning, .success,
+            .link, .linkSecondary, .detailPrimary:
+            true
+        case .plain, .icon, .compactIcon, .compactLink:
+            false
         }
     }
 

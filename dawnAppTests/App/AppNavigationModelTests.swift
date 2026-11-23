@@ -20,7 +20,7 @@ struct AppNavigationModelTests {
 
         let requiresRefresh = model.receive(
             .settings,
-            availableContexts: []
+            availableWorkspaces: []
         )
 
         #expect(!requiresRefresh)
@@ -28,87 +28,87 @@ struct AppNavigationModelTests {
         #expect(model.pendingRoute == nil)
     }
 
-    @Test("known context routes navigate immediately")
-    func knownContextRoute() {
-        let context = WorkspaceContext(
+    @Test("known workspace routes navigate immediately")
+    func knownWorkspaceRoute() {
+        let workspace = Workspace(
             name: "Work",
             symbol: "briefcase"
         )
         let model = AppNavigationModel()
 
         let requiresRefresh = model.receive(
-            .context(context.id),
-            availableContexts: [context]
+            .workspace(workspace.id),
+            availableWorkspaces: [workspace]
         )
 
         #expect(!requiresRefresh)
-        #expect(model.selectedDestination == .context(context.id))
+        #expect(model.selectedDestination == .workspace(workspace.id))
         #expect(model.pendingRoute == nil)
     }
 
-    @Test("missing context waits for an updated snapshot")
-    func pendingContextAppears() {
-        let context = WorkspaceContext(
+    @Test("missing workspace waits for an updated snapshot")
+    func pendingWorkspaceAppears() {
+        let workspace = Workspace(
             name: "Work",
             symbol: "briefcase"
         )
         let model = AppNavigationModel()
 
         let requiresRefresh = model.receive(
-            .context(context.id),
-            availableContexts: []
+            .workspace(workspace.id),
+            availableWorkspaces: []
         )
 
         #expect(requiresRefresh)
-        #expect(model.pendingRoute == .context(context.id))
+        #expect(model.pendingRoute == .workspace(workspace.id))
 
-        model.contextsDidChange([context])
+        model.workspacesDidChange([workspace])
 
         #expect(
-            model.selectedDestination == .context(context.id)
+            model.selectedDestination == .workspace(workspace.id)
         )
         #expect(model.pendingRoute == nil)
     }
 
-    @Test("unknown context produces a navigation error")
-    func unknownContextRoute() {
-        let contextID = UUID()
+    @Test("unknown workspace produces a navigation error")
+    func unknownWorkspaceRoute() {
+        let workspaceID = UUID()
         let model = AppNavigationModel()
 
         model.receive(
-            .context(contextID),
-            availableContexts: []
+            .workspace(workspaceID),
+            availableWorkspaces: []
         )
 
-        model.contextRefreshSucceeded(with: [])
+        model.workspaceRefreshSucceeded(with: [])
 
         #expect(
-            model.error == .contextNotFound(contextID)
+            model.error == .workspaceNotFound(workspaceID)
         )
         #expect(model.pendingRoute == nil)
         #expect(model.selectedDestination == nil)
     }
 
     @Test("failed refresh produces an availability error")
-    func contextRefreshFailure() {
+    func workspaceRefreshFailure() {
         let model = AppNavigationModel()
 
         model.receive(
-            .context(UUID()),
-            availableContexts: []
+            .workspace(UUID()),
+            availableWorkspaces: []
         )
 
-        model.contextRefreshFailed()
+        model.workspaceRefreshFailed()
 
-        #expect(model.error == .contextsUnavailable)
+        #expect(model.error == .workspacesUnavailable)
         #expect(model.pendingRoute == nil)
     }
 
     @Test("selects the first active workspace when nothing is selected")
     func selectsInitialWorkspace() {
-        let first = WorkspaceContext(name: "Work", symbol: "briefcase")
-        let second = WorkspaceContext(name: "Home", symbol: "house")
-        let archived = WorkspaceContext(
+        let first = Workspace(name: "Work", symbol: "briefcase")
+        let second = Workspace(name: "Home", symbol: "house")
+        let archived = Workspace(
             name: "Old",
             symbol: "archivebox",
             isArchived: true
@@ -117,13 +117,13 @@ struct AppNavigationModelTests {
 
         model.selectInitialWorkspaceIfNeeded(from: [archived, first, second])
 
-        #expect(model.selectedDestination == .context(first.id))
+        #expect(model.selectedDestination == .workspace(first.id))
     }
 
     @Test("does not override an existing selection")
     func keepsExistingSelection() {
-        let first = WorkspaceContext(name: "Work", symbol: "briefcase")
-        let second = WorkspaceContext(name: "Home", symbol: "house")
+        let first = Workspace(name: "Work", symbol: "briefcase")
+        let second = Workspace(name: "Home", symbol: "house")
         let model = AppNavigationModel()
         model.selectedDestination = .settings
 
@@ -134,7 +134,7 @@ struct AppNavigationModelTests {
 
     @Test("leaves selection empty when there are no active workspaces")
     func emptyWhenNoActiveWorkspaces() {
-        let archived = WorkspaceContext(
+        let archived = Workspace(
             name: "Old",
             symbol: "archivebox",
             isArchived: true

@@ -2,10 +2,10 @@ import Foundation
 import libdawn
 
 struct SidebarContent {
-    var contexts: [WorkspaceContext] = []
-    var archivedContexts: [WorkspaceContext] = []
+    var workspaces: [Workspace] = []
+    var archivedWorkspaces: [Workspace] = []
     var activity: WorkspaceActivityState = .empty
-    var busyContextID: UUID?
+    var busyWorkspaceID: UUID?
     var isLoading = false
     var isAgentRunning = true
     var needsAccessibilityPermission = false
@@ -13,8 +13,8 @@ struct SidebarContent {
     /// Newest error first (FILO). Cap enforced by the shell when pushing.
     var errorMessages: [SidebarErrorMessage] = []
 
-    var activeContextID: UUID? {
-        activity.activeContextID
+    var activeWorkspaceID: UUID? {
+        activity.activeWorkspaceID
     }
 }
 

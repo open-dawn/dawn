@@ -48,12 +48,12 @@ final class MenuBarController: NSObject, MenuBarControlling {
         statusItem?.button
     }
 
-    var hasActiveContext: Bool {
-        workspace.activeContextID != nil
+    var hasActiveWorkspace: Bool {
+        workspace.activeWorkspaceID != nil
     }
 
-    var observedActiveContextID: UUID? {
-        workspace.activeContextID
+    var observedActiveWorkspaceID: UUID? {
+        workspace.activeWorkspaceID
     }
 
     var canUpdateStatusItemAppearance: Bool {
@@ -74,7 +74,7 @@ final class MenuBarController: NSObject, MenuBarControlling {
 
         configurePanel(workspace: workspace)
         setVisible(initiallyVisible)
-        startObservingActiveContext()
+        startObservingActiveWorkspace()
     }
 
     func setVisible(_ isVisible: Bool) {
@@ -134,7 +134,7 @@ final class MenuBarController: NSObject, MenuBarControlling {
             return
         }
 
-        button.image = makeStatusItemImage(isActive: hasActiveContext)
+        button.image = makeStatusItemImage(isActive: hasActiveWorkspace)
         button.imageScaling = .scaleProportionallyDown
         button.toolTip = "DAWN"
         button.target = self

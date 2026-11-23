@@ -7,7 +7,7 @@ public enum WMActionIdentifier {
     case windowLayout(WorkspaceApplication) // Apply window layout via Accessibility
     case resetWindows(WorkspaceActivationPolicy, keep: [WorkspaceApplication]) // Apply activation policy to non-members
     case terminalCommand(String) // Run a shell command
-    case workspaceTransition(WorkspaceContext) // Full enter-workspace transition
+    case workspaceTransition(Workspace) // Full enter-workspace transition
 
     var action: WMAction {
         return switch self {
@@ -18,7 +18,7 @@ public enum WMActionIdentifier {
         case let .resetWindows(policy, keep):
             WMResetWindowsAction(activationPolicy: policy, keepApplications: keep)
         case let .terminalCommand(command): WMTerminalCommandAction(command: command)
-        case let .workspaceTransition(context): WMWorkspaceTransitionAction(context: context)
+        case let .workspaceTransition(workspace): WMWorkspaceTransitionAction(workspace: workspace)
         }
     }
 }

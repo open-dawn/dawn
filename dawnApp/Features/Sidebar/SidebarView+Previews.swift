@@ -7,14 +7,14 @@
     #Preview("Sidebar / Populated") {
         SidebarPreview(
             content: SidebarPreviewData.populated,
-            selection: .context(SidebarPreviewData.academy.id)
+            selection: .workspace(SidebarPreviewData.academy.id)
         )
     }
 
     #Preview("Sidebar / Full") {
         SidebarPreview(
             content: SidebarPreviewData.full,
-            selection: .context(SidebarPreviewData.academy.id),
+            selection: .workspace(SidebarPreviewData.academy.id),
             search: SidebarSearchState(isArchivedSectionExpanded: true)
         )
     }
@@ -22,7 +22,7 @@
     #Preview("Sidebar / Search") {
         SidebarPreview(
             content: SidebarPreviewData.populated,
-            selection: .context(SidebarPreviewData.academy.id),
+            selection: .workspace(SidebarPreviewData.academy.id),
             search: SidebarSearchState(text: "App", isPresented: true)
         )
     }
@@ -35,38 +35,38 @@
         SidebarPreview(content: SidebarPreviewData.loading)
     }
 
-    #Preview("Sidebar / Busy context") {
+    #Preview("Sidebar / Busy workspace") {
         SidebarPreview(
             content: SidebarPreviewData.busy,
-            selection: .context(SidebarPreviewData.gaming.id)
+            selection: .workspace(SidebarPreviewData.gaming.id)
         )
     }
 
     #Preview("Sidebar / Agent stopped") {
         SidebarPreview(
             content: SidebarPreviewData.disconnected,
-            selection: .context(SidebarPreviewData.academy.id)
+            selection: .workspace(SidebarPreviewData.academy.id)
         )
     }
 
     #Preview("Sidebar / Accessibility required") {
         SidebarPreview(
             content: SidebarPreviewData.accessibilityRequired,
-            selection: .context(SidebarPreviewData.academy.id)
+            selection: .workspace(SidebarPreviewData.academy.id)
         )
     }
 
     #Preview("Sidebar / Long names") {
         SidebarPreview(
             content: SidebarPreviewData.longNames,
-            selection: .context(SidebarPreviewData.longName.id)
+            selection: .workspace(SidebarPreviewData.longName.id)
         )
     }
 
     #Preview("Sidebar / Archived") {
         SidebarPreview(
             content: SidebarPreviewData.populated,
-            selection: .context(SidebarPreviewData.archived.id),
+            selection: .workspace(SidebarPreviewData.archived.id),
             search: SidebarSearchState(isArchivedSectionExpanded: true)
         )
     }
@@ -74,7 +74,7 @@
     #Preview("Sidebar / No update") {
         SidebarPreview(
             content: SidebarPreviewData.populated,
-            selection: .context(SidebarPreviewData.study.id)
+            selection: .workspace(SidebarPreviewData.study.id)
         )
     }
 
@@ -105,7 +105,7 @@
         SidebarPreview(
             content: SidebarPreviewData.populated,
             availableUpdate: SidebarPreviewData.availableUpdate,
-            selection: .context(SidebarPreviewData.academy.id),
+            selection: .workspace(SidebarPreviewData.academy.id),
         )
     }
 
@@ -135,7 +135,7 @@
                     availableUpdate: availableUpdate,
                     selectedDestination: $selectedDestination,
                     initialSearch: search,
-                    onCreateContext: {},
+                    onCreateWorkspace: {},
                     onDismissError: {}
                 )
 
@@ -165,8 +165,8 @@
                 "Settings"
             case .about:
                 "About"
-            case .context(let identifier):
-                contextName(identifier) ?? "Workspace"
+            case .workspace(let identifier):
+                workspaceName(identifier) ?? "Workspace"
             case .debug:
                 "Debug"
             case nil:
@@ -174,9 +174,9 @@
             }
         }
 
-        private func contextName(_ identifier: UUID) -> String? {
-            let contexts = content.contexts + content.archivedContexts
-            return contexts.first { $0.id == identifier }?.name
+        private func workspaceName(_ identifier: UUID) -> String? {
+            let workspaces = content.workspaces + content.archivedWorkspaces
+            return workspaces.first { $0.id == identifier }?.name
         }
     }
 
@@ -237,40 +237,40 @@
                 .font(DawnTextStyle.sidebarSectionHeader)
                 .foregroundStyle(DawnColors.sidebarSecondaryForeground)
 
-            SidebarContextRow(name: name, symbol: "book.fill", state: state)
+            SidebarWorkspaceRow(name: name, symbol: "book.fill", state: state)
         }
     }
 
     private enum SidebarPreviewData {
-        static let academy = makeContext(
+        static let academy = makeWorkspace(
             "10000000-0000-0000-0000-000000000001",
             name: "Apple Developer Academy",
             symbol: "apple.terminal.on.rectangle.fill"
         )
 
-        static let gaming = makeContext(
+        static let gaming = makeWorkspace(
             "10000000-0000-0000-0000-000000000002",
             name: "Gaming",
             symbol: "logo.playstation"
         )
 
-        static let study = makeContext(
+        static let study = makeWorkspace(
             "10000000-0000-0000-0000-000000000003",
             name: "Study",
             symbol: "book.fill"
         )
 
-        static let archived = makeContext(
+        static let archived = makeWorkspace(
             "10000000-0000-0000-0000-000000000004",
             name: "Appppppple IPHONE 2 DUO!!!",
             symbol: "book.fill",
             isArchived: true
         )
 
-        static let longName = makeContext(
+        static let longName = makeWorkspace(
             "10000000-0000-0000-0000-000000000005",
             name: "Apple Developer Academy International Design and Technology Studio",
-            symbol: "apple.logo"
+            symbol: "house.fill"
         )
 
         static let availableUpdate = AvailableAppUpdate(
@@ -282,14 +282,14 @@
 
         static var populated: SidebarContent {
             SidebarContent(
-                contexts: [academy, gaming, study],
-                archivedContexts: [archived],
+                workspaces: [academy, gaming, study],
+                archivedWorkspaces: [archived],
                 activity: WorkspaceActivityState(
                     activeSession: .init(
-                        contextID: academy.id,
+                        workspaceID: academy.id,
                         startedAt: Date().addingTimeInterval(-5 * 3600 - 12 * 60)
                     ),
-                    lastActiveAtByContextID: [
+                    lastActiveAtByWorkspaceID: [
                         gaming.id: Date().addingTimeInterval(-86_400),
                         study.id: Date().addingTimeInterval(-86_400),
                     ]
@@ -303,17 +303,17 @@
 
         static var full: SidebarContent {
             SidebarContent(
-                contexts: [academy, gaming, study],
-                archivedContexts: [oldContext],
+                workspaces: [academy, gaming, study],
+                archivedWorkspaces: [oldWorkspace],
                 activity: WorkspaceActivityState(
-                    activeSession: .init(contextID: academy.id, startedAt: Date().addingTimeInterval(-3600))
+                    activeSession: .init(workspaceID: academy.id, startedAt: Date().addingTimeInterval(-3600))
                 ),
                 isAgentRunning: false,
                 interactionsDisabled: true,
             )
         }
 
-        static let oldContext = makeContext(
+        static let oldWorkspace = makeWorkspace(
             "10000000-0000-0000-0000-000000000006",
             name: "Personal (2024)",
             symbol: "archivebox",
@@ -326,7 +326,7 @@
 
         static var busy: SidebarContent {
             var content = populated
-            content.busyContextID = gaming.id
+            content.busyWorkspaceID = gaming.id
             content.interactionsDisabled = true
             return content
         }
@@ -346,10 +346,10 @@
 
         static var longNames: SidebarContent {
             SidebarContent(
-                contexts: [longName, gaming, study],
-                archivedContexts: [archived],
+                workspaces: [longName, gaming, study],
+                archivedWorkspaces: [archived],
                 activity: WorkspaceActivityState(
-                    activeSession: .init(contextID: longName.id, startedAt: Date().addingTimeInterval(-600))
+                    activeSession: .init(workspaceID: longName.id, startedAt: Date().addingTimeInterval(-600))
                 )
             )
         }
@@ -357,19 +357,19 @@
         static var failed: SidebarContent {
             var content = populated
             content.errorMessages = [
-                SidebarErrorMessage(text: "The workspace manager could not switch contexts.")
+                SidebarErrorMessage(text: "The workspace manager could not switch workspaces.")
             ]
             content.isAgentRunning = false
             return content
         }
 
-        private static func makeContext(
+        private static func makeWorkspace(
             _ identifier: String,
             name: String,
             symbol: String,
             isArchived: Bool = false
-        ) -> WorkspaceContext {
-            WorkspaceContext(
+        ) -> Workspace {
+            Workspace(
                 id: UUID(uuidString: identifier) ?? UUID(),
                 name: name,
                 symbol: symbol,

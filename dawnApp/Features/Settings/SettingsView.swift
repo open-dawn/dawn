@@ -139,7 +139,7 @@ struct SettingsContent: View {
     }
 
     private var protectedAppsSection: some View {
-        ContextDetailApplicationList(
+        WorkspaceDetailApplicationList(
             title: "Protected applications",
             subtitle: "(not affected by workspace changes)",
             titleFont: DawnTextStyle.settingsSectionTitle,
@@ -177,12 +177,12 @@ struct SettingsContent: View {
         VStack(alignment: .leading, spacing: 16) {
             sectionTitle("Other options")
 
-            HStack(spacing: 12) {
-                HStack(spacing: 8) {
+            HStack(alignment: .center, spacing: 12) {
+                HStack(alignment: .center, spacing: 8) {
                     Image(systemName: "hand.raised")
                         .font(DawnTextStyle.actionIcon)
                         .foregroundStyle(DawnColors.primaryForeground)
-                        .frame(width: 24, height: 24)
+                        .frame(width: DawnTextStyle.bodySize + 8, height: DawnTextStyle.bodySize + 8)
                         .accessibilityHidden(true)
 
                     VStack(alignment: .leading, spacing: 2) {
@@ -191,7 +191,7 @@ struct SettingsContent: View {
                             .foregroundStyle(DawnColors.primaryForeground)
 
                         Text(accessibilityStatusDescription)
-                            .font(DawnTextStyle.primary)
+                            .font(DawnTextStyle.secondaryCaption)
                             .foregroundStyle(DawnColors.secondaryForeground)
                     }
                 }
@@ -241,12 +241,12 @@ struct SettingsContent: View {
         systemImage: String,
         isOn: Binding<Bool>
     ) -> some View {
-        HStack(spacing: 12) {
-            HStack(spacing: 8) {
+        HStack(alignment: .center, spacing: 12) {
+            HStack(alignment: .center, spacing: 8) {
                 Image(systemName: systemImage)
                     .font(DawnTextStyle.actionIcon)
                     .foregroundStyle(DawnColors.primaryForeground)
-                    .frame(width: 24, height: 24)
+                    .frame(width: DawnTextStyle.bodySize + 8, height: DawnTextStyle.bodySize + 8)
                     .accessibilityHidden(true)
 
                 Text(title)
@@ -285,7 +285,7 @@ private struct SettingsProtectedApplicationPicker: View {
     let onCancel: () -> Void
 
     var body: some View {
-        ContextApplicationPicker(
+        WorkspaceApplicationPicker(
             loadApplications: loadInstalledApplications,
             initialSelection: protectedApps.map { creationApplication(from: $0) },
             confirmTitle: "Add",
@@ -303,7 +303,7 @@ private struct SettingsProtectedApplicationPicker: View {
         .presentationBackground(DawnColors.primaryBackground)
     }
 
-    private func loadInstalledApplications() async throws -> [ContextCreationApplication] {
+    private func loadInstalledApplications() async throws -> [WorkspaceCreationApplication] {
         try await ApplicationsDirectoryProvider().applications().map {
             creationApplication(from: $0)
         }
@@ -311,8 +311,8 @@ private struct SettingsProtectedApplicationPicker: View {
 
     private func creationApplication(
         from application: WorkspaceApplication
-    ) -> ContextCreationApplication {
-        ContextCreationApplication(
+    ) -> WorkspaceCreationApplication {
+        WorkspaceCreationApplication(
             id: application.id,
             bundleIdentifier: application.bundleIdentifier,
             displayName: application.displayName,
@@ -322,15 +322,15 @@ private struct SettingsProtectedApplicationPicker: View {
 
     private func creationApplication(
         from application: ProtectedApplication
-    ) -> ContextCreationApplication {
-        ContextCreationApplication(
+    ) -> WorkspaceCreationApplication {
+        WorkspaceCreationApplication(
             bundleIdentifier: application.bundleIdentifier,
             displayName: application.displayName
         )
     }
 
     private func protectedApplication(
-        from application: ContextCreationApplication
+        from application: WorkspaceCreationApplication
     ) -> ProtectedApplication {
         ProtectedApplication(
             bundleIdentifier: application.bundleIdentifier,

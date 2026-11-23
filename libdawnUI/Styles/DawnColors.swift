@@ -41,17 +41,17 @@ public enum DawnColors {
 
     public static let selectionForeground = Color(.selectionForeground)
 
-    public static let contextCardBackground = Color(.contextCardBackground)
-    public static let contextCardHoveredBackground = Color(.contextCardHoveredBackground)
+    public static let workspaceCardBackground = Color(.workspaceCardBackground)
+    public static let workspaceCardHoveredBackground = Color(.workspaceCardHoveredBackground)
 
-    public static let selectedContextCardBackground = Color(.selectedContextCardBackground)
-    public static let selectedContextCardHoveredBackground = Color(.selectedContextCardHoveredBackground)
+    public static let selectedWorkspaceCardBackground = Color(.selectedWorkspaceCardBackground)
+    public static let selectedWorkspaceCardHoveredBackground = Color(.selectedWorkspaceCardHoveredBackground)
 
-    public static let contextCardBorder = Color(.contextCardBorder)
-    public static let contextCardHoveredBorder = Color(.contextCardHoveredBorder)
+    public static let workspaceCardBorder = Color(.workspaceCardBorder)
+    public static let workspaceCardHoveredBorder = Color(.workspaceCardHoveredBorder)
 
-    public static let contextCardContent = Color(.contextCardContent)
-    public static let contextCardContentActive = Color(.contextCardContentActive)
+    public static let workspaceCardContent = Color(.workspaceCardContent)
+    public static let workspaceCardContentActive = Color(.workspaceCardContentActive)
 
     public static let primaryBackground = Color(.primaryBackground) // #FDF6EE / #212121
     public static let secondaryBackground = Color(.secondaryBackground)

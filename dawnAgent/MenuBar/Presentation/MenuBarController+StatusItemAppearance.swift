@@ -8,9 +8,9 @@ import Observation
 import libdawnUI
 
 extension MenuBarController {
-    func startObservingActiveContext() {
+    func startObservingActiveWorkspace() {
         updateStatusItemAppearance()
-        observeActiveContext()
+        observeActiveWorkspace()
     }
 
     func updateStatusItemAppearance() {
@@ -18,14 +18,14 @@ extension MenuBarController {
             return
         }
 
-        button.image = makeStatusItemImage(isActive: hasActiveContext)
+        button.image = makeStatusItemImage(isActive: hasActiveWorkspace)
     }
 
     func makeStatusItemImage(isActive: Bool) -> NSImage? {
         let accessibilityDescription =
             isActive
-            ? "DAWN, context active"
-            : "DAWN, no active context"
+            ? "DAWN, workspace active"
+            : "DAWN, no active workspace"
 
         let image =
             (DawnSymbol.nsImage(isActive: isActive)?.copy() as? NSImage)
@@ -51,9 +51,9 @@ extension MenuBarController {
         return image
     }
 
-    private func observeActiveContext() {
+    private func observeActiveWorkspace() {
         withObservationTracking {
-            _ = observedActiveContextID
+            _ = observedActiveWorkspaceID
         } onChange: { [weak self] in
             Task { @MainActor [weak self] in
                 guard let self, self.canUpdateStatusItemAppearance else {
@@ -61,7 +61,7 @@ extension MenuBarController {
                 }
 
                 self.updateStatusItemAppearance()
-                self.observeActiveContext()
+                self.observeActiveWorkspace()
             }
         }
     }

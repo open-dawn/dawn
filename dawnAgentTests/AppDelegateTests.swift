@@ -17,7 +17,7 @@ struct AppDelegateTests {
     @Test("Start registers and retains listeners before starting service")
     func startRegistersListenersBeforeService() async throws {
         let service = EventBusServiceSpy()
-        let provider = ContextProviderStub()
+        let provider = WorkspaceProviderStub()
         let menuBarController = MenuBarControllerSpy()
         let identity = ComponentIdentity(
             identifier: EventBusMachService.agentBundleIdentifier,
@@ -46,24 +46,24 @@ struct AppDelegateTests {
         #expect(service.startCallCount == 1)
         #expect(service.listenersWereRegisteredWhenStarted)
 
-        #expect(service.bus.hasListeners(for: .getContexts(GetContextsEvent())))
+        #expect(service.bus.hasListeners(for: .getWorkspaces(GetWorkspacesEvent())))
         #expect(service.bus.hasListeners(for: .debugPing(DebugPingEvent())))
         #expect(service.bus.hasListeners(for: .getSettings(GetSettingsEvent())))
         #expect(service.bus.hasListeners(for: .getComponentIdentity(GetComponentIdentityEvent())))
         #expect(service.bus.hasListeners(for: .prepareForApplicationUpdate(PrepareForApplicationUpdateEvent())))
     }
 
-    @Test("Retained workspace listener answers context requests")
-    func retainedListenerAnswersContextRequests() async throws {
-        let expectedContext = [
-            WorkspaceContext(
+    @Test("Retained workspace listener answers workspace requests")
+    func retainedListenerAnswersWorkspaceRequests() async throws {
+        let expectedWorkspace = [
+            Workspace(
                 name: "Study",
                 symbol: "book"
             )
         ]
 
         let service = EventBusServiceSpy()
-        let provider = ContextProviderStub(contexts: expectedContext)
+        let provider = WorkspaceProviderStub(workspaces: expectedWorkspace)
         let menuBarController = MenuBarControllerSpy()
 
         let delegate = AppDelegate(
@@ -82,16 +82,16 @@ struct AppDelegateTests {
         try await delegate.start()
 
         let response = try await service.bus.ask(
-            .getContexts(GetContextsEvent()),
+            .getWorkspaces(GetWorkspacesEvent()),
             timeout: .seconds(1)
         )
 
-        guard case .contextsFetched(let contextsFetchedEvent) = response else {
-            Issue.record("Expected contextsFetched, received \(response)")
+        guard case .workspacesFetched(let workspacesFetchedEvent) = response else {
+            Issue.record("Expected workspacesFetched, received \(response)")
             return
         }
 
-        #expect(contextsFetchedEvent.contexts == expectedContext)
+        #expect(workspacesFetchedEvent.workspaces == expectedWorkspace)
     }
 
     @Test("Startup failure does not start event bus service")
@@ -121,7 +121,7 @@ struct AppDelegateTests {
     @Test("Termination stops service and releases listeners")
     func terminationStopsServiceAndReleasesListeners() async throws {
         let service = EventBusServiceSpy()
-        let provider = ContextProviderStub()
+        let provider = WorkspaceProviderStub()
         let menuBarController = MenuBarControllerSpy()
 
         let delegate = AppDelegate(
@@ -146,7 +146,7 @@ struct AppDelegateTests {
         )
 
         #expect(service.stopCallCount == 1)
-        #expect(!service.bus.hasListeners(for: .getContexts(GetContextsEvent())))
+        #expect(!service.bus.hasListeners(for: .getWorkspaces(GetWorkspacesEvent())))
         #expect(!service.bus.hasListeners(for: .debugPing(DebugPingEvent())))
         #expect(!service.bus.hasListeners(for: .getSettings(GetSettingsEvent())))
         #expect(!service.bus.hasListeners(for: .applySettings(ApplySettingsEvent())))
@@ -156,7 +156,7 @@ struct AppDelegateTests {
     @Test("Repeated starts initialize only once")
     func repeatedStartsInitializeOnlyOnce() async throws {
         let service = EventBusServiceSpy()
-        let provider = ContextProviderStub()
+        let provider = WorkspaceProviderStub()
         var factoryCallCount = 0
         let menuBarController = MenuBarControllerSpy()
 
@@ -185,7 +185,7 @@ struct AppDelegateTests {
     @Test("Overlapping starts initialize only once")
     func overlappingStartsInitializeOnlyOnce() async throws {
         let service = EventBusServiceSpy()
-        let provider = ContextProviderStub()
+        let provider = WorkspaceProviderStub()
         let factory = PausingWorkspaceRuntimeFactory(provider: provider)
         let menuBarController = MenuBarControllerSpy()
         let delegate = AppDelegate(
@@ -226,7 +226,7 @@ struct AppDelegateTests {
     @Test("Startup can be retried after failure")
     func startupCanBeRetriedAfterFailure() async throws {
         let service = EventBusServiceSpy()
-        let provider = ContextProviderStub()
+        let provider = WorkspaceProviderStub()
         var attemptCount = 0
         let menuBarController = MenuBarControllerSpy()
 
@@ -263,19 +263,19 @@ struct AppDelegateTests {
     func startLoadsInitialWorkspaceSnapshot() async throws {
         let service = EventBusServiceSpy()
 
-        let expectedContexts = [
-            WorkspaceContext(
+        let expectedWorkspaces = [
+            Workspace(
                 name: "Study",
                 symbol: "book"
             )
         ]
 
-        let provider = ContextProviderStub(
-            contexts: expectedContexts
+        let provider = WorkspaceProviderStub(
+            workspaces: expectedWorkspaces
         )
 
         let runtime = WorkspaceRuntime(
-            contextManager: provider
+            workspaceCatalog: provider
         )
 
         let menuBarController = MenuBarControllerSpy()
@@ -296,17 +296,17 @@ struct AppDelegateTests {
         try await delegate.start()
 
         #expect(provider.getWorkspaceSnapshotCallCount == 1)
-        #expect(runtime.contexts == expectedContexts)
-        #expect(provider.stopActiveContextCallCount == 0)
+        #expect(runtime.workspaces == expectedWorkspaces)
+        #expect(provider.stopActiveWorkspaceCallCount == 0)
     }
 
     @Test("Start creates menu controller with shared runtime once")
     func startCreatesMenuControllerOnce() async throws {
         let service = EventBusService()
-        let provider = ContextProviderStub()
+        let provider = WorkspaceProviderStub()
 
         let runtime = WorkspaceRuntime(
-            contextManager: provider
+            workspaceCatalog: provider
         )
 
         let menuBarController = MenuBarControllerSpy()
@@ -339,35 +339,35 @@ struct AppDelegateTests {
 
     @Test("Start ends a restored active session before creating menu bar")
     func startEndsRestoredActiveSession() async throws {
-        let context = WorkspaceContext(
+        let workspace = Workspace(
             name: "Work",
             symbol: "briefcase"
         )
 
-        let provider = ContextProviderStub(
-            contexts: [context]
+        let provider = WorkspaceProviderStub(
+            workspaces: [workspace]
         )
 
         provider.workspaceActivity.activate(
-            contextID: context.id,
+            workspaceID: workspace.id,
             at: Date(timeIntervalSince1970: 100)
         )
 
         let runtime = WorkspaceRuntime(
-            contextManager: provider
+            workspaceCatalog: provider
         )
 
         let service = EventBusServiceSpy()
         let menuBarController = MenuBarControllerSpy()
 
-        var activeContextReceivedByMenuBar: UUID?
+        var activeWorkspaceReceivedByMenuBar: UUID?
 
         let delegate = AppDelegate(
             eventBusService: service,
             repository: MockSettingsRepository(),
             makeMenuBarController: { workspace, _ in
-                activeContextReceivedByMenuBar =
-                    workspace.activeContextID
+                activeWorkspaceReceivedByMenuBar =
+                    workspace.activeWorkspaceID
 
                 return menuBarController
             },
@@ -380,13 +380,13 @@ struct AppDelegateTests {
 
         try await delegate.start()
 
-        #expect(provider.stopActiveContextCallCount == 1)
-        #expect(provider.workspaceActivity.activeContextID == nil)
-        #expect(runtime.activeContextID == nil)
-        #expect(activeContextReceivedByMenuBar == nil)
+        #expect(provider.stopActiveWorkspaceCallCount == 1)
+        #expect(provider.workspaceActivity.activeWorkspaceID == nil)
+        #expect(runtime.activeWorkspaceID == nil)
+        #expect(activeWorkspaceReceivedByMenuBar == nil)
 
         #expect(
-            runtime.lastActiveAt(for: context.id)
+            runtime.lastActiveAt(for: workspace.id)
                 == provider.lastStopDate
         )
     }
@@ -399,7 +399,7 @@ struct AppDelegateTests {
         expectedVisibility: Bool
     ) async throws {
         let service = EventBusServiceSpy()
-        let provider = ContextProviderStub()
+        let provider = WorkspaceProviderStub()
         var document = SettingsDocument.empty
         document.generalSettings.showInMenuBar = expectedVisibility
 
@@ -434,7 +434,7 @@ struct AppDelegateTests {
         )
 
         let service = EventBusServiceSpy()
-        let provider = ContextProviderStub()
+        let provider = WorkspaceProviderStub()
         let menuBarController = MenuBarControllerSpy()
 
         let delegate = AppDelegate(
@@ -482,8 +482,8 @@ private final class EventBusServiceSpy: EventBusServicing {
         startCallCount += 1
 
         let hasWorkspaceListener = bus.hasListeners(
-            for: .getContexts(
-                GetContextsEvent()
+            for: .getWorkspaces(
+                GetWorkspacesEvent()
             )
         )
 
@@ -524,22 +524,22 @@ private final class EventBusServiceSpy: EventBusServicing {
 }
 
 @MainActor
-private final class ContextProviderStub: WorkspaceManaging {
+private final class WorkspaceProviderStub: WorkspaceManaging {
     private(set) var getWorkspaceSnapshotCallCount = 0
-    private(set) var stopActiveContextCallCount = 0
+    private(set) var stopActiveWorkspaceCallCount = 0
     private(set) var lastStopDate: Date?
 
-    private let contexts: [WorkspaceContext]
+    private let workspaces: [Workspace]
 
     var workspaceActivity: WorkspaceActivityState = .empty
 
-    func createContext(
+    func createWorkspace(
         name: String,
         symbol: String,
         applications: [WorkspaceApplication],
         transition: WorkspaceTransition
-    ) async throws -> WorkspaceContext {
-        WorkspaceContext(
+    ) async throws -> Workspace {
+        Workspace(
             name: name,
             symbol: symbol,
             applications: applications,
@@ -547,49 +547,49 @@ private final class ContextProviderStub: WorkspaceManaging {
         )
     }
 
-    func updateContext(_ context: WorkspaceContext) async throws {
+    func updateWorkspace(_ workspace: Workspace) async throws {
     }
 
-    func deleteContext(id: UUID) async throws {
+    func deleteWorkspace(id: UUID) async throws {
     }
 
-    func archiveContext(id: UUID) async throws {
+    func archiveWorkspace(id: UUID) async throws {
     }
 
-    func unarchiveContext(id: UUID) async throws {
+    func unarchiveWorkspace(id: UUID) async throws {
     }
 
-    func getContext(id: UUID) async -> WorkspaceContext? {
-        WorkspaceContext(id: id, name: "Placeholder", symbol: "book")
+    func getWorkspace(id: UUID) async -> Workspace? {
+        Workspace(id: id, name: "Placeholder", symbol: "book")
     }
 
-    init(contexts: [WorkspaceContext] = []) {
-        self.contexts = contexts
+    init(workspaces: [Workspace] = []) {
+        self.workspaces = workspaces
     }
 
-    func getAvailableContexts() async -> [WorkspaceContext] {
-        return contexts
+    func getAvailableWorkspaces() async -> [Workspace] {
+        return workspaces
     }
 
     func getWorkspaceActivity() async -> WorkspaceActivityState {
         workspaceActivity
     }
 
-    func recordContextActivation(contextID: UUID, at date: Date) async throws -> WorkspaceActivityState {
-        guard contexts.contains(where: { $0.id == contextID }) else {
-            throw SettingsStoreError.contextNotFound(contextID)
+    func recordWorkspaceActivation(workspaceID: UUID, at date: Date) async throws -> WorkspaceActivityState {
+        guard workspaces.contains(where: { $0.id == workspaceID }) else {
+            throw SettingsStoreError.workspaceNotFound(workspaceID)
         }
 
         workspaceActivity.activate(
-            contextID: contextID,
+            workspaceID: workspaceID,
             at: date
         )
 
         return workspaceActivity
     }
 
-    func stopActiveContext(at date: Date) async throws -> WorkspaceActivityState {
-        stopActiveContextCallCount += 1
+    func stopActiveWorkspace(at date: Date) async throws -> WorkspaceActivityState {
+        stopActiveWorkspaceCallCount += 1
         lastStopDate = date
 
         workspaceActivity.stop(at: date)
@@ -601,7 +601,7 @@ private final class ContextProviderStub: WorkspaceManaging {
         getWorkspaceSnapshotCallCount += 1
 
         return WorkspaceSnapshot(
-            contexts: contexts,
+            workspaces: workspaces,
             activity: workspaceActivity
         )
     }
@@ -609,13 +609,13 @@ private final class ContextProviderStub: WorkspaceManaging {
 
 @MainActor
 private final class PausingWorkspaceRuntimeFactory {
-    private let provider: ContextProviderStub
+    private let provider: WorkspaceProviderStub
     private var callWaiter: CheckedContinuation<Void, Never>?
     private var factoryContinuation: CheckedContinuation<Void, Never>?
 
     private(set) var callCount = 0
 
-    init(provider: ContextProviderStub) {
+    init(provider: WorkspaceProviderStub) {
         self.provider = provider
     }
 
@@ -630,7 +630,7 @@ private final class PausingWorkspaceRuntimeFactory {
         }
 
         return WorkspaceRuntime(
-            contextManager: provider
+            workspaceCatalog: provider
         )
     }
 
@@ -673,11 +673,11 @@ private enum StartupError: Error, Equatable {
 
 @MainActor
 private func makeAgentRuntimeComponents(
-    provider: ContextProviderStub
+    provider: WorkspaceProviderStub
 ) -> AgentRuntimeComponents {
     AgentRuntimeComponents(
         workspace: WorkspaceRuntime(
-            contextManager: provider
+            workspaceCatalog: provider
         )
     )
 }

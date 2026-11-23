@@ -7,7 +7,7 @@ protocol SettingsEventBus: AnyObject {
     func ask(_ event: Event, timeout: Duration) async throws -> Event
 }
 
-/// Shared event-bus surface used by context, settings, and accessibility clients.
-typealias SettingsContextEventBus = SettingsEventBus
+/// Shared event-bus surface used by workspace, settings, and accessibility clients.
+typealias SettingsWorkspaceEventBus = SettingsEventBus
 
 extension RemoteEventBus: SettingsEventBus {}

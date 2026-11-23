@@ -2,19 +2,19 @@ import dawnLogging
 import libdawn
 
 @MainActor
-protocol ContextSwitching {
-    func switchToContext(to context: WorkspaceContext) async throws
+protocol WorkspaceSwitching {
+    func switchToWorkspace(to workspace: Workspace) async throws
 }
 
 @MainActor
-final class DefaultContextSwitching: ContextSwitching {
+final class DefaultWorkspaceSwitching: WorkspaceSwitching {
     private var tail: Task<Void, Never>?
 
-    func switchToContext(to context: WorkspaceContext) async throws {
+    func switchToWorkspace(to workspace: Workspace) async throws {
         let previous = tail
         let transition = Task { @MainActor in
             await previous?.value
-            try await WMActionIdentifier.workspaceTransition(context).action.execute()
+            try await WMActionIdentifier.workspaceTransition(workspace).action.execute()
         }
         tail = Task {
             _ = try? await transition.value
@@ -40,14 +40,14 @@ final class WindowManagerListener: Listener {
             self,
             kinds: [
                 .initialized,
-                .getContexts,
-                .createContext,
-                .updateContext,
-                .deleteContext,
-                .archiveContext,
-                .unarchiveContext,
-                .switchContext,
-                .stopContext,
+                .getWorkspaces,
+                .createWorkspace,
+                .updateWorkspace,
+                .deleteWorkspace,
+                .archiveWorkspace,
+                .unarchiveWorkspace,
+                .switchWorkspace,
+                .stopWorkspace,
             ]
         )
     }
@@ -60,7 +60,7 @@ final class WindowManagerListener: Listener {
             return
         }
 
-        if event.isContextMutation {
+        if event.isWorkspaceMutation {
             handleMutationEvent(event, reply: reply)
         } else {
             handleNonMutationEvent(event, reply: reply)
@@ -72,14 +72,14 @@ final class WindowManagerListener: Listener {
         reply: (@Sendable (Event) -> Void)?
     ) {
         switch event {
-        case .getContexts:
+        case .getWorkspaces:
             Task { @MainActor in
-                let contexts = await getAllContexts()
+                let workspaces = await getAllWorkspaces()
 
                 reply?(
-                    .contextsFetched(
-                        ContextsFetchedEvent(
-                            contexts: contexts,
+                    .workspacesFetched(
+                        WorkspacesFetchedEvent(
+                            workspaces: workspaces,
                             activity: workspace.workspaceActivity
                         )
                     )
@@ -103,45 +103,45 @@ final class WindowManagerListener: Listener {
         reply: (@Sendable (Event) -> Void)?
     ) {
         switch event {
-        case .createContext(let payload):
-            handleCreateContext(payload, reply: reply)
+        case .createWorkspace(let payload):
+            handleCreateWorkspace(payload, reply: reply)
 
-        case .updateContext(let payload):
-            handleUpdateContext(payload, reply: reply)
+        case .updateWorkspace(let payload):
+            handleUpdateWorkspace(payload, reply: reply)
 
-        case .deleteContext(let payload):
-            handleDeleteContext(payload, reply: reply)
+        case .deleteWorkspace(let payload):
+            handleDeleteWorkspace(payload, reply: reply)
 
-        case .archiveContext(let payload):
-            handleArchiveContext(payload, reply: reply)
+        case .archiveWorkspace(let payload):
+            handleArchiveWorkspace(payload, reply: reply)
 
-        case .unarchiveContext(let payload):
-            handleUnarchiveContext(payload, reply: reply)
+        case .unarchiveWorkspace(let payload):
+            handleUnarchiveWorkspace(payload, reply: reply)
 
-        case .switchContext(let payload):
-            handleSwitchContext(payload, reply: reply)
+        case .switchWorkspace(let payload):
+            handleSwitchWorkspace(payload, reply: reply)
 
-        case .stopContext(let payload):
-            handleStopContext(payload, reply: reply)
+        case .stopWorkspace(let payload):
+            handleStopWorkspace(payload, reply: reply)
 
         default:
             return
         }
     }
 
-    func getAllContexts() async -> [WorkspaceContext] {
-        await workspace.getAvailableContexts()
+    func getAllWorkspaces() async -> [Workspace] {
+        await workspace.getAvailableWorkspaces()
     }
 }
 
 extension WindowManagerListener {
 
-    private func handleCreateContext(_ payload: CreateContextEvent, reply: (@Sendable (Event) -> Void)?) {
+    private func handleCreateWorkspace(_ payload: CreateWorkspaceEvent, reply: (@Sendable (Event) -> Void)?) {
         guard let reply else { return }
 
         Task { @MainActor in
             do {
-                let context = try await workspace.createContext(
+                let created = try await workspace.createWorkspace(
                     name: payload.name,
                     symbol: payload.symbol,
                     applications: payload.applications,
@@ -149,13 +149,13 @@ extension WindowManagerListener {
                 )
 
                 reply(
-                    .contextMutationAcknowledged(
-                        .success(contextID: context.id)
+                    .workspaceMutationAcknowledged(
+                        .success(workspaceID: created.id)
                     )
                 )
             } catch {
                 reply(
-                    .contextMutationAcknowledged(
+                    .workspaceMutationAcknowledged(
                         .failure(
                             failure: mutationFailure(from: error)
                         )
@@ -165,23 +165,23 @@ extension WindowManagerListener {
         }
     }
 
-    private func handleUpdateContext(_ payload: UpdateContextEvent, reply: (@Sendable (Event) -> Void)?) {
+    private func handleUpdateWorkspace(_ payload: UpdateWorkspaceEvent, reply: (@Sendable (Event) -> Void)?) {
         guard let reply else { return }
 
         Task { @MainActor in
             do {
-                try await workspace.updateContext(
-                    payload.context
+                try await workspace.updateWorkspace(
+                    payload.workspace
                 )
 
                 reply(
-                    .contextMutationAcknowledged(
-                        .success(contextID: payload.context.id)
+                    .workspaceMutationAcknowledged(
+                        .success(workspaceID: payload.workspace.id)
                     )
                 )
             } catch {
                 reply(
-                    .contextMutationAcknowledged(
+                    .workspaceMutationAcknowledged(
                         .failure(
                             failure: mutationFailure(from: error)
                         )
@@ -191,23 +191,23 @@ extension WindowManagerListener {
         }
     }
 
-    private func handleDeleteContext(_ payload: DeleteContextEvent, reply: (@Sendable (Event) -> Void)?) {
+    private func handleDeleteWorkspace(_ payload: DeleteWorkspaceEvent, reply: (@Sendable (Event) -> Void)?) {
         guard let reply else { return }
 
         Task { @MainActor in
             do {
-                try await workspace.deleteContext(
-                    id: payload.contextID
+                try await workspace.deleteWorkspace(
+                    id: payload.workspaceID
                 )
 
                 reply(
-                    .contextMutationAcknowledged(
-                        .success(contextID: payload.contextID)
+                    .workspaceMutationAcknowledged(
+                        .success(workspaceID: payload.workspaceID)
                     )
                 )
             } catch {
                 reply(
-                    .contextMutationAcknowledged(
+                    .workspaceMutationAcknowledged(
                         .failure(failure: mutationFailure(from: error))
                     )
                 )
@@ -215,21 +215,21 @@ extension WindowManagerListener {
         }
     }
 
-    private func handleArchiveContext(_ payload: ArchiveContextEvent, reply: (@Sendable (Event) -> Void)?) {
+    private func handleArchiveWorkspace(_ payload: ArchiveWorkspaceEvent, reply: (@Sendable (Event) -> Void)?) {
         guard let reply else { return }
 
         Task { @MainActor in
             do {
-                try await workspace.archiveContext(id: payload.contextID)
+                try await workspace.archiveWorkspace(id: payload.workspaceID)
 
                 reply(
-                    .contextMutationAcknowledged(
-                        .success(contextID: payload.contextID)
+                    .workspaceMutationAcknowledged(
+                        .success(workspaceID: payload.workspaceID)
                     )
                 )
             } catch {
                 reply(
-                    .contextMutationAcknowledged(
+                    .workspaceMutationAcknowledged(
                         .failure(failure: mutationFailure(from: error))
                     )
                 )
@@ -237,21 +237,21 @@ extension WindowManagerListener {
         }
     }
 
-    private func handleUnarchiveContext(_ payload: UnarchiveContextEvent, reply: (@Sendable (Event) -> Void)?) {
+    private func handleUnarchiveWorkspace(_ payload: UnarchiveWorkspaceEvent, reply: (@Sendable (Event) -> Void)?) {
         guard let reply else { return }
 
         Task { @MainActor in
             do {
-                try await workspace.unarchiveContext(id: payload.contextID)
+                try await workspace.unarchiveWorkspace(id: payload.workspaceID)
 
                 reply(
-                    .contextMutationAcknowledged(
-                        .success(contextID: payload.contextID)
+                    .workspaceMutationAcknowledged(
+                        .success(workspaceID: payload.workspaceID)
                     )
                 )
             } catch {
                 reply(
-                    .contextMutationAcknowledged(
+                    .workspaceMutationAcknowledged(
                         .failure(failure: mutationFailure(from: error))
                     )
                 )
@@ -259,21 +259,21 @@ extension WindowManagerListener {
         }
     }
 
-    private func handleSwitchContext(_ payload: SwitchContextEvent, reply: (@Sendable (Event) -> Void)?) {
+    private func handleSwitchWorkspace(_ payload: SwitchWorkspaceEvent, reply: (@Sendable (Event) -> Void)?) {
         guard let reply else { return }
 
         Task { @MainActor in
             do {
-                try await workspace.activateContext(id: payload.contextID)
+                try await workspace.activateWorkspace(id: payload.workspaceID)
 
                 reply(
-                    .contextMutationAcknowledged(
-                        .success(contextID: payload.contextID)
+                    .workspaceMutationAcknowledged(
+                        .success(workspaceID: payload.workspaceID)
                     )
                 )
             } catch {
                 reply(
-                    .contextMutationAcknowledged(
+                    .workspaceMutationAcknowledged(
                         .failure(
                             failure: mutationFailure(from: error)
                         )
@@ -283,16 +283,16 @@ extension WindowManagerListener {
         }
     }
 
-    private func handleStopContext(_ payload: StopContextEvent, reply: (@Sendable (Event) -> Void)?) {
+    private func handleStopWorkspace(_ payload: StopWorkspaceEvent, reply: (@Sendable (Event) -> Void)?) {
         guard let reply else { return }
 
         Task { @MainActor in
             do {
-                guard workspace.activeContextID == payload.contextID else {
+                guard workspace.activeWorkspaceID == payload.workspaceID else {
                     reply(
-                        .contextMutationAcknowledged(
+                        .workspaceMutationAcknowledged(
                             .failure(
-                                failure: .contextNotActive(payload.contextID)
+                                failure: .workspaceNotActive(payload.workspaceID)
                             )
                         )
                     )
@@ -300,18 +300,18 @@ extension WindowManagerListener {
                     return
                 }
 
-                try await workspace.stopActiveContext()
+                try await workspace.stopActiveWorkspace()
 
                 reply(
-                    .contextMutationAcknowledged(
+                    .workspaceMutationAcknowledged(
                         .success(
-                            contextID: payload.contextID
+                            workspaceID: payload.workspaceID
                         )
                     )
                 )
             } catch {
                 reply(
-                    .contextMutationAcknowledged(
+                    .workspaceMutationAcknowledged(
                         .failure(
                             failure: mutationFailure(from: error)
                         )
@@ -323,7 +323,7 @@ extension WindowManagerListener {
 
     private func mutationFailure(
         from error: Error
-    ) -> ContextMutationAcknowledgement.Failure {
+    ) -> WorkspaceMutationAcknowledgement.Failure {
         if let error = error as? SettingsStoreError {
             return error.mutationFailure
         }
@@ -336,13 +336,13 @@ extension WindowManagerListener {
     }
 
     private func accepts(_ event: Event, reply: (@Sendable (Event) -> Void)?) -> Bool {
-        guard event.isContextMutation else {
+        guard event.isWorkspaceMutation else {
             return true
         }
 
         guard lifecycle.acceptsMutations else {
             reply?(
-                .contextMutationAcknowledged(
+                .workspaceMutationAcknowledged(
                     .failure(failure: .updateInProgress)
                 )
             )
@@ -355,15 +355,15 @@ extension WindowManagerListener {
 }
 
 extension Event {
-    fileprivate var isContextMutation: Bool {
+    fileprivate var isWorkspaceMutation: Bool {
         switch self {
-            case .createContext,
-                 .updateContext,
-                 .deleteContext,
-                 .archiveContext,
-                 .unarchiveContext,
-                 .switchContext,
-                 .stopContext:
+            case .createWorkspace,
+                 .updateWorkspace,
+                 .deleteWorkspace,
+                 .archiveWorkspace,
+                 .unarchiveWorkspace,
+                 .switchWorkspace,
+                 .stopWorkspace:
                 true
 
             default:

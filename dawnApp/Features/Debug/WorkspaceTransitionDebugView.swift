@@ -4,7 +4,7 @@
     import SwiftUI
 
     struct WorkspaceTransitionDebugView: View {
-        @Environment(SettingsContextStore.self) private var contextStore
+        @Environment(SettingsWorkspaceStore.self) private var workspaceStore
         @Environment(SettingsEventBusService.self) private var eventBusService
 
         @State private var viewModel = WorkspaceTransitionDebugViewModel()
@@ -23,7 +23,7 @@
                         transitionSection
                         appsSection
                         applicationSection
-                        existingContextSection
+                        existingWorkspaceSection
                         actionsSection
                         logSection
                     }
@@ -73,8 +73,8 @@
                         .foregroundStyle(eventBusService.isConnected ? .green : .orange)
                 }
 
-                LabeledContent("Contexts") {
-                    Text("\(contextStore.contexts.count)")
+                LabeledContent("Workspaces") {
+                    Text("\(workspaceStore.workspaces.count)")
                 }
             }
         }
@@ -90,7 +90,7 @@
                 TextField("Terminal command (optional)", text: $viewModel.terminalCommand)
                     .textFieldStyle(.roundedBorder)
 
-                Toggle("Delete ephemeral context after run", isOn: $viewModel.cleanupAfterRun)
+                Toggle("Delete ephemeral workspace after run", isOn: $viewModel.cleanupAfterRun)
             }
         }
 
@@ -189,16 +189,16 @@
             }
         }
 
-        var existingContextSection: some View {
-            Section("Existing context") {
-                if contextStore.contexts.isEmpty {
-                    Text("No saved contexts")
+        var existingWorkspaceSection: some View {
+            Section("Existing workspace") {
+                if workspaceStore.workspaces.isEmpty {
+                    Text("No saved workspaces")
                         .foregroundStyle(.secondary)
                 } else {
-                    Picker("Context", selection: $viewModel.selectedExistingContextID) {
+                    Picker("Workspace", selection: $viewModel.selectedExistingWorkspaceID) {
                         Text("None").tag(UUID?.none)
-                        ForEach(contextStore.contexts) { context in
-                            Text(context.name).tag(Optional(context.id))
+                        ForEach(workspaceStore.workspaces) { workspace in
+                            Text(workspace.name).tag(Optional(workspace.id))
                         }
                     }
                 }
@@ -208,28 +208,28 @@
         var actionsSection: some View {
             Section("Actions") {
                 Button {
-                    Task { await viewModel.runEphemeralTransition(using: contextStore) }
+                    Task { await viewModel.runEphemeralTransition(using: workspaceStore) }
                 } label: {
                     actionLabel("Run ephemeral transition", systemImage: "play.fill")
                 }
                 .disabled(interactionsDisabled)
                 .help(
-                    "Create a temporary context with this transition, switch to it, then optionally delete it"
+                    "Create a temporary workspace with this transition, switch to it, then optionally delete it"
                 )
 
                 Button {
-                    Task { await viewModel.applyTransitionToExistingContext(using: contextStore) }
+                    Task { await viewModel.applyTransitionToExistingWorkspace(using: workspaceStore) }
                 } label: {
-                    actionLabel("Apply config to selected context", systemImage: "square.and.pencil")
+                    actionLabel("Apply config to selected workspace", systemImage: "square.and.pencil")
                 }
-                .disabled(interactionsDisabled || viewModel.selectedExistingContextID == nil)
+                .disabled(interactionsDisabled || viewModel.selectedExistingWorkspaceID == nil)
 
                 Button {
-                    Task { await viewModel.runExistingContext(using: contextStore) }
+                    Task { await viewModel.runExistingWorkspace(using: workspaceStore) }
                 } label: {
-                    actionLabel("Switch selected context", systemImage: "arrow.triangle.2.circlepath")
+                    actionLabel("Switch selected workspace", systemImage: "arrow.triangle.2.circlepath")
                 }
-                .disabled(interactionsDisabled || viewModel.selectedExistingContextID == nil)
+                .disabled(interactionsDisabled || viewModel.selectedExistingWorkspaceID == nil)
 
                 Button {
                     Task { await viewModel.sendDebugPing(using: eventBusService) }
@@ -239,9 +239,9 @@
                 .disabled(interactionsDisabled)
 
                 Button {
-                    Task { await viewModel.refreshContexts(using: contextStore) }
+                    Task { await viewModel.refreshWorkspaces(using: workspaceStore) }
                 } label: {
-                    actionLabel("Refresh contexts", systemImage: "arrow.clockwise")
+                    actionLabel("Refresh workspaces", systemImage: "arrow.clockwise")
                 }
                 .disabled(viewModel.isRunning)
 
