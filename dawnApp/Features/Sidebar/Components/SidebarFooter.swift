@@ -66,7 +66,7 @@ struct SidebarFooter: View {
                         .foregroundStyle(DawnColors.sidebarForeground)
                         .lineLimit(2)
 
-                    Text("Restart to starts new workspaces")
+                    Text("Restart to start a new workspace")
                         .font(DawnTextStyle.sidebarBannerBody)
                         .foregroundStyle(DawnColors.sidebarForeground)
                         .fixedSize(horizontal: false, vertical: true)
@@ -169,10 +169,17 @@ struct SidebarFooter: View {
 
                     Spacer(minLength: 8)
 
-                    Image(systemName: "xmark")
-                        .font(.system(size: 8, weight: .semibold))
-                        .foregroundStyle(DawnColors.sidebarForeground)
-                        .accessibilityHidden(true)
+                    if isTopMost {
+                        Button(action: onDismissError) {
+                            Image(systemName: "xmark")
+                                .font(.system(size: 8, weight: .semibold))
+                                .foregroundStyle(DawnColors.sidebarForeground)
+                                .padding(4)
+                                .contentShape(Rectangle())
+                        }
+                        .buttonStyle(.plain)
+                        .accessibilityLabel("Dismiss error")
+                    }
                 }
 
                 Text(message)
@@ -187,24 +194,8 @@ struct SidebarFooter: View {
             RoundedRectangle(cornerRadius: SidebarMetrics.cornerRadius, style: .continuous)
                 .fill(DawnColors.sidebarBannerBackground)
         }
-        .contentShape(Rectangle())
-        .accessibilityElement(children: .ignore)
+        .accessibilityElement(children: isTopMost ? .contain : .ignore)
         .accessibilityLabel("Error")
         .accessibilityValue(message)
-        .accessibilityHint(isTopMost ? "Dismisses this error" : "")
-        .accessibilityAction {
-            guard isTopMost else {
-                return
-            }
-
-            onDismissError()
-        }
-        .onTapGesture {
-            guard isTopMost else {
-                return
-            }
-
-            onDismissError()
-        }
     }
 }

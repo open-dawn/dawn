@@ -19,7 +19,7 @@ struct EmptyWorkspacesView: View {
                         .font(DawnTextStyle.noWorkspaceBody)
                     + Text("new one")
                         .font(DawnTextStyle.noWorkspaceBodyEmphasis)
-                    + Text(" to start organize")
+                    + Text(" to start organizing")
                         .font(DawnTextStyle.noWorkspaceBody)
                 )
                 .foregroundStyle(DawnColors.sidebarMeta)
