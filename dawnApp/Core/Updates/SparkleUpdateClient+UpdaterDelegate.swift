@@ -9,7 +9,8 @@ extension SparkleUpdateClient: SPUUpdaterDelegate {
             hostBundle: hostBundle,
             userDefaults: userDefaults,
             operatingSystemVersion: ProcessInfo.processInfo.operatingSystemVersion,
-            trigger: trigger
+            trigger: trigger,
+            analyticsEnabled: isAnalyticsEnabled()
         )
     }
 
@@ -17,7 +18,8 @@ extension SparkleUpdateClient: SPUUpdaterDelegate {
         hostBundle: Bundle,
         userDefaults: UserDefaults,
         operatingSystemVersion: OperatingSystemVersion,
-        trigger: String
+        trigger: String,
+        analyticsEnabled: Bool
     ) -> String? {
         guard let baseFeedURL = hostBundle.object(
             forInfoDictionaryKey: "SUFeedURL"
@@ -25,6 +27,10 @@ extension SparkleUpdateClient: SPUUpdaterDelegate {
         var components = URLComponents(string: baseFeedURL)
         else {
             return nil
+        }
+
+        guard analyticsEnabled else {
+            return components.url?.absoluteString
         }
 
         let identity = UpdateInstallationIdentity.loadOrCreate(

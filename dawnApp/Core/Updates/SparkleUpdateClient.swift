@@ -30,6 +30,7 @@ final class SparkleUpdateClient: NSObject, AppUpdateClient {
 
     let hostBundle: Bundle
     let userDefaults: UserDefaults
+    let isAnalyticsEnabled: @MainActor () -> Bool
     private var canCheckObservation: NSKeyValueObservation?
 
     private var currentUpdate: AvailableAppUpdate?
@@ -56,10 +57,12 @@ final class SparkleUpdateClient: NSObject, AppUpdateClient {
 
     init(
         hostBundle: Bundle = .main,
-        userDefaults: UserDefaults = .standard
+        userDefaults: UserDefaults = .standard,
+        isAnalyticsEnabled: @escaping @MainActor () -> Bool = { false }
     ) {
         self.hostBundle = hostBundle
         self.userDefaults = userDefaults
+        self.isAnalyticsEnabled = isAnalyticsEnabled
         super.init()
     }
 

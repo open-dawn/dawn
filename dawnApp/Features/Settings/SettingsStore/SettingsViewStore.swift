@@ -9,6 +9,7 @@ final class SettingsViewStore: Listener {
     private var isStarted = false
 
     private(set) var settings = Settings()
+    private(set) var hasLoaded = false
     private(set) var isLoading = false
     private(set) var error: SettingsViewStoreError?
 
@@ -42,6 +43,7 @@ final class SettingsViewStore: Listener {
         }
 
         settings = payload.settings
+        hasLoaded = true
         error = nil
     }
 
@@ -58,10 +60,12 @@ final class SettingsViewStore: Listener {
             switch response {
             case let .settingsFetched(payload):
                 settings = payload.settings
+                hasLoaded = true
                 error = nil
 
             case let .availableSettings(payload):
                 settings = payload.settings
+                hasLoaded = true
                 error = nil
 
             default:
