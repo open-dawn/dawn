@@ -13,7 +13,7 @@ settings:
   base:
     SWIFT_VERSION: &swiftversion "6"
     MARKETING_VERSION: &mktversion "1.2.0"
-    CURRENT_PROJECT_VERSION: &buildversion "6"
+    CURRENT_PROJECT_VERSION: &buildversion "7"
 
 configFiles:
   Release: Config/Release.xcconfig
@@ -51,9 +51,10 @@ targets:
         CFBundleDisplayName: DAWN
         CFBundleShortVersionString: "$(MARKETING_VERSION)"
         CFBundleVersion: "$(CURRENT_PROJECT_VERSION)"
-        SUFeedURL: "https://update.opendawn.app/appcast.xml"
+        SUFeedURL: "https://opendawn.app/appcast.xml"
         SUPublicEDKey: "F62epeumzInQi+a4UM0k9lQF8xOWyXZNCDtBm5J5QT0="
-        SUEnableAutomaticChecks: false
+        SUEnableAutomaticChecks: true
+        SUScheduledCheckInterval: 86400
         SUAllowsAutomaticUpdates: false
         SUAutomaticallyUpdate: false
         SURequireSignedFeed: true

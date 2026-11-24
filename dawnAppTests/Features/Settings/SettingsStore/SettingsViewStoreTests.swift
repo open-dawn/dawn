@@ -50,6 +50,7 @@ struct SettingsViewStoreTests {
         )
 
         #expect(store.settings == second)
+        #expect(store.hasLoaded)
         #expect(store.error == nil)
     }
 
@@ -63,11 +64,13 @@ struct SettingsViewStoreTests {
         bus.askResponse = .settingsFetched(SettingsFetchedEvent(settings: settings))
 
         let store = SettingsViewStore(bus: bus)
+        #expect(!store.hasLoaded)
         await store.refresh()
 
         #expect(bus.askedEvents == [.getSettings(GetSettingsEvent())])
         #expect(bus.requestedTimeouts == [.seconds(5)])
         #expect(store.settings == settings)
+        #expect(store.hasLoaded)
         #expect(store.error == nil)
         #expect(!store.isLoading)
     }
