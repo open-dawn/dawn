@@ -14,7 +14,12 @@ final class SettingsAppDelegate: NSObject, NSApplicationDelegate {
 
     override init() {
         let eventBusService = SettingsEventBusService()
-        let updateClient = SparkleUpdateClient()
+        let settingsStore = SettingsViewStore(bus: eventBusService.bus)
+        let updateClient = SparkleUpdateClient(
+            isAnalyticsEnabled: { [weak settingsStore] in
+                settingsStore?.settings.analyticsEnabled ?? false
+            }
+        )
 
         let updateComponents: [any UpdateComponent]
 
@@ -40,10 +45,9 @@ final class SettingsAppDelegate: NSObject, NSApplicationDelegate {
 
         self.eventBusService = eventBusService
         self.componentCoordinator = componentCoordinator
+        self.settingsStore = settingsStore
 
         workspaceStore = SettingsWorkspaceStore(bus: eventBusService.bus)
-
-        settingsStore = SettingsViewStore(bus: eventBusService.bus)
 
         updaterService = AppUpdaterService(client: updateClient, componentCoordinator: componentCoordinator)
 

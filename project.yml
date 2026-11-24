@@ -51,9 +51,10 @@ targets:
         CFBundleDisplayName: DAWN
         CFBundleShortVersionString: "$(MARKETING_VERSION)"
         CFBundleVersion: "$(CURRENT_PROJECT_VERSION)"
-        SUFeedURL: "https://update.opendawn.app/appcast.xml"
+        SUFeedURL: "https://opendawn.app/appcast.xml"
         SUPublicEDKey: "F62epeumzInQi+a4UM0k9lQF8xOWyXZNCDtBm5J5QT0="
-        SUEnableAutomaticChecks: false
+        SUEnableAutomaticChecks: true
+        SUScheduledCheckInterval: 86400
         SUAllowsAutomaticUpdates: false
         SUAutomaticallyUpdate: false
         SURequireSignedFeed: true

@@ -6,6 +6,14 @@ struct AppShellView: View {
     @Environment(SettingsWorkspaceStore.self)
     private var workspaceStore
 
+    @Environment(SettingsEventBusService.self)
+    private var eventBusService
+
+    @Environment(SettingsViewStore.self)
+    private var settingsStore
+
+    @State private var analyticsConsent = AnalyticsConsentStore()
+
     var body: some View {
         AppShellContent(
             store: workspaceStore,
@@ -14,6 +22,37 @@ struct AppShellView: View {
             width: SidebarMetrics.windowWidth,
             height: SidebarMetrics.windowHeight
         )
+        .onChange(of: eventBusService.isConnected, initial: true) { _, isConnected in
+            analyticsConsent.presentIfNeeded(
+                isAgentConnected: isConnected,
+                hasLoadedSettings: settingsStore.hasLoaded
+            )
+        }
+        .onChange(of: settingsStore.hasLoaded, initial: true) { _, hasLoaded in
+            analyticsConsent.presentIfNeeded(
+                isAgentConnected: eventBusService.isConnected,
+                hasLoadedSettings: hasLoaded
+            )
+        }
+        .sheet(
+            isPresented: Binding(
+                get: { analyticsConsent.isPresented },
+                set: { _ in }
+            )
+        ) {
+            AnalyticsConsentView(
+                isSubmitting: analyticsConsent.isSubmitting,
+                errorMessage: analyticsConsent.errorMessage,
+                onChoose: { enabled in
+                    Task {
+                        await analyticsConsent.submit(
+                            analyticsEnabled: enabled,
+                            settingsStore: settingsStore
+                        )
+                    }
+                }
+            )
+        }
     }
 
     fileprivate struct AppShellContent: View {

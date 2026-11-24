@@ -87,7 +87,7 @@ public enum DButtonStyle: CaseIterable {
     var verticalPadding: CGFloat {
         switch self {
         case .primary: return 8
-        case .secondary: return 12
+        case .secondary: return 8
         case .accent: return 12
         case .danger: return 12
         case .warning: return 12
