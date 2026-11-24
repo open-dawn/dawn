@@ -18,7 +18,7 @@
   <summary>Table of Contents</summary>
   <ol>
     <li><a href="#1-about-the-project">About The Project</a></li>
-    <li><a href="#2-usage">Usage</a></li>
+    <li><a href="#2-demo">Demo</a></li>
     <li>
       <a href="#3-installation">Installation</a>
       <ul>
@@ -39,15 +39,9 @@ DAWN is an open-source macOS application designed by OpenDawn. It manages worksp
 
 The first release supports macOS 15 or later on Apple Silicon.
 
-## 2. Usage
+## 2. Demo
 
-A demo video or GIF will be added here.
-
-Place the file at `.github/media/demo.gif`, then replace this note with:
-
-```markdown
 ![DAWN demo](.github/media/demo.gif)
-```
 
 ## 3. Installation
 
