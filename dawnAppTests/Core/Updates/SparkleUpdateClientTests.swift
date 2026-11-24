@@ -154,4 +154,90 @@ struct SparkleUpdateClientTests {
             ) == .unknown
         )
     }
+
+    @Test("Installation identity generates and persists a lowercase UUID")
+    func installationIdentityPersistsUUID() throws {
+        let suiteName = "SparkleUpdateClientTests.\(UUID().uuidString)"
+        let defaults = try #require(UserDefaults(suiteName: suiteName))
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+
+        let first = UpdateInstallationIdentity.loadOrCreate(userDefaults: defaults)
+        let second = UpdateInstallationIdentity.loadOrCreate(userDefaults: defaults)
+
+        #expect(UUID(uuidString: first.installationID) != nil)
+        #expect(first.installationID == first.installationID.lowercased())
+        #expect(first.installationID == second.installationID)
+    }
+
+    @Test("Feed URL includes Sparkle telemetry query parameters when analytics is enabled")
+    func buildFeedURLStringAppendsTelemetryParamsWhenAnalyticsEnabled() throws {
+        let suiteName = "SparkleUpdateClientTests.\(UUID().uuidString)"
+        let defaults = try #require(UserDefaults(suiteName: suiteName))
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+
+        let osVersion = OperatingSystemVersion(
+            majorVersion: 15,
+            minorVersion: 4,
+            patchVersion: 1
+        )
+        let feedURLString = try #require(
+            SparkleUpdateClient.buildFeedURLString(
+                hostBundle: .main,
+                userDefaults: defaults,
+                operatingSystemVersion: osVersion,
+                trigger: "manual",
+                analyticsEnabled: true
+            )
+        )
+
+        let components = try #require(URLComponents(string: feedURLString))
+        let query = Dictionary(
+            uniqueKeysWithValues: (components.queryItems ?? []).map { ($0.name, $0.value) }
+        )
+        let expectedIdentity = UpdateInstallationIdentity.loadOrCreate(userDefaults: defaults)
+        let expectedVersion =
+            Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String
+        let expectedBuild =
+            Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String
+
+        #expect(components.scheme == "https")
+        #expect(components.host == "opendawn.app")
+        #expect(components.path == "/appcast.xml")
+        #expect(query["client"] == "sparkle")
+        #expect(query["uid"] == expectedIdentity.installationID)
+        #expect(query["v"] == expectedVersion)
+        #expect(query["build"] == expectedBuild)
+        #expect(query["os"] == "15.4.1")
+        #expect(query["trigger"] == "manual")
+    }
+
+    @Test("Feed URL omits telemetry parameters and installation ID when analytics is disabled")
+    func buildFeedURLStringOmitsTelemetryParamsWhenAnalyticsDisabled() throws {
+        let suiteName = "SparkleUpdateClientTests.\(UUID().uuidString)"
+        let defaults = try #require(UserDefaults(suiteName: suiteName))
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+
+        let osVersion = OperatingSystemVersion(
+            majorVersion: 15,
+            minorVersion: 4,
+            patchVersion: 1
+        )
+        let feedURLString = try #require(
+            SparkleUpdateClient.buildFeedURLString(
+                hostBundle: .main,
+                userDefaults: defaults,
+                operatingSystemVersion: osVersion,
+                trigger: "manual",
+                analyticsEnabled: false
+            )
+        )
+
+        let components = try #require(URLComponents(string: feedURLString))
+
+        #expect(components.scheme == "https")
+        #expect(components.host == "opendawn.app")
+        #expect(components.path == "/appcast.xml")
+        #expect(components.queryItems == nil)
+        #expect(defaults.string(forKey: UpdateInstallationIdentity.userDefaultsKey) == nil)
+    }
 }
