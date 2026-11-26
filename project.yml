@@ -12,8 +12,8 @@ options:
 settings:
   base:
     SWIFT_VERSION: &swiftversion "6"
-    MARKETING_VERSION: &mktversion "1.1.0"
-    CURRENT_PROJECT_VERSION: &buildversion "5"
+    MARKETING_VERSION: &mktversion "1.2.0"
+    CURRENT_PROJECT_VERSION: &buildversion "7"
 
 configFiles:
   Release: Config/Release.xcconfig
